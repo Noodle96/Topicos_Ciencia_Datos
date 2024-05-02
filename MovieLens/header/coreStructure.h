@@ -20,12 +20,12 @@ class CoreStructure{
 			Calculo de la distancia euclidiana entre el usuario A y el usuario B
 		*/
 		void details_calculatEuclideanDistance(t_userId, t_userId);
-		double calculatEuclideanDistance(t_userId, t_userId);
+		pair<double, bool> calculatEuclideanDistance(t_userId, t_userId);
 
 		/*
 			Calculo de la distancia euclidiana entre el Usuario X, contra todos los demas usuarios
 		*/
-		void distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId);
+		double distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId);
 		
 		/*
 			Calculo de la distancia de manhatan entre el Usuario X, contra todos los demas usuarios
