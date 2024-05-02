@@ -36,13 +36,20 @@ void solve(){
 	t_userId user_test_A;
 	t_userId user_test_B;
 	int choice;
+	// to save distances between userX and all users
+	// called in opcion 3 of menu
+	ofstream out_distance_userX_all, out_common_movies_userA_userB;
+
+	// commmon Vectors, clear before use
+	vec_id_dist_inter distancesOfUserXWithAll;
+	vector<t_movieId> commonMovies;
 
 	cout << "Menu Principal:" << endl;;
 	cout << "0. Salir" << endl;
 	cout << "1. Imprimir usuarios in printUsers.txt" << endl;
 	cout << "2. Calculate Euclidean Distance between userA and userB (ids)" << endl;
 	cout << "3. Distance Between UserX And All by EuclideanDistance" << endl;
-
+	cout << "4. Common movies between UserA and UserB" << endl;
 	cout << endl;
 
 	cout << SOLVE <<"Load Data ..." << endl;
@@ -51,8 +58,6 @@ void solve(){
 	cout << TAB SOLVE << "Total Time in load rating.csv and STORE : " << timer.getCurrentTime() << endl << endl;
 
     while (true) {
-        
-
         // Get user input
         cout << "Input option: ";
         cin >> choice;
@@ -73,7 +78,7 @@ void solve(){
                 /*
 					* Calcular la distancia euclidiana entre dos usuarios (id_userA, id_userB)
 				*/
-				cout << "Insert users" << endl;
+				cout << "Insert users (valid ids)" << endl;
 				cin>>user_test_A>>user_test_B;
 				// // Usuarios validos
 				cout << SOLVE<< "Call calculatEuclideanDistance" << endl;
@@ -88,10 +93,40 @@ void solve(){
 				cout << "Insert User (id valid)" << endl;
 				cin>>user_test_A;
 				cout << SOLVE << "Call distanceBetweenUserXAndAll_by_EuclideanDistance" << endl;
+				
                 timer.reset();
-				coreStructure.distanceBetweenUserXAndAll_by_EuclideanDistance(user_test_A);
+				distancesOfUserXWithAll.clear();
+				coreStructure.distanceBetweenUserXAndAll_by_EuclideanDistance(user_test_A,distancesOfUserXWithAll);
 				cout << TAB SOLVE<< "total time in distanceBetweenUserXAndAll_by_EuclideanDistance: " << timer.getCurrentTime() << endl << endl;
+
+				cout << TAB SOLVE << "Begin save in../out/distanceBetweenUserXAndAll_by_EuclideanDistance.txt " << endl;
+				out_distance_userX_all.open("../out/distanceBetweenUserXAndAll_by_EuclideanDistance.txt");
+				for(auto x: distancesOfUserXWithAll){
+					out_distance_userX_all  << std::fixed << std::setprecision(10)<< x.first << " " << x.second.first << " " << x.second.second<< endl;
+				}
+				out_distance_userX_all.close();
+				cout << TAB SOLVE << "End save in../out/distanceBetweenUserXAndAll_by_EuclideanDistance.txt "<< endl << endl;
                 break;
+			case 4:
+				/*
+					* Listar las peliculas en comun entre el usuarioA y el usuarioB
+				*/
+				cout << "Insert users (valid ids)" << endl;
+				cin>>user_test_A>>user_test_B;
+				cout << SOLVE << "Call getCommonMovies" << endl;
+				timer.startt();
+				commonMovies.clear();
+				coreStructure.getCommonMovies(user_test_A, user_test_B, commonMovies);
+				cout << TAB SOLVE << "Total Time in getCommonMovies: " << timer.getCurrentTime() << endl << endl;
+
+				cout << TAB SOLVE << "Begin save in ../out/commonMovies_userA_userB.txt" << endl;
+				out_common_movies_userA_userB.open("../out/commonMovies_userA_userB.txt");
+				for(auto x: commonMovies){
+					out_common_movies_userA_userB << x << endl;
+				}
+				out_common_movies_userA_userB.close();
+				cout << TAB SOLVE << "End save in ../out/commonMovies_userA_userB.txt" << endl << endl;
+				break;
             default:
                 cout << "Opción inválida. Intente nuevamente." << endl << endl;
         }

@@ -5,6 +5,36 @@ void CoreStructure::add(t_userId userId, t_movieId movieId, t_rating rating, t_t
 	users.insert(userId);
 }
 
+void CoreStructure::getCommonMovies(t_userId userA, t_userId userB, vector<t_movieId> &vec){
+	auto hash_movie_rating_userA = user_movie_rating[userA];
+	auto hash_movie_rating_userB = user_movie_rating[userB];
+
+	auto sizeHashUserA = hash_movie_rating_userA.size();
+	auto sizeHashUserB = hash_movie_rating_userB.size();
+	// cout << "sizeHashUserA: " << sizeHashUserA << " sizeHashUserB: " << sizeHashUserB << endl;
+
+	//criterio para recorrer solo el hash con el menor tamaño
+	if(sizeHashUserA <= sizeHashUserB){
+		for(auto it = hash_movie_rating_userA.begin() ;it != hash_movie_rating_userA.end() ; it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userB.find(movie);
+			if(it_find != hash_movie_rating_userB.end()){
+				// found
+				vec.pb(movie);
+			}
+		}
+	}else{
+		for(auto it = hash_movie_rating_userB.begin() ;it != hash_movie_rating_userB.end() ; it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userA.find(movie);
+			if(it_find != hash_movie_rating_userA.end()){
+				// found
+				vec.pb(movie);
+			}
+		}
+	}
+}
+
 /*
 	Complexity: O(n), where n: number of movies rated by userA
 */
@@ -114,18 +144,20 @@ pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_us
 
 //----------------------------------------one-to-all----------------------------------------
 
-double CoreStructure::distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId userX){
-	double distance = 0.0;
+void CoreStructure::distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId userX, vec_id_dist_inter &distancesOfUserXWithAll){
+	for(auto user: users){
+		if(user != userX){
+			auto [dis,inters] = calculatEuclideanDistance(userX, user);
+			// distancesOfUserXWithAll.emplace_back(user,dis,inters);
+			distancesOfUserXWithAll.pb({user,{dis,inters}});
+			// cout << TAB <<DEVELOPING << "Euclidean Distance between userX: " << userX << " and user: " << user << " is: " << distance << endl;
+		}
 
-	// for(auto user: users){
-	// 	if(user != userX){
-	// 		distance += calculatEuclideanDistance(userX, user);
-
-	// 		cout << TAB <<DEVELOPING << "Euclidean Distance between userX: " << userX << " and user: " << user << " is: " << distance << endl;
-	// 	}
-
-	// }
-	return distance;
+	}
+	sort(distancesOfUserXWithAll.begin(), distancesOfUserXWithAll.end(), [](const auto &a, const auto &b){
+		// ordenar  por distancias que se encuentra en a.second.first
+		return a.second.first < b.second.first;
+	});
 }
 
 void CoreStructure::distanceBetweenUserXAndAll_by_ManhatanDistance(t_userId userX){
