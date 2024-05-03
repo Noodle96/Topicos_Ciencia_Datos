@@ -208,10 +208,52 @@ void CoreStructure::details_calculateManhatanDistance(t_userId userA, t_userId u
 	cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
 }
 
-
-
+/*
+	* Not details
+	* Esta funcion se utilizara dentro de la funcion distanceBetweenUserXAndAll_by_ManhatanDistance
+*/
 pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_userId userB){
-	return {5.5,false};
+	double manhatanDistance = 0.0;
+	bool interseccion = false;
+
+	auto hash_movie_rating_userA = user_movie_rating[userA];
+	auto hash_movie_rating_userB = user_movie_rating[userB];
+
+	if(hash_movie_rating_userA.size() == 0 || hash_movie_rating_userB.size() == 0){
+		// cout << DEVELOPING <<"UserA or UserB not found" << endl;
+		// cout << DEVELOPING <<"Interseccion: " << interseccion << endl;
+		return {0.0, false};
+	}
+	/*
+		* Es eficiente comparar quien tiene menos peliculas recomendadas contra el que tiene mas peliculas
+		* Para ello condicionamos con el criterio anterior
+	*/
+	auto sizeHashUserA = hash_movie_rating_userA.size();
+	auto sizeHashUserB = hash_movie_rating_userB.size();
+
+	if( sizeHashUserA<= sizeHashUserB){
+		for(auto it = hash_movie_rating_userA.begin(); it != hash_movie_rating_userA.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
+			if(it_find != hash_movie_rating_userB.end()){
+				// FOUND
+				interseccion = true;
+				manhatanDistance += abs(it->second - it_find->second);
+			}
+		}
+	}else{
+		// sizeHashUserA<= sizeHashUserB
+		for(auto it = hash_movie_rating_userB.begin(); it != hash_movie_rating_userB.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userA.find(movie);
+			if(it_find != hash_movie_rating_userA.end()){
+				// found
+				interseccion = true;
+				manhatanDistance += abs(it->second - it_find->second);
+			}
+		}
+	}
+	return {manhatanDistance, interseccion};
 }
 
 //  ===================================END MANHATAN DISTANCE=================================
