@@ -1,5 +1,91 @@
 #include "../header/coreStructure.h"
 #include "../header/timer.h"
+
+
+
+// ~ =================================BEGIN CONSTRUCTOR======================================
+CoreStructure::CoreStructure(){
+	// * Load rating.csv
+	// atributos rating.csv
+	t_userId userId;
+	t_movieId movieId;
+	t_rating rating;
+	t_timestamp timestamp;
+	char delimiter = ',';
+	string linea;
+	Timer timer;
+	// ifstream archivo_csv("data/ml-20m/temporal.csv");
+
+
+	cout << "[CORESTRUCTURE] Load rating.csv" << endl;
+	timer.startt();
+	std::ifstream archivo_csv("../data-ml-latest/ratings.csv");
+	getline(archivo_csv,linea); // omitir la linea de cabecera
+	// Verificar si el archivo se abrió correctamente
+	if (archivo_csv.is_open()) {
+		while (std::getline(archivo_csv, linea)) {
+			std::istringstream ss(linea);// [1]30seg
+			ss >> userId >>delimiter>> movieId >> delimiter>> rating >>delimiter>> timestamp;
+			// mapa[userId]++;
+			// coreStructure.add(userId, movieId, rating, timestamp); //[1] 30seg
+			add(userId, movieId, rating, timestamp); //[1] 30seg
+			// cout << userId << " " << movieId << " " << rating << " " << timestamp << endl;
+		}
+		archivo_csv.close();
+		cout << TAB << "[CORESTRUCTURE] Total time to load rating.csv: " << timer.getCurrentTime() << endl;
+		cout << TAB << "[CORESTRUCTURE] Load rating.csv [OK]" << endl;
+
+	} else {
+		std::cerr << "Error al abrir el archivo CSV" << std::endl;
+	}
+
+	// * Load movies.csv
+	t_movieName movieName;
+	t_movieGenre movieGenres;
+	cout << "[CORESTRUCTURE] Load movies.csv" << endl;
+	timer.startt();
+	std::ifstream archivo_csv_movies("../data-ml-latest/movies.csv");
+	getline(archivo_csv_movies,linea); // omitir la linea de cabecera
+	// Verificar si el archivo se abrió correctamente
+	if (archivo_csv_movies.is_open()) {
+		while (std::getline(archivo_csv_movies, linea)) {
+			istringstream iss(linea);
+			// Extract ID
+			std::string idStr;
+			if (std::getline(iss, idStr, ',')) {
+				movieId = std::stoi(idStr);
+			}
+
+			// Extract movie title
+			std::string titleStr;
+			if (std::getline(iss, titleStr, ',')) {
+				movieName = titleStr;
+			}
+
+			// procesar luego los generos !important
+			// Extract genres
+			// std::string genreStr;
+			// while (std::getline(iss, genreStr, ',')) {
+			// 	genreStr.erase(std::remove_if(genreStr.begin(), genreStr.end(), isspace), genreStr.end());
+			// 	movie.genres.push_back(genreStr);
+			// }
+			// cout << "movieId: " << movieId << " movieName: " << movieName << endl;
+			movies[movieId] = {movieName, {}};
+		}
+		archivo_csv_movies.close();
+		cout << TAB << "[CORESTRUCTURE] Total time to load movies.csv: " << timer.getCurrentTime() << endl;
+		cout << TAB << "[CORESTRUCTURE] Load movies.csv [OK]" << endl;
+	} else {
+		std::cerr << "Error al abrir el archivo CSV" << std::endl;
+	}
+
+}
+// ~ =================================BEGIN CONSTRUCTOR======================================
+
+
+
+// ~ =================================BEGIN MAIN FUNCTIONS======================================
+
 void CoreStructure::add(t_userId userId, t_movieId movieId, t_rating rating, t_timestamp timestamp){
 	user_movie_rating[userId][movieId] = rating;
 	users.insert(userId);
@@ -34,13 +120,14 @@ void CoreStructure::getCommonMovies(t_userId userA, t_userId userB, vector<t_mov
 		}
 	}
 }
+// ~ =================================END MAIN FUNCTIONS======================================
 
 
 
 
 
 /*
-	================================= BEGIN EUCLIDEAN DISTANCE=================================
+	~================================= BEGIN EUCLIDEAN DISTANCE=================================
 */
 
 /*
@@ -101,7 +188,7 @@ void CoreStructure::details_calculatEuclideanDistance(t_userId userA, t_userId u
 /*
 	Complexity: O(n), where n: number of movies rated by min(size(userA), size(userB))
 */
-pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_userId userB){
+pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_userId userB, int &commom_movies){
 	double euclideanDistance = 0.0;
 	bool interseccion = false;
 	// usuarios validos
@@ -128,6 +215,7 @@ pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_us
 				// found
 				// cout << "Movie: " << movie << " Rating userA: " << it->second << " Rating userB: " << it_find->second << endl;
 				// podriamos optimizar
+				commom_movies++;
 				interseccion = true;
 				euclideanDistance += pow(it->second - it_find->second, 2);
 			}
@@ -141,6 +229,7 @@ pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_us
 				// found
 				// cout << "Movie: " << movie << " Rating userA: " << it->second << " Rating userB: " << it_find->second << endl;
 				// podriamos optimizar
+				commom_movies++;
 				interseccion = true;
 				euclideanDistance += pow(it->second - it_find->second, 2);
 			}
@@ -149,18 +238,18 @@ pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_us
 	euclideanDistance = sqrt(euclideanDistance);
 	return {euclideanDistance, interseccion};
 }
-//  ===================================END EUCLIDEAN DISTANCE=================================
+//  ~===================================END EUCLIDEAN DISTANCE=================================
 
 
 
 
 
 /*
-	================================= BEGIN MANHATAN DISTANCE=================================
+	~================================= BEGIN MANHATAN DISTANCE=================================
 */
 /*
-	Complexity: O(n), where n: number of movies rated by min(size(userA), size(userB))
-	Both
+	* Complexity: O(n), where n: number of movies rated by min(size(userA), size(userB))
+	* Both
 */
 void CoreStructure::details_calculateManhatanDistance(t_userId userA, t_userId userB){
 	double manhatanDistance = 0.0;
@@ -257,17 +346,17 @@ pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_use
 	return {manhatanDistance, interseccion};
 }
 
-//  ===================================END MANHATAN DISTANCE=================================
+//~  ===================================END MANHATAN DISTANCE=================================
 
 
 
 
 
 /*
-	================================= BEGIN SIMILARIDAD COSENO=================================
+	~================================= BEGIN SIMILARIDAD COSENO=================================
 */
 /*
-	Calculo de la similaridad de coseno entre el usuario A y el usuario B
+	* Calculo de la similaridad de coseno entre el usuario A y el usuario B
 */
 void CoreStructure::details_calculateCosineSimilarity(t_userId userA, t_userId userB){
 	int n = 0;
@@ -402,14 +491,14 @@ pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_use
 		}
 	}
 }
-//  ===================================END SIMILARIDAD COSENO=================================
+//  ~===================================END SIMILARIDAD COSENO=================================
 
 
 
 
 
 /*
-	================================= BEGIN SIMILARIDAD PEARSON=================================
+	~================================= BEGIN SIMILARIDAD PEARSON=================================
 */
 /*
 	Calculo de la correlaccion de pearson entre el usuario A y el usuario B
@@ -556,21 +645,24 @@ pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_u
 	}
 }
 
-//  ===================================END SIMILARIDAD COSENO=================================
+//  ~===================================END SIMILARIDAD COSENO=================================
 
 
 
 
 
-//----------------------------------------one-to-all----------------------------------------
-
+/*
+	~===================== BEGIN DISTANCE BETWEEN USERX AND ALL ===============================
+*/
 void CoreStructure::distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId userX, vec_id_dist_inter &distancesOfUserXWithAll){
+	int common_movies;
 	for(auto user: users){
 		if(user != userX){
-			auto [dis,inters] = calculatEuclideanDistance(userX, user);
+			common_movies = 0;
+			auto [dis,inters] = calculatEuclideanDistance(userX, user, common_movies);
 			// distancesOfUserXWithAll.emplace_back(user,dis,inters);
 			// si no hay inters
-			if(inters){
+			if(inters && common_movies >= UMBRAL_MINIMUM_PELICULAS_COMMON){
 				distancesOfUserXWithAll.pb({user,{dis,inters}});
 				// cout << TAB <<DEVELOPING << "Euclidean Distance between userX: " << userX << " and user: " << user << " is: " << distance << endl;
 			}
@@ -628,10 +720,13 @@ void CoreStructure::distanceBetweenUserXAndAll_by_PearsonCorrelation(t_userId us
 		return a.second.first < b.second.first;
 	});
 }
-//--------------------------------------------------------------------------------------------
+//	~===================== BEGIN DISTANCE BETWEEN USERX AND ALL ===============================
 
 
-//--------------------------------------------OUTS--------------------------------------------
+
+
+
+// ~ =======================================BEGIN OUTS=========================================
 void CoreStructure::print_users(){
 	out_users.open("../out/printUsers.txt");
 	for(auto x: users){
@@ -639,13 +734,23 @@ void CoreStructure::print_users(){
 	}
 	out_users << "Total users: " << users.size() << endl;
 }
-//--------------------------------------------------------------------------------------------
+
+void CoreStructure::print_movies(){
+	out_movies.open("../out/printMovies.txt");
+	for(auto x: movies){
+		out_movies << x.first << " " << x.second.first << endl;
+	}
+	out_movies << "Total movies: " << movies.size() << endl;
+
+}
+//~ ========================================END OUTS===========================================
+
 
 
 
 
 /*
-	================================= BEGIN KNN=================================
+	~========================================= BEGIN KNN========================================
 */
 
 void CoreStructure::knn_by_euclideanDistance(t_userId userX, int n){
@@ -654,13 +759,19 @@ void CoreStructure::knn_by_euclideanDistance(t_userId userX, int n){
 	timer.startt();
 	distanceBetweenUserXAndAll_by_EuclideanDistance(userX, distancesOfUserXWithAll);
 	cout << TAB << " [CORESTRUCTURE]" << "Total Time in distanceBetweenUserXAndAll_by_EuclideanDistance: " << timer.getCurrentTime() << endl;
-	cout << TAB << " [CORESTRUCTURE]" << "Total all users: " << distancesOfUserXWithAll.size() << endl;
+	cout << TAB << " [CORESTRUCTURE]" << "Total all users with restrictions(DISJOINT, UMBRAL): " << distancesOfUserXWithAll.size() << endl;
 	// cout << TAB <<DEVELOPING << "K-NN with Euclidean Distance between userX: " << userX << " and all users" << endl;
 	auto sizeVector = distancesOfUserXWithAll.size();
 	if(sizeVector == 0){
 		cout << TAB <<DEVELOPING << "distancesOfUserXWithAll is equal 0" << endl;
 		return;
 	}
+
+	vector<t_userId> kNN;
+
+	// MOSTRAR LO SIGUIENTE:
+	// 1.- Guardar en el archivo ../out/knn_euclidean.txt [Usuario, Distancia, Interseccion]
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_euclidean.txt" << endl;
 	out_knn_euclidean.open("../out/knn_euclidean.txt");
 	out_knn_euclidean << "User-Distance-Interseccion" << endl;
 	if(n >= sizeVector){
@@ -670,16 +781,102 @@ void CoreStructure::knn_by_euclideanDistance(t_userId userX, int n){
 		// n = sizeVector;
 		// mostrat todos los usuarios
 		for(auto x: distancesOfUserXWithAll){
+			// Para analizar despues
+			kNN.pb(x.first);
 			// cout << TAB <<DEVELOPING << "User: " << x.first << " Distance: " << x.second.first << " Interseccion: " << x.second.second << endl;
 			out_knn_euclidean << fixed << setprecision(10) << x.first << " " << x.second.first << " " << x.second.second << endl;
 		}
 	}else{
 		// mostrar solo los n primeros
 		for(int e = 0 ; e < n; e++){
+			// Para analizar despues
+			kNN.pb(distancesOfUserXWithAll[e].first);
 			out_knn_euclidean << fixed << setprecision(10) << distancesOfUserXWithAll[e].first << " " << distancesOfUserXWithAll[e].second.first << " " << distancesOfUserXWithAll[e].second.second << endl;
 		}
 	}
 	out_knn_euclidean.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_euclidean.txt" << endl;
 
+	/*
+		? 2.- Por cada Usuario, mostrar las peliculas y el puntaje que le da
+		?     ordenados por rating.
+		?     en el archivo ../out/knn_euclidean_[user-peliculas-puntaje].txt
+	*/
+
+	unordered_map<t_userId, vector<pair<t_movieId, t_rating>> > recommender;
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_euclidean_[user-peliculas_puntaje].txt" << endl;
+	ofstream out_knn_euclidean_user_peliculas_puntaje;
+	out_knn_euclidean_user_peliculas_puntaje.open("../out/knn_euclidean_[user-peliculas_puntaje].txt");
+	for(auto x: kNN){
+		auto hash_movie_rating_userX = user_movie_rating[x];
+		out_knn_euclidean_user_peliculas_puntaje << "User: " << x << endl;
+		out_knn_euclidean_user_peliculas_puntaje << "Peliculas-Puntaje (" << hash_movie_rating_userX.size()<< " rows founded)"<<  endl;
+		for(auto it = hash_movie_rating_userX.begin(); it != hash_movie_rating_userX.end(); it++){
+			// auto movieName = movies[it->first].first;
+			// out_knn_euclidean_user_peliculas_puntaje << "[" <<it->first << "]-[" << movieName<< "] => "<<  it->second << endl;
+			out_knn_euclidean_user_peliculas_puntaje << it->first << " " << it->second << endl;
+
+			// *VALIDANDO EL SEGUNDO UMBRAL
+			if(it->second >= UMBRAL_MINIMUM_RATING){
+				recommender[x].pb({it->first, it->second});
+			}
+		}
+		out_knn_euclidean << endl;
+	}
+	out_knn_euclidean_user_peliculas_puntaje.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_euclidean_[user-peliculas_puntaje].txt" << endl;
+
+
+	/*
+		? 3.- Finalemte mostrar las peliculas que se recomendaran al usuario X, en base
+		?     al umbral de UMBRAL_MINIMUM_RATING y UMBRAL_MINIMUM_PELICULAS_COMMON(ya filtrado
+		?     con anterioridad)
+		?	 en el archivo ../out/knn_euclidean_[recomendation].txt
+	*/
+	for(auto x:kNN){
+		sort(recommender[x].begin(), recommender[x].end(), [](const auto &a, const auto &b){
+			return a.second > b.second;
+		});
+	}
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_euclidean_[recomendation].txt" << endl;
+	ofstream out_knn_euclidean_recomendation;
+	out_knn_euclidean_recomendation.open("../out/knn_euclidean_[recomendation].txt");
+	for(auto x: kNN){
+		out_knn_euclidean_recomendation << "User: " << x << endl;
+		out_knn_euclidean_recomendation << "Recomendation (" << recommender[x].size() << " rows)" << endl;
+		for(auto it: recommender[x]){
+			// auto movieName = movies[it.first].first;
+			// out_knn_euclidean_recomendation << "[" << it.first << "]-[" << movieName << "] => " << it.second << endl;
+			out_knn_euclidean_recomendation << it.first << " " << it.second << endl;
+		}
+		out_knn_euclidean_recomendation << endl;
+	}
+	out_knn_euclidean_recomendation.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_euclidean_[recomendation].txt" << endl;
 }
-//  ===================================END  KNN=================================
+//  ~=========================================END  KNN==================================
+
+
+
+
+/*
+	~================================== BEGIN QUERIES ==================================
+*/
+void CoreStructure::query_rating(t_userId userId, t_movieId movieId){
+	if(user_movie_rating.find(userId) != user_movie_rating.end()){
+		if(user_movie_rating[userId].find(movieId) != user_movie_rating[userId].end()){
+			cout << "Rating: " << user_movie_rating[userId][movieId] << endl;
+		}else{
+			cout << "Movie not found" << endl;
+		}
+	}else{
+		cout << "User not found" << endl;
+	}
+}
+
+void CoreStructure::query_movies(t_userId userId){
+	for(auto x: user_movie_rating[userId]){
+		cout << x.first << " " << x.second << endl;
+	}
+}
+//  ~======================================END  QUERIES ===============================

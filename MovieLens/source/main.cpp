@@ -1,40 +1,40 @@
 #include "../header/coreStructure.h"
 #include "../header/timer.h"
 
-CoreStructure coreStructure;
-std::string linea;
 // unordered_map<int,int> mapa;
 
-void readRatingCSV(){
-	// atributos rating.csv
-	t_userId userId;
-	t_movieId movieId;
-	t_rating rating;
-	t_timestamp timestamp;
-	char delimiter = ',';
+// void readRatingCSV(){
+// 	// atributos rating.csv
+// 	t_userId userId;
+// 	t_movieId movieId;
+// 	t_rating rating;
+// 	t_timestamp timestamp;
+// 	char delimiter = ',';
 
-	// ifstream archivo_csv("data/ml-20m/temporal.csv");
-	std::ifstream archivo_csv("../data-ml-latest/ratings_test.csv");
-	getline(archivo_csv,linea); // omitir la linea de cabecera
+// 	// ifstream archivo_csv("data/ml-20m/temporal.csv");
+// 	std::ifstream archivo_csv("../data-ml-latest/ratings.csv");
+// 	getline(archivo_csv,linea); // omitir la linea de cabecera
 
-	// Verificar si el archivo se abrió correctamente
-	if (archivo_csv.is_open()) {
-		while (std::getline(archivo_csv, linea)) {
-			std::istringstream ss(linea);// [1]30seg
-			ss >> userId >>delimiter>> movieId >> delimiter>> rating >>delimiter>> timestamp;
-			// mapa[userId]++;
-			coreStructure.add(userId, movieId, rating, timestamp); //[1] 30seg
-			// cout << userId << " " << movieId << " " << rating << " " << timestamp << endl;
-		}
-		archivo_csv.close();
-	} else {
-		std::cerr << "Error al abrir el archivo CSV" << std::endl;
-	}
-}
+// 	// Verificar si el archivo se abrió correctamente
+// 	if (archivo_csv.is_open()) {
+// 		while (std::getline(archivo_csv, linea)) {
+// 			std::istringstream ss(linea);// [1]30seg
+// 			ss >> userId >>delimiter>> movieId >> delimiter>> rating >>delimiter>> timestamp;
+// 			// mapa[userId]++;
+// 			coreStructure.add(userId, movieId, rating, timestamp); //[1] 30seg
+// 			// cout << userId << " " << movieId << " " << rating << " " << timestamp << endl;
+// 		}
+// 		archivo_csv.close();
+// 	} else {
+// 		std::cerr << "Error al abrir el archivo CSV" << std::endl;
+// 	}
+// }
 void solve(){
 	Timer timer;
 	t_userId user_test_A;
 	t_userId user_test_B;
+	t_movieId movie_test_A;
+	int k;
 	int choice;
 	// to save distances between userX and all users
 	// called in opcion 3 of menu
@@ -46,19 +46,24 @@ void solve(){
 
 	cout << "Menu Principal:" << endl;;
 	cout << "0. Salir" << endl;
-	cout << "1. Imprimir usuarios in printUsers.txt" << endl;
+	cout << "1. Imprimir usuarios in printUsers.txt e imprimir peliculas en movies.txt" << endl;
 	cout << "2. Calculate Euclidean Distance between userA and userB (ids) details" << endl;
 	cout << "3. Distance Between UserX And All by EuclideanDistance" << endl;
 	cout << "4. Common movies between UserA and UserB" << endl;
 	cout << "5. Calculate Manhatan Distance between userA and userB (ids) details" << endl;
 	cout << "6. Calculate Cosine Similarity between userA and userB (ids) details" << endl;
 	cout << "7. Calculate Pearson Correlation between userA and userB (ids) details" << endl;
+	cout << "100. Knn by euclidean Distance" << endl;
+	cout << "700. Query rating by user and movie" << endl;
+	cout << "701. Query movies by user" << endl;
 	cout << endl;
 
-	cout << SOLVE <<"Load Data ..." << endl;
-	timer.startt();
-	readRatingCSV();
-	cout << TAB SOLVE << "Total Time in load rating.csv and STORE : " << timer.getCurrentTime() << endl << endl;
+	cout << SOLVE <<"Begin Constructor ..." << endl;
+	// timer.startt();
+	// readRatingCSV();
+	CoreStructure coreStructure;
+	cout << SOLVE << "End Constructor ..." << endl;
+	// cout << TAB SOLVE << "Total Time in load rating.csv and STORE : " << timer.getCurrentTime() << endl << endl;
 
     while (true) {
         // Get user input
@@ -76,6 +81,11 @@ void solve(){
 				timer.startt();
 				coreStructure.print_users();
 				cout << TAB SOLVE << "Total Time in print users in printUsers.txt  : " << timer.getCurrentTime() << endl << endl;
+
+				cout << SOLVE << "Print Movies in movies.txt ..." << endl;
+				timer.startt();
+				coreStructure.print_movies();
+				cout << TAB SOLVE << "Total Time in print movies in movies.txt  : " << timer.getCurrentTime() << endl << endl;
                 break;
             case 2:
                 /*
@@ -166,6 +176,37 @@ void solve(){
 				coreStructure.details_calculatePearsonCorrelation(user_test_A, user_test_B);
 				cout << TAB SOLVE << "[calculatePearsonCorrelation] Total Time in calculate Pearson Correlation: " << timer.getCurrentTime() << endl << endl;
 				break;
+			case 100:
+				/*
+					* Knn by Euclidean Distance
+				*/
+				cout << SOLVE << "Knn by Euclidean Distance" << endl;
+				cout << "Insert User(valid id)" << endl;
+				cin>>user_test_A;
+				cout << "Insert K (number of neighbors)" << endl;
+				cin>>k;
+				// timer.startt();
+				coreStructure.knn_by_euclideanDistance(user_test_A,k);
+				// cout << TAB SOLVE << "Total Time in knn_by_euclideanDistance: " << timer.getCurrentTime() << endl << endl;
+				break;
+			case 700:
+				/*
+					* Query rating by user and movie
+				*/
+				cout << "Insert User(valid id)" << endl;
+				cin>>user_test_A;
+				cout << "Insert Movie(valid id)" << endl;
+				cin>> movie_test_A;
+				coreStructure.query_rating(user_test_A, movie_test_A);
+				break;
+			case 701:
+				/*
+					* Query movies by user
+				*/
+				cout << "Insert User(valid id)" << endl;
+				cin>>user_test_A;
+				coreStructure.query_movies(user_test_A);
+				break;
             default:
                 cout << "Opción inválida. Intente nuevamente." << endl << endl;
         }
@@ -185,3 +226,10 @@ int main(){
 	solve();
 	return 0;
 }
+
+// 0.7 => 7 decimas
+// 0.07 => 7 centesimas
+// 0.007 => 7 milesimas
+// 0.0007 => 7 diezmilesimas
+// 0.00007 => 7 cienmilesimas
+// 0.000007 => 7 millonésimas
