@@ -8,6 +8,7 @@ class CoreStructure{
 		unordered_map<t_userId, unordered_map<t_movieId,t_rating> > user_movie_rating;
 		unordered_set<t_userId> users;
 		ofstream out_users;
+		ofstream out_knn_euclidean;
 	public:
 		CoreStructure(){}
 		~CoreStructure(){}
@@ -65,6 +66,23 @@ class CoreStructure{
 		*/
 		void distanceBetweenUserXAndAll_by_PearsonCorrelation(t_userId);
 
+		/*
+			K-NN con la distancia euclidiana
+		*/
+		void knn_by_euclideanDistance(t_userId, int);
+
 		void print_users();
+
+		void query_rating(t_userId userId, t_movieId movieId){
+			if(user_movie_rating.find(userId) != user_movie_rating.end()){
+				if(user_movie_rating[userId].find(movieId) != user_movie_rating[userId].end()){
+					cout << "Rating: " << user_movie_rating[userId][movieId] << endl;
+				}else{
+					cout << "Movie not found" << endl;
+				}
+			}else{
+				cout << "User not found" << endl;
+			}
+		}
 };
 #endif // CORESTRUCTURE_H
