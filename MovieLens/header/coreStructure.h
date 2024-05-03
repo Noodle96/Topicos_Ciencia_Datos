@@ -40,6 +40,12 @@ class CoreStructure{
 
 
 		/*
+			Calculo de la correlaccion de pearson entre el usuario A y el usuario B
+		*/
+		void details_calculatePearsonCorrelation(t_userId, t_userId);
+		pair<double,bool> calculatePearsonCorrelation(t_userId, t_userId);
+
+		/*
 			Calculo de la distancia euclidiana entre el Usuario X, contra todos los demas usuarios
 		*/
 		void distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId,vec_id_dist_inter &);
