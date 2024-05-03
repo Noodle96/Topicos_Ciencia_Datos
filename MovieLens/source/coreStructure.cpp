@@ -35,8 +35,16 @@ void CoreStructure::getCommonMovies(t_userId userA, t_userId userB, vector<t_mov
 	}
 }
 
+
+
+
+
 /*
-	Complexity: O(n), where n: number of movies rated by userA
+	================================= BEGIN EUCLIDEAN DISTANCE=================================
+*/
+
+/*
+	Complexity: O(n), where n: number of movies rated by min(userA, userB)
 */
 void CoreStructure::details_calculatEuclideanDistance(t_userId userA, t_userId userB){
 	double euclideanDistance = 0.0;
@@ -91,7 +99,7 @@ void CoreStructure::details_calculatEuclideanDistance(t_userId userA, t_userId u
 }
 
 /*
-	Complexity: O(n), where n: number of movies rated by userA
+	Complexity: O(n), where n: number of movies rated by min(size(userA), size(userB))
 */
 pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_userId userB){
 	double euclideanDistance = 0.0;
@@ -141,6 +149,79 @@ pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_us
 	euclideanDistance = sqrt(euclideanDistance);
 	return {euclideanDistance, interseccion};
 }
+//  ===================================END EUCLIDEAN DISTANCE=================================
+
+
+
+
+/*
+	================================= BEGIN MANHATAN DISTANCE=================================
+*/
+/*
+	Complexity: O(n), where n: number of movies rated by min(size(userA), size(userB))
+	Both
+*/
+void CoreStructure::details_calculateManhatanDistance(t_userId userA, t_userId userB){
+	double manhatanDistance = 0.0;
+	bool interseccion = false;
+	cout << TAB <<DEVELOPING << "Manhatan Distance between userA: " << userA << " and userB: " << userB << endl;
+	// usuarios validos
+	auto hash_movie_rating_userA = user_movie_rating[userA];
+	auto hash_movie_rating_userB = user_movie_rating[userB];
+
+	if(hash_movie_rating_userA.size() == 0 || hash_movie_rating_userB.size() == 0){
+		cout << DEVELOPING <<"UserA or UserB not found" << endl;
+		cout << DEVELOPING <<"Interseccion: " << interseccion << endl;
+		return;
+	}
+	/*
+		* Es eficiente comparar quien tiene menos peliculas recomendadas contra el que tiene mas peliculas
+		* Para ello condicionamos con el criterio anterior
+	*/
+	auto sizeHashUserA = hash_movie_rating_userA.size();
+	auto sizeHashUserB = hash_movie_rating_userB.size();
+	cout << TAB <<DEVELOPING << "SizeHashUserA: " << sizeHashUserA << " SizeHashUserB: " << sizeHashUserB << endl;
+	if( sizeHashUserA<= sizeHashUserB){
+		for(auto it = hash_movie_rating_userA.begin(); it != hash_movie_rating_userA.end(); it++){
+			// cout << it->first << " " << it->second << endl;
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
+			if(it_find != hash_movie_rating_userB.end()){
+				// FOUND
+				interseccion = true;
+				manhatanDistance += abs(it->second - it_find->second);
+			}
+		}
+	}else{
+		// sizeHashUserA<= sizeHashUserB
+		for(auto it = hash_movie_rating_userB.begin(); it != hash_movie_rating_userB.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userA.find(movie);
+			if(it_find != hash_movie_rating_userA.end()){
+				// found
+				interseccion = true;
+				manhatanDistance += abs(it->second - it_find->second);
+			}
+		}
+	}
+	cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Manhatan Distance: " << manhatanDistance << endl;
+	cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+}
+
+
+
+pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_userId userB){
+	return {5.5,false};
+}
+
+//  ===================================END MANHATAN DISTANCE=================================
+
+
+
+
+
+
+
 
 //----------------------------------------one-to-all----------------------------------------
 
@@ -149,8 +230,12 @@ void CoreStructure::distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId use
 		if(user != userX){
 			auto [dis,inters] = calculatEuclideanDistance(userX, user);
 			// distancesOfUserXWithAll.emplace_back(user,dis,inters);
-			distancesOfUserXWithAll.pb({user,{dis,inters}});
-			// cout << TAB <<DEVELOPING << "Euclidean Distance between userX: " << userX << " and user: " << user << " is: " << distance << endl;
+			// si no hay inters
+			if(inters){
+				distancesOfUserXWithAll.pb({user,{dis,inters}});
+				// cout << TAB <<DEVELOPING << "Euclidean Distance between userX: " << userX << " and user: " << user << " is: " << distance << endl;
+			}
+
 		}
 
 	}
