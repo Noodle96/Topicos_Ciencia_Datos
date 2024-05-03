@@ -302,7 +302,7 @@ void CoreStructure::details_calculateManhatanDistance(t_userId userA, t_userId u
 	* Not details
 	* Esta funcion se utilizara dentro de la funcion distanceBetweenUserXAndAll_by_ManhatanDistance
 */
-pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_userId userB){
+pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_userId userB, int &commom_movies){
 	double manhatanDistance = 0.0;
 	bool interseccion = false;
 
@@ -327,6 +327,7 @@ pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_use
 			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
 			if(it_find != hash_movie_rating_userB.end()){
 				// FOUND
+				commom_movies++;
 				interseccion = true;
 				manhatanDistance += abs(it->second - it_find->second);
 			}
@@ -338,6 +339,7 @@ pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_use
 			auto it_find = hash_movie_rating_userA.find(movie);
 			if(it_find != hash_movie_rating_userA.end()){
 				// found
+				commom_movies++;
 				interseccion = true;
 				manhatanDistance += abs(it->second - it_find->second);
 			}
@@ -430,7 +432,7 @@ void CoreStructure::details_calculateCosineSimilarity(t_userId userA, t_userId u
 	}
 }
 
-pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_userId userB){
+pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_userId userB, int &commom_movies){
 	int n = 0;
 	double cosinoSimilaridad = 0.0;
 	double productoPunto = 0.0;
@@ -456,6 +458,7 @@ pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_use
 			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
 			if(it_find != hash_movie_rating_userB.end()){
 				// FOUND
+				commom_movies++;
 				interseccion = true;
 				n++;
 				productoPunto += (it->second * it_find->second);
@@ -469,6 +472,7 @@ pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_use
 			auto it_find = hash_movie_rating_userA.find(movie);
 			if(it_find != hash_movie_rating_userA.end()){
 				// found
+				commom_movies++;
 				interseccion = true;
 				n++;
 				productoPunto += (it->second * it_find->second);
@@ -580,7 +584,7 @@ void CoreStructure::details_calculatePearsonCorrelation(t_userId userA, t_userId
 		}
 	}
 }
-pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_userId userB){
+pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_userId userB, int & commom_movies){
 	double pearsonCorrelation = 0.0;
 	double n = 0;
 	double xy = 0.0;
@@ -608,6 +612,7 @@ pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_u
 			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
 			if(it_find != hash_movie_rating_userB.end()){
 				// FOUND
+				commom_movies++;
 				interseccion = true;
 				n++;
 				xy += (it->second * it_find->second);
@@ -622,6 +627,7 @@ pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_u
 			auto movie = it->first;
 			auto it_find = hash_movie_rating_userA.find(movie);
 			if(it_find != hash_movie_rating_userA.end()){
+				commom_movies++;
 				interseccion = true;
 				n++;
 				xy += (it->second * it_find->second);
@@ -677,10 +683,12 @@ void CoreStructure::distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId use
 }
 
 void CoreStructure::distanceBetweenUserXAndAll_by_ManhatanDistance(t_userId userX, vec_id_dist_inter &vec){
+	int common_movies;
 	for(auto user: users){
 		if(user != userX){
-			auto [dis,inters] = calculateManhatanDistance(userX, user);
-			if(inters){
+			common_movies = 0;
+			auto [dis,inters] = calculateManhatanDistance(userX, user,common_movies);
+			if(inters && common_movies >= UMBRAL_MINIMUM_PELICULAS_COMMON){
 				vec.pb({user,{dis,inters}});
 			}
 		}
@@ -692,10 +700,12 @@ void CoreStructure::distanceBetweenUserXAndAll_by_ManhatanDistance(t_userId user
 }
 
 void CoreStructure::distanceBetweenUserXAndAll_by_CosineSimilarity(t_userId userX, vec_id_dist_inter &vec){
+	int common_movies;
 	for(auto user: users){
 		if(user != userX){
-			auto [dis,inters] = calculateCosineSimilarity(userX, user);
-			if(inters){
+			common_movies = 0;
+			auto [dis,inters] = calculateCosineSimilarity(userX, user, common_movies);
+			if(inters && common_movies >= UMBRAL_MINIMUM_PELICULAS_COMMON){
 				vec.pb({user,{dis,inters}});
 			}
 		}
@@ -707,10 +717,12 @@ void CoreStructure::distanceBetweenUserXAndAll_by_CosineSimilarity(t_userId user
 }
 
 void CoreStructure::distanceBetweenUserXAndAll_by_PearsonCorrelation(t_userId userX, vec_id_dist_inter &vec){
+	int common_movies;
 	for(auto user: users){
 		if(user != userX){
-			auto [dis,inters] = calculatePearsonCorrelation(userX, user);
-			if(inters){
+			common_movies = 0;
+			auto [dis,inters] = calculatePearsonCorrelation(userX, user, common_movies);
+			if(inters && common_movies >= UMBRAL_MINIMUM_PELICULAS_COMMON){
 				vec.pb({user,{dis,inters}});
 			}
 		}
@@ -771,6 +783,7 @@ void CoreStructure::knn_by_euclideanDistance(t_userId userX, int n){
 
 	// MOSTRAR LO SIGUIENTE:
 	// 1.- Guardar en el archivo ../out/knn_euclidean.txt [Usuario, Distancia, Interseccion]
+	ofstream out_knn_euclidean;
 	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_euclidean.txt" << endl;
 	out_knn_euclidean.open("../out/knn_euclidean.txt");
 	out_knn_euclidean << "User-Distance-Interseccion" << endl;
@@ -854,6 +867,115 @@ void CoreStructure::knn_by_euclideanDistance(t_userId userX, int n){
 	out_knn_euclidean_recomendation.close();
 	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_euclidean_[recomendation].txt" << endl;
 }
+
+
+void CoreStructure::knn_by_manhatanDistance(t_userId userX, int n){
+	vec_id_dist_inter distancesOfUserXWithAll;
+	Timer timer;
+	timer.startt();
+	distanceBetweenUserXAndAll_by_ManhatanDistance(userX, distancesOfUserXWithAll);
+	cout << TAB << " [CORESTRUCTURE]" << "Total Time in distanceBetweenUserXAndAll_by_ManhatanDistance: " << timer.getCurrentTime() << endl;
+	cout << TAB << " [CORESTRUCTURE]" << "Total all users with restrictions(DISJOINT, UMBRAL_MINIMUM_PELICULAS_COMMON): " << distancesOfUserXWithAll.size() << endl;
+	auto sizeVector = distancesOfUserXWithAll.size();
+	if(sizeVector == 0){
+		cout << TAB <<DEVELOPING << "distancesOfUserXWithAll is equal 0" << endl;
+		return;
+	}
+
+	vector<t_userId> kNN;
+	ofstream out_knn_manhatan;
+	// MOSTRAR LO SIGUIENTE:
+	// 1.- Guardar en el archivo ../out/knn_manhatan.txt [Usuario, Distancia, Interseccion]
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_manhatan.txt" << endl;
+	out_knn_manhatan.open("../out/knn_manhatan.txt");
+	out_knn_manhatan << "User-Distance-Interseccion" << endl;
+	if(n >= sizeVector){
+		// cout << TAB <<DEVELOPING << "K-NN with Euclidean Distance between userX: " << userX << " and all users" << endl;
+		// cout << TAB <<DEVELOPING << "n: " << n << " is greater than the number of users: " << sizeVector << endl;
+		// cout << TAB <<DEVELOPING << "The result will be the same as the number of users" << endl;
+		// n = sizeVector;
+		// mostrat todos los usuarios
+		for(auto x: distancesOfUserXWithAll){
+			// Para analizar despues
+			kNN.pb(x.first);
+			// cout << TAB <<DEVELOPING << "User: " << x.first << " Distance: " << x.second.first << " Interseccion: " << x.second.second << endl;
+			out_knn_manhatan << fixed << setprecision(10) << x.first << " " << x.second.first << " " << x.second.second << endl;
+		}
+	}else{
+		// mostrar solo los n primeros
+		for(int e = 0 ; e < n; e++){
+			// Para analizar despues
+			kNN.pb(distancesOfUserXWithAll[e].first);
+			out_knn_manhatan << fixed << setprecision(10) << distancesOfUserXWithAll[e].first << " " << distancesOfUserXWithAll[e].second.first << " " << distancesOfUserXWithAll[e].second.second << endl;
+		}
+	}
+	out_knn_manhatan.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_manhatan.txt" << endl;
+
+	/*
+		? 2.- Por cada Usuario, mostrar las peliculas y el puntaje que le da
+		?     ordenados por rating.
+		?     en el archivo ../out/knn_manhatan_[user-peliculas-puntaje].txt
+	*/
+
+	unordered_map<t_userId, vector<pair<t_movieId, t_rating>> > recommender;
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_manhatan_[user-peliculas_puntaje].txt" << endl;
+	ofstream out_knn_manhatan_user_peliculas_puntaje;
+	out_knn_manhatan_user_peliculas_puntaje.open("../out/knn_manhatan_[user-peliculas_puntaje].txt");
+
+	for(auto x: kNN){
+		auto hash_movie_rating_userX = user_movie_rating[x];
+		out_knn_manhatan_user_peliculas_puntaje << "User: " << x << endl;
+		out_knn_manhatan_user_peliculas_puntaje << "Peliculas-Puntaje (" << hash_movie_rating_userX.size()<< " rows founded)"<<  endl;
+		for(auto it = hash_movie_rating_userX.begin(); it != hash_movie_rating_userX.end(); it++){
+			// auto movieName = movies[it->first].first;
+			// out_knn_manhatan_user_peliculas_puntaje << "[" <<it->first << "]-[" << movieName<< "] => "<<  it->second << endl;
+			out_knn_manhatan_user_peliculas_puntaje << it->first << " " << it->second << endl;
+
+			// *VALIDANDO EL SEGUNDO UMBRAL
+			if(it->second >= UMBRAL_MINIMUM_RATING){
+				recommender[x].pb({it->first, it->second});
+			}
+		}
+		out_knn_manhatan_user_peliculas_puntaje << endl;
+	}
+	out_knn_manhatan_user_peliculas_puntaje.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_manhatan_[user-peliculas_puntaje].txt" << endl;
+
+
+	/*
+		? 3.- Finalemte mostrar las peliculas que se recomendaran al usuario X, en base
+		?     al umbral de UMBRAL_MINIMUM_RATING y UMBRAL_MINIMUM_PELICULAS_COMMON(ya filtrado
+		?     con anterioridad)
+		?	 en el archivo ../out/knn_manhatan_[recomendation].txt
+	*/
+	for(auto x:kNN){
+		sort(recommender[x].begin(), recommender[x].end(), [](const auto &a, const auto &b){
+			return a.second > b.second;
+		});
+	}
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_manhatan_[recomendation].txt" << endl;
+	ofstream out_knn_manhatan_recomendation;
+	out_knn_manhatan_recomendation.open("../out/knn_manhatan_[recomendation].txt");
+	for(auto x: kNN){
+		out_knn_manhatan_recomendation << "User: " << x << endl;
+		out_knn_manhatan_recomendation << "Recomendation (" << recommender[x].size() << " rows)" << endl;
+		for(auto it: recommender[x]){
+			// auto movieName = movies[it.first].first;
+			// out_knn_manhatan_recomendation << "[" << it.first << "]-[" << movieName << "] => " << it.second << endl;
+			out_knn_manhatan_recomendation << it.first << " " << it.second << endl;
+		}
+		out_knn_manhatan_recomendation << endl;
+	}
+	out_knn_manhatan_recomendation.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_manhatan_[recomendation].txt" << endl;
+}
+
+void CoreStructure::knn_by_similaridad_cosenos(t_userId userX, int n){
+	;
+}
+
+
 //  ~=========================================END  KNN==================================
 
 

@@ -9,7 +9,7 @@ class CoreStructure{
 		unordered_set<t_userId> users;
 		unordered_map<t_movieId, pair<t_movieName, vector<t_movieGenre>> > movies;
 		ofstream out_users,out_movies;
-		ofstream out_knn_euclidean;
+		// ofstream out_knn_euclidean, out_knn_manhatan, out_knn_cosine, out_knn_pearson;
 	public:
 		CoreStructure();
 		~CoreStructure(){}
@@ -31,21 +31,21 @@ class CoreStructure{
 			!Calculo de la distancia de manhatan entre el usuario A y el usuario B
 		*/
 		void details_calculateManhatanDistance(t_userId, t_userId);
-		pair<double,bool> calculateManhatanDistance(t_userId, t_userId);
+		pair<double,bool> calculateManhatanDistance(t_userId, t_userId, int &);
 
 
 		/*
 			!Calculo de la similaridad de coseno entre el usuario A y el usuario B
 		*/
 		void details_calculateCosineSimilarity(t_userId, t_userId);
-		pair<double,bool> calculateCosineSimilarity(t_userId, t_userId);
+		pair<double,bool> calculateCosineSimilarity(t_userId, t_userId, int &);
 
 
 		/*
 			!Calculo de la correlaccion de pearson entre el usuario A y el usuario B
 		*/
 		void details_calculatePearsonCorrelation(t_userId, t_userId);
-		pair<double,bool> calculatePearsonCorrelation(t_userId, t_userId);
+		pair<double,bool> calculatePearsonCorrelation(t_userId, t_userId, int &);
 
 		/*
 			!Calculo de la distancia euclidiana entre el Usuario X, contra todos los demas usuarios
@@ -71,6 +71,21 @@ class CoreStructure{
 			!K-NN con la distancia euclidiana
 		*/
 		void knn_by_euclideanDistance(t_userId, int);
+
+		/*
+			!K-NN con la distancia de manhatan
+		*/
+		void knn_by_manhatanDistance(t_userId, int);
+
+		/*
+			!K-NN con la similaridad de cosenos
+		*/
+		void knn_by_similaridad_cosenos(t_userId, int);
+
+		/*
+			!K-NN con la correlacio  de pearson
+		*/
+		void knn_by_correlacion_pearson(t_userId, int);
 
 		/*
 			!Guardar los usuarios en el archivo printUsers.txt

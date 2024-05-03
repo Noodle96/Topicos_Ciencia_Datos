@@ -54,6 +54,7 @@ void solve(){
 	cout << "6. Calculate Cosine Similarity between userA and userB (ids) details" << endl;
 	cout << "7. Calculate Pearson Correlation between userA and userB (ids) details" << endl;
 	cout << "100. Knn by euclidean Distance" << endl;
+	cout << "101. Knn by manhatan Distance" << endl;
 	cout << "700. Query rating by user and movie" << endl;
 	cout << "701. Query movies by user" << endl;
 	cout << endl;
@@ -188,6 +189,18 @@ void solve(){
 				// timer.startt();
 				coreStructure.knn_by_euclideanDistance(user_test_A,k);
 				// cout << TAB SOLVE << "Total Time in knn_by_euclideanDistance: " << timer.getCurrentTime() << endl << endl;
+				break;
+			case 101:
+				/*
+					* Knn by Manhatan Distance
+				*/
+				cout << SOLVE << "Knn by Manhatan Distance" << endl;
+				cout << "Insert User(valid id)" << endl;
+				cin>>user_test_A;
+				cout << "Insert K (number of neighbors)" << endl;
+				cin>>k;
+				// timer.startt();
+				coreStructure.knn_by_manhatanDistance(user_test_A,k);
 				break;
 			case 700:
 				/*
