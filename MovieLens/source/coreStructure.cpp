@@ -329,9 +329,15 @@ void CoreStructure::details_calculateCosineSimilarity(t_userId userA, t_userId u
 	}else{
 		longitudX = sqrt(longitudX);
 		longitudY = sqrt(longitudY);
-		cosinoSimilaridad = productoPunto / (longitudX * longitudY);
-		cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Cosino Similaridad: " << cosinoSimilaridad << endl;
-		cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+		double denominador = (longitudX * longitudY);
+		if(denominador == 0){
+			cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Cosino Similaridad: " << 0 << endl;
+			cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+		}else{
+			cosinoSimilaridad = productoPunto / denominador;
+			cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Cosino Similaridad: " << cosinoSimilaridad << endl;
+			cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+		}
 	}
 }
 
@@ -387,11 +393,15 @@ pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_use
 	}else{
 		longitudX = sqrt(longitudX);
 		longitudY = sqrt(longitudY);
-		cosinoSimilaridad = productoPunto / (longitudX * longitudY);
-		return {cosinoSimilaridad, interseccion};
+		double denominador = (longitudX * longitudY);
+		if(denominador == 0){
+			return {0.0, interseccion};
+		}else{
+			cosinoSimilaridad = productoPunto / denominador;
+			return {cosinoSimilaridad, interseccion};
+		}
 	}
 }
-
 //  ===================================END SIMILARIDAD COSENO=================================
 
 
@@ -468,9 +478,17 @@ void CoreStructure::details_calculatePearsonCorrelation(t_userId userA, t_userId
 		cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Pearson Correlation: " << 0 << endl;
 		cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
 	}else{
-		pearsonCorrelation = (xy - (x * y) / n) / (sqrt(x2 - pow(x, 2) / n) * sqrt(y2 - pow(y, 2) / n));
-		cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Pearson Correlation: " << pearsonCorrelation << endl;
-		cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+		double denominador = (sqrt(x2 - pow(x, 2) / n) * sqrt(y2 - pow(y, 2) / n));
+		if(denominador == 0){
+			cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Pearson Correlation: " << 0 << endl;
+			cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+			return;
+		}else{
+			// cout << "xy: " << xy << " x: " << x << " y: " << y << " x2: " << x2 << " y2: " << y2 << " n: " << n << endl; 
+			pearsonCorrelation = (xy - (x * y) / n) / denominador;
+			cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Pearson Correlation: " << pearsonCorrelation << endl;
+			cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+		}
 	}
 }
 pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_userId userB){
@@ -528,8 +546,13 @@ pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_u
 	if(n == 0){
 		return {0.0, interseccion};
 	}else{
-		pearsonCorrelation = (xy - (x * y) / n) / (sqrt(x2 - pow(x, 2) / n) * sqrt(y2 - pow(y, 2) / n));
-		return {pearsonCorrelation, interseccion};
+		double denominador = (sqrt(x2 - pow(x, 2) / n) * sqrt(y2 - pow(y, 2) / n));
+		if(denominador == 0){
+			return {0.0, interseccion};
+		}else{
+			pearsonCorrelation = (xy - (x * y) / n) / denominador;
+			return {pearsonCorrelation, interseccion};
+		}
 	}
 }
 
@@ -561,16 +584,49 @@ void CoreStructure::distanceBetweenUserXAndAll_by_EuclideanDistance(t_userId use
 	});
 }
 
-void CoreStructure::distanceBetweenUserXAndAll_by_ManhatanDistance(t_userId userX){
-	;
+void CoreStructure::distanceBetweenUserXAndAll_by_ManhatanDistance(t_userId userX, vec_id_dist_inter &vec){
+	for(auto user: users){
+		if(user != userX){
+			auto [dis,inters] = calculateManhatanDistance(userX, user);
+			if(inters){
+				vec.pb({user,{dis,inters}});
+			}
+		}
+	}
+	sort(vec.begin(), vec.end(), [](const auto &a, const auto &b){
+		// ordenar  por distancias que se encuentra en a.second.first
+		return a.second.first < b.second.first;
+	});
 }
 
-void CoreStructure::distanceBetweenUserXAndAll_by_CosineSimilarity(t_userId userX){
-	;
+void CoreStructure::distanceBetweenUserXAndAll_by_CosineSimilarity(t_userId userX, vec_id_dist_inter &vec){
+	for(auto user: users){
+		if(user != userX){
+			auto [dis,inters] = calculateCosineSimilarity(userX, user);
+			if(inters){
+				vec.pb({user,{dis,inters}});
+			}
+		}
+	}
+	sort(vec.begin(), vec.end(), [](const auto &a, const auto &b){
+		// ordenar  por distancias que se encuentra en a.second.first
+		return a.second.first < b.second.first;
+	});
 }
 
-void CoreStructure::distanceBetweenUserXAndAll_by_PearsonCorrelation(t_userId userX){
-	;
+void CoreStructure::distanceBetweenUserXAndAll_by_PearsonCorrelation(t_userId userX, vec_id_dist_inter &vec){
+	for(auto user: users){
+		if(user != userX){
+			auto [dis,inters] = calculatePearsonCorrelation(userX, user);
+			if(inters){
+				vec.pb({user,{dis,inters}});
+			}
+		}
+	}
+	sort(vec.begin(), vec.end(), [](const auto &a, const auto &b){
+		// ordenar  por distancias que se encuentra en a.second.first
+		return a.second.first < b.second.first;
+	});
 }
 //--------------------------------------------------------------------------------------------
 
@@ -584,3 +640,46 @@ void CoreStructure::print_users(){
 	out_users << "Total users: " << users.size() << endl;
 }
 //--------------------------------------------------------------------------------------------
+
+
+
+
+/*
+	================================= BEGIN KNN=================================
+*/
+
+void CoreStructure::knn_by_euclideanDistance(t_userId userX, int n){
+	vec_id_dist_inter distancesOfUserXWithAll;
+	Timer timer;
+	timer.startt();
+	distanceBetweenUserXAndAll_by_EuclideanDistance(userX, distancesOfUserXWithAll);
+	cout << TAB << " [CORESTRUCTURE]" << "Total Time in distanceBetweenUserXAndAll_by_EuclideanDistance: " << timer.getCurrentTime() << endl;
+	cout << TAB << " [CORESTRUCTURE]" << "Total all users: " << distancesOfUserXWithAll.size() << endl;
+	// cout << TAB <<DEVELOPING << "K-NN with Euclidean Distance between userX: " << userX << " and all users" << endl;
+	auto sizeVector = distancesOfUserXWithAll.size();
+	if(sizeVector == 0){
+		cout << TAB <<DEVELOPING << "distancesOfUserXWithAll is equal 0" << endl;
+		return;
+	}
+	out_knn_euclidean.open("../out/knn_euclidean.txt");
+	out_knn_euclidean << "User-Distance-Interseccion" << endl;
+	if(n >= sizeVector){
+		// cout << TAB <<DEVELOPING << "K-NN with Euclidean Distance between userX: " << userX << " and all users" << endl;
+		// cout << TAB <<DEVELOPING << "n: " << n << " is greater than the number of users: " << sizeVector << endl;
+		// cout << TAB <<DEVELOPING << "The result will be the same as the number of users" << endl;
+		// n = sizeVector;
+		// mostrat todos los usuarios
+		for(auto x: distancesOfUserXWithAll){
+			// cout << TAB <<DEVELOPING << "User: " << x.first << " Distance: " << x.second.first << " Interseccion: " << x.second.second << endl;
+			out_knn_euclidean << fixed << setprecision(10) << x.first << " " << x.second.first << " " << x.second.second << endl;
+		}
+	}else{
+		// mostrar solo los n primeros
+		for(int e = 0 ; e < n; e++){
+			out_knn_euclidean << fixed << setprecision(10) << distancesOfUserXWithAll[e].first << " " << distancesOfUserXWithAll[e].second.first << " " << distancesOfUserXWithAll[e].second.second << endl;
+		}
+	}
+	out_knn_euclidean.close();
+
+}
+//  ===================================END  KNN=================================
