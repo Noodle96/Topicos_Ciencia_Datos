@@ -52,6 +52,7 @@ void solve(){
 	cout << "4. Common movies between UserA and UserB" << endl;
 	cout << "5. Calculate Manhatan Distance between userA and userB (ids) details" << endl;
 	cout << "6. Calculate Cosine Similarity between userA and userB (ids) details" << endl;
+	cout << "7. Calculate Pearson Correlation between userA and userB (ids) details" << endl;
 	cout << endl;
 
 	cout << SOLVE <<"Load Data ..." << endl;
@@ -152,6 +153,18 @@ void solve(){
 				timer.startt();
 				coreStructure.details_calculateCosineSimilarity(user_test_A, user_test_B);
 				cout << TAB SOLVE << "[calculateCosineSimilarity] Total Time in calculate Cosine Similarity: " << timer.getCurrentTime() << endl << endl;
+				break;
+			case 7:
+				/*
+					* Calcular la correlaccion de pearson entre dos usuarios (id_userA, id_userB)
+				*/
+				cout << "Insert users (valid ids)" << endl;
+				cin>>user_test_A>>user_test_B;
+				// // Usuarios validos
+				cout << SOLVE<< "Call calculatePearsonCorrelation" << endl;
+				timer.startt();
+				coreStructure.details_calculatePearsonCorrelation(user_test_A, user_test_B);
+				cout << TAB SOLVE << "[calculatePearsonCorrelation] Total Time in calculate Pearson Correlation: " << timer.getCurrentTime() << endl << endl;
 				break;
             default:
                 cout << "Opción inválida. Intente nuevamente." << endl << endl;

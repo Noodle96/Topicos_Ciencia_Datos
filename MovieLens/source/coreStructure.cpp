@@ -474,7 +474,63 @@ void CoreStructure::details_calculatePearsonCorrelation(t_userId userA, t_userId
 	}
 }
 pair<double,bool> CoreStructure::calculatePearsonCorrelation(t_userId userA, t_userId userB){
-	return {4.5, false};
+	double pearsonCorrelation = 0.0;
+	double n = 0;
+	double xy = 0.0;
+	double x = 0.0;
+	double y = 0.0;
+	double x2 = 0.0;
+	double y2 = 0.0;
+	bool interseccion = false;
+
+	auto hash_movie_rating_userA = user_movie_rating[userA];
+	auto hash_movie_rating_userB = user_movie_rating[userB];
+
+	if(hash_movie_rating_userA.size() == 0 || hash_movie_rating_userB.size() == 0){
+		return{0.0,false};
+	}
+	/*
+		* Es eficiente comparar quien tiene menos peliculas recomendadas contra el que tiene mas peliculas
+		* Para ello condicionamos con el criterio anterior
+	*/
+	auto sizeHashUserA = hash_movie_rating_userA.size();
+	auto sizeHashUserB = hash_movie_rating_userB.size();
+	if( sizeHashUserA<= sizeHashUserB){
+		for(auto it = hash_movie_rating_userA.begin(); it != hash_movie_rating_userA.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
+			if(it_find != hash_movie_rating_userB.end()){
+				// FOUND
+				interseccion = true;
+				n++;
+				xy += (it->second * it_find->second);
+				x += it->second;
+				y += it_find->second;
+				x2 += pow(it->second, 2);
+				y2 += pow(it_find->second, 2);
+			}
+		}
+	}else{
+		for(auto it = hash_movie_rating_userB.begin(); it != hash_movie_rating_userB.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userA.find(movie);
+			if(it_find != hash_movie_rating_userA.end()){
+				interseccion = true;
+				n++;
+				xy += (it->second * it_find->second);
+				x += it->second;
+				y += it_find->second;
+				x2 += pow(it->second, 2);
+				y2 += pow(it_find->second, 2);
+			}
+		}
+	}
+	if(n == 0){
+		return {0.0, interseccion};
+	}else{
+		pearsonCorrelation = (xy - (x * y) / n) / (sqrt(x2 - pow(x, 2) / n) * sqrt(y2 - pow(y, 2) / n));
+		return {pearsonCorrelation, interseccion};
+	}
 }
 
 //  ===================================END SIMILARIDAD COSENO=================================
