@@ -154,6 +154,7 @@ pair<double, bool> CoreStructure::calculatEuclideanDistance(t_userId userA, t_us
 
 
 
+
 /*
 	================================= BEGIN MANHATAN DISTANCE=================================
 */
@@ -260,6 +261,76 @@ pair<double,bool> CoreStructure::calculateManhatanDistance(t_userId userA, t_use
 
 
 
+
+
+/*
+	================================= BEGIN SIMILARIDAD COSENO=================================
+*/
+/*
+	Calculo de la similaridad de coseno entre el usuario A y el usuario B
+*/
+void CoreStructure::details_calculateCosineSimilarity(t_userId userA, t_userId userB){
+	double cosinoSimilaridad = 0.0;
+	double productoPunto = 0.0;
+	double longitudX = 0.0;
+	double longitudY = 0.0;
+	bool interseccion = false;
+
+	cout << TAB <<DEVELOPING << "Cosino Similaridad between userA: " << userA << " and userB: " << userB << endl;
+	// usuarios validos
+	auto hash_movie_rating_userA = user_movie_rating[userA];
+	auto hash_movie_rating_userB = user_movie_rating[userB];
+
+	if(hash_movie_rating_userA.size() == 0 || hash_movie_rating_userB.size() == 0){
+		cout << DEVELOPING <<"UserA or UserB not found" << endl;
+		cout << DEVELOPING <<"Interseccion: " << interseccion << endl;
+		return;
+	}
+	/*
+		* Es eficiente comparar quien tiene menos peliculas recomendadas contra el que tiene mas peliculas
+		* Para ello condicionamos con el criterio anterior
+	*/
+	auto sizeHashUserA = hash_movie_rating_userA.size();
+	auto sizeHashUserB = hash_movie_rating_userB.size();
+	cout << TAB <<DEVELOPING << "SizeHashUserA: " << sizeHashUserA << " SizeHashUserB: " << sizeHashUserB << endl;
+	if( sizeHashUserA<= sizeHashUserB){
+		for(auto it = hash_movie_rating_userA.begin(); it != hash_movie_rating_userA.end(); it++){
+			// cout << it->first << " " << it->second << endl;
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
+			if(it_find != hash_movie_rating_userB.end()){
+				// FOUND
+				interseccion = true;
+				productoPunto += (it->second * it_find->second);
+				longitudX += pow(it->second, 2);
+				longitudY += pow(it_find->second, 2);
+			}
+		}
+	}else{
+		// sizeHashUserA<= sizeHashUserB
+		for(auto it = hash_movie_rating_userB.begin(); it != hash_movie_rating_userB.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userA.find(movie);
+			if(it_find != hash_movie_rating_userA.end()){
+				// found
+				interseccion = true;
+				productoPunto += (it->second * it_find->second);
+				longitudX += pow(it->second, 2);
+				longitudY += pow(it_find->second, 2);
+			}
+		}
+	}
+	longitudX = sqrt(longitudX);
+	longitudY = sqrt(longitudY);
+	cosinoSimilaridad = productoPunto / (longitudX * longitudY);
+	cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Cosino Similaridad: " << cosinoSimilaridad << endl;
+	cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
+}
+pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_userId userB){
+	return {4.5,true};
+}
+
+//  ===================================END SIMILARIDAD COSENO=================================
 
 
 

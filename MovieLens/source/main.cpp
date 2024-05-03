@@ -47,9 +47,11 @@ void solve(){
 	cout << "Menu Principal:" << endl;;
 	cout << "0. Salir" << endl;
 	cout << "1. Imprimir usuarios in printUsers.txt" << endl;
-	cout << "2. Calculate Euclidean Distance between userA and userB (ids)" << endl;
+	cout << "2. Calculate Euclidean Distance between userA and userB (ids) details" << endl;
 	cout << "3. Distance Between UserX And All by EuclideanDistance" << endl;
 	cout << "4. Common movies between UserA and UserB" << endl;
+	cout << "5. Calculate Manhatan Distance between userA and userB (ids) details" << endl;
+	cout << "6. Calculate Cosine Similarity between userA and userB (ids) details" << endl;
 	cout << endl;
 
 	cout << SOLVE <<"Load Data ..." << endl;
@@ -126,6 +128,30 @@ void solve(){
 				}
 				out_common_movies_userA_userB.close();
 				cout << TAB SOLVE << "End save in ../out/commonMovies_userA_userB.txt" << endl << endl;
+				break;
+			case 5:
+				/*
+					* Calcular la distancia de manhatan entre dos usuarios (id_userA, id_userB)
+				*/
+				cout << "Insert users (valid ids)" << endl;
+				cin>>user_test_A>>user_test_B;
+				// // Usuarios validos
+				cout << SOLVE<< "Call calculateManhatanDistance" << endl;
+				timer.startt();
+				coreStructure.details_calculateManhatanDistance(user_test_A, user_test_B);
+				cout << TAB SOLVE << "[calculateManhatanDistance] Total Time in calculate Manhatan Distance: " << timer.getCurrentTime() << endl << endl;
+				break;
+			case 6:
+				/*
+					* Calcular la similaridad de coseno entre dos usuarios (id_userA, id_userB)
+				*/
+				cout << "Insert users (valid ids)" << endl;
+				cin>>user_test_A>>user_test_B;
+				// // Usuarios validos
+				cout << SOLVE<< "Call calculateCosineSimilarity" << endl;
+				timer.startt();
+				coreStructure.details_calculateCosineSimilarity(user_test_A, user_test_B);
+				cout << TAB SOLVE << "[calculateCosineSimilarity] Total Time in calculate Cosine Similarity: " << timer.getCurrentTime() << endl << endl;
 				break;
             default:
                 cout << "Opción inválida. Intente nuevamente." << endl << endl;
