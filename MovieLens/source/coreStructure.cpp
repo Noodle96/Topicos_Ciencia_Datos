@@ -326,8 +326,55 @@ void CoreStructure::details_calculateCosineSimilarity(t_userId userA, t_userId u
 	cout << TAB <<DEVELOPING<< fixed << setprecision(10)<<"Cosino Similaridad: " << cosinoSimilaridad << endl;
 	cout << TAB DEVELOPING << "Interseccion: " << interseccion << endl;
 }
+
 pair<double,bool> CoreStructure::calculateCosineSimilarity(t_userId userA, t_userId userB){
-	return {4.5,true};
+	double cosinoSimilaridad = 0.0;
+	double productoPunto = 0.0;
+	double longitudX = 0.0;
+	double longitudY = 0.0;
+	bool interseccion = false;
+
+	auto hash_movie_rating_userA = user_movie_rating[userA];
+	auto hash_movie_rating_userB = user_movie_rating[userB];
+
+	if(hash_movie_rating_userA.size() == 0 || hash_movie_rating_userB.size() == 0){
+		return{0.0, false};
+	}
+	/*
+		* Es eficiente comparar quien tiene menos peliculas recomendadas contra el que tiene mas peliculas
+		* Para ello condicionamos con el criterio anterior
+	*/
+	auto sizeHashUserA = hash_movie_rating_userA.size();
+	auto sizeHashUserB = hash_movie_rating_userB.size();
+	if( sizeHashUserA<= sizeHashUserB){
+		for(auto it = hash_movie_rating_userA.begin(); it != hash_movie_rating_userA.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userB.find(movie); //O(1)
+			if(it_find != hash_movie_rating_userB.end()){
+				// FOUND
+				interseccion = true;
+				productoPunto += (it->second * it_find->second);
+				longitudX += pow(it->second, 2);
+				longitudY += pow(it_find->second, 2);
+			}
+		}
+	}else{
+		for(auto it = hash_movie_rating_userB.begin(); it != hash_movie_rating_userB.end(); it++){
+			auto movie = it->first;
+			auto it_find = hash_movie_rating_userA.find(movie);
+			if(it_find != hash_movie_rating_userA.end()){
+				// found
+				interseccion = true;
+				productoPunto += (it->second * it_find->second);
+				longitudX += pow(it->second, 2);
+				longitudY += pow(it_find->second, 2);
+			}
+		}
+	}
+	longitudX = sqrt(longitudX);
+	longitudY = sqrt(longitudY);
+	cosinoSimilaridad = productoPunto / (longitudX * longitudY);
+	return {cosinoSimilaridad, interseccion};
 }
 
 //  ===================================END SIMILARIDAD COSENO=================================
