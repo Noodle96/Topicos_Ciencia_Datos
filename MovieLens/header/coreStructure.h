@@ -25,10 +25,19 @@ class CoreStructure{
 		pair<double, bool> calculatEuclideanDistance(t_userId, t_userId);
 
 
+		/*
+			Calculo de la distancia de manhatan entre el usuario A y el usuario B
+		*/
+		void details_calculateManhatanDistance(t_userId, t_userId);
+		pair<double,bool> calculateManhatanDistance(t_userId, t_userId);
 
 
+		/*
+			Calculo de la similaridad de coseno entre el usuario A y el usuario B
+		*/
+		void details_calculateCosineSimilarity(t_userId, t_userId);
+		pair<double,bool> calculateCosineSimilarity(t_userId, t_userId);
 
-		
 
 		/*
 			Calculo de la distancia euclidiana entre el Usuario X, contra todos los demas usuarios
@@ -49,7 +58,6 @@ class CoreStructure{
 			Calculo de la correlaccion de pearson entre el Usuario X, contra todos los demas usuarios
 		*/
 		void distanceBetweenUserXAndAll_by_PearsonCorrelation(t_userId);
-
 
 		void print_users();
 };
