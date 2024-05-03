@@ -53,8 +53,10 @@ void solve(){
 	cout << "5. Calculate Manhatan Distance between userA and userB (ids) details" << endl;
 	cout << "6. Calculate Cosine Similarity between userA and userB (ids) details" << endl;
 	cout << "7. Calculate Pearson Correlation between userA and userB (ids) details" << endl;
+	cout << "8. Distance between userX and all by cosino similarity" << endl;
 	cout << "100. Knn by euclidean Distance" << endl;
 	cout << "101. Knn by manhatan Distance" << endl;
+	cout << "102. Knn by cosine Similarity" << endl;
 	cout << "700. Query rating by user and movie" << endl;
 	cout << "701. Query movies by user" << endl;
 	cout << endl;
@@ -177,6 +179,27 @@ void solve(){
 				coreStructure.details_calculatePearsonCorrelation(user_test_A, user_test_B);
 				cout << TAB SOLVE << "[calculatePearsonCorrelation] Total Time in calculate Pearson Correlation: " << timer.getCurrentTime() << endl << endl;
 				break;
+			case 8:
+				/*
+					* Calcular la similaridad de coseno entre el Usuario X, contra todos los demas usuarios
+				*/
+				cout << "Insert User (id valid)" << endl;
+				cin>>user_test_A;
+				cout << SOLVE << "Call distanceBetweenUserXAndAll_by_CosineSimilarity" << endl;
+				
+				timer.reset();
+				distancesOfUserXWithAll.clear();
+				coreStructure.distanceBetweenUserXAndAll_by_CosineSimilarity(user_test_A,distancesOfUserXWithAll);
+				cout << TAB SOLVE << "total time in distanceBetweenUserXAndAll_by_CosineSimilarity: " << timer.getCurrentTime() << endl << endl;
+
+				cout << TAB SOLVE << "Begin save in ../out/distanceBetweenUserXAndAll_by_CosineSimilarity.txt " << endl;
+				out_distance_userX_all.open("../out/distanceBetweenUserXAndAll_by_CosineSimilarity.txt");
+				for(auto x: distancesOfUserXWithAll){
+					out_distance_userX_all  << std::fixed << std::setprecision(10)<< x.first << " " << x.second.first << " " << x.second.second<< endl;
+				}
+				out_distance_userX_all.close();
+				cout << TAB SOLVE << "End save in ../out/distanceBetweenUserXAndAll_by_CosineSimilarity.txt "<< endl << endl;
+				break;
 			case 100:
 				/*
 					* Knn by Euclidean Distance
@@ -201,6 +224,18 @@ void solve(){
 				cin>>k;
 				// timer.startt();
 				coreStructure.knn_by_manhatanDistance(user_test_A,k);
+				break;
+			case 102:
+				/*
+					* Knn by Cosine Similarity
+				*/
+				cout << SOLVE << "Knn by Cosine Similarity" << endl;
+				cout << "Insert User(valid id)" << endl;
+				cin>>user_test_A;
+				cout << "Insert K (number of neighbors)" << endl;
+				cin>>k;
+				// timer.startt();
+				coreStructure.knn_by_similaridad_cosenos(user_test_A,k);
 				break;
 			case 700:
 				/*

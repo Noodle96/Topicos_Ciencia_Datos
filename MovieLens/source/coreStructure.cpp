@@ -712,7 +712,7 @@ void CoreStructure::distanceBetweenUserXAndAll_by_CosineSimilarity(t_userId user
 	}
 	sort(vec.begin(), vec.end(), [](const auto &a, const auto &b){
 		// ordenar  por distancias que se encuentra en a.second.first
-		return a.second.first < b.second.first;
+		return a.second.first > b.second.first;
 	});
 }
 
@@ -972,9 +972,110 @@ void CoreStructure::knn_by_manhatanDistance(t_userId userX, int n){
 }
 
 void CoreStructure::knn_by_similaridad_cosenos(t_userId userX, int n){
-	;
+	vec_id_dist_inter distancesOfUserXWithAll;
+	Timer timer;
+	timer.startt();
+	distanceBetweenUserXAndAll_by_CosineSimilarity(userX, distancesOfUserXWithAll);
+	cout << TAB << " [CORESTRUCTURE]" << "Total Time in distanceBetweenUserXAndAll_by_CosineSimilarity: " << timer.getCurrentTime() << endl;
+	cout << TAB << " [CORESTRUCTURE]" << "Total all users with restrictions(DISJOINT, UMBRAL): " << distancesOfUserXWithAll.size() << endl;
+	auto sizeVector = distancesOfUserXWithAll.size();
+	if(sizeVector == 0){
+		cout << TAB <<DEVELOPING << "distancesOfUserXWithAll is equal 0" << endl;
+		return;
+	}
+
+	vector<t_userId> kNN;
+
+	// MOSTRAR LO SIGUIENTE:
+	// 1.- Guardar en el archivo ../out/knn_coseno.txt [Usuario, Distancia, Interseccion]
+	ofstream out_knn_coseno;
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_coseno.txt" << endl;
+	out_knn_coseno.open("../out/knn_coseno.txt");
+	out_knn_coseno << "User-Distance-Interseccion" << endl;
+	if(n >= sizeVector){
+		// cout << TAB <<DEVELOPING << "K-NN with Euclidean Distance between userX: " << userX << " and all users" << endl;
+		// cout << TAB <<DEVELOPING << "n: " << n << " is greater than the number of users: " << sizeVector << endl;
+		// cout << TAB <<DEVELOPING << "The result will be the same as the number of users" << endl;
+		// n = sizeVector;
+		// mostrat todos los usuarios
+		for(auto x: distancesOfUserXWithAll){
+			// Para analizar despues
+			kNN.pb(x.first);
+			// cout << TAB <<DEVELOPING << "User: " << x.first << " Distance: " << x.second.first << " Interseccion: " << x.second.second << endl;
+			out_knn_coseno << fixed << setprecision(10) << x.first << " " << x.second.first << " " << x.second.second << endl;
+		}
+	}else{
+		// mostrar solo los n primeros
+		for(int e = 0 ; e < n; e++){
+			// Para analizar despues
+			kNN.pb(distancesOfUserXWithAll[e].first);
+			out_knn_coseno << fixed << setprecision(10) << distancesOfUserXWithAll[e].first << " " << distancesOfUserXWithAll[e].second.first << " " << distancesOfUserXWithAll[e].second.second << endl;
+		}
+	}
+	out_knn_coseno.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_coseno.txt" << endl;
+
+	/*
+		? 2.- Por cada Usuario, mostrar las peliculas y el puntaje que le da
+		?     ordenados por rating.
+		?     en el archivo ../out/knn_coseno_[user-peliculas-puntaje].txt
+	*/
+
+	unordered_map<t_userId, vector<pair<t_movieId, t_rating>> > recommender;
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_coseno_[user-peliculas_puntaje].txt" << endl;
+	ofstream out_knn_coseno_user_peliculas_puntaje;
+	out_knn_coseno_user_peliculas_puntaje.open("../out/knn_coseno_[user-peliculas_puntaje].txt");
+	for(auto x: kNN){
+		auto hash_movie_rating_userX = user_movie_rating[x];
+		out_knn_coseno_user_peliculas_puntaje << "User: " << x << endl;
+		out_knn_coseno_user_peliculas_puntaje << "Peliculas-Puntaje (" << hash_movie_rating_userX.size()<< " rows founded)"<<  endl;
+		for(auto it = hash_movie_rating_userX.begin(); it != hash_movie_rating_userX.end(); it++){
+			// auto movieName = movies[it->first].first;
+			// out_knn_euclidean_user_peliculas_puntaje << "[" <<it->first << "]-[" << movieName<< "] => "<<  it->second << endl;
+			out_knn_coseno_user_peliculas_puntaje << it->first << " " << it->second << endl;
+
+			// *VALIDANDO EL SEGUNDO UMBRAL
+			if(it->second >= UMBRAL_MINIMUM_RATING){
+				recommender[x].pb({it->first, it->second});
+			}
+		}
+		out_knn_coseno_user_peliculas_puntaje << endl;
+	}
+	out_knn_coseno_user_peliculas_puntaje.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_coseno_[user-peliculas_puntaje].txt" << endl;
+
+
+	/*
+		? 3.- Finalemte mostrar las peliculas que se recomendaran al usuario X, en base
+		?     al umbral de UMBRAL_MINIMUM_RATING y UMBRAL_MINIMUM_PELICULAS_COMMON(ya filtrado
+		?     con anterioridad)
+		?	 en el archivo ../out/knn_coseno_[recomendation].txt
+	*/
+	for(auto x:kNN){
+		sort(recommender[x].begin(), recommender[x].end(), [](const auto &a, const auto &b){
+			return a.second > b.second;
+		});
+	}
+	cout << TAB << " [CORESTRUCTURE]" << "Begin Saving in ../out/knn_coseno_[recomendation].txt" << endl;
+	ofstream out_knn_coseno_recomendation;
+	out_knn_coseno_recomendation.open("../out/knn_coseno_[recomendation].txt");
+	for(auto x: kNN){
+		out_knn_coseno_recomendation << "User: " << x << endl;
+		out_knn_coseno_recomendation << "Recomendation (" << recommender[x].size() << " rows)" << endl;
+		for(auto it: recommender[x]){
+			// auto movieName = movies[it.first].first;
+			// out_knn_euclidean_recomendation << "[" << it.first << "]-[" << movieName << "] => " << it.second << endl;
+			out_knn_coseno_recomendation << it.first << " " << it.second << endl;
+		}
+		out_knn_coseno_recomendation << endl;
+	}
+	out_knn_coseno_recomendation.close();
+	cout << TAB << " [CORESTRUCTURE]" << "End Saving in ../out/knn_coseno_[recomendation].txt" << endl;
 }
 
+void CoreStructure::knn_by_correlacion_pearson(t_userId userX, int n){
+	;
+}
 
 //  ~=========================================END  KNN==================================
 
