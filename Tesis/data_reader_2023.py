@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, Any
 import os
 import mne
 import numpy as np
@@ -65,6 +65,19 @@ def get_channels_from_raw(
                 - 0 si hubo un error al leer canales.
                 - Matriz de numpy con la diferencia entre los dos montajes de canales.
     """
+    # montage_list_1 = ["EEG FP1-REF","EEG F7-REF","EEG T3-REF","EEG T5-REF",
+    #                   "EEG FP2-REF","EEG F8-REF","EEG T4-REF","EEG T6-REF",
+    #                   "EEG A1-REF","EEG T3-REF","EEG C3-REF","EEG CZ-REF",
+    #                   "EEG C4-REF","EEG T4-REF","EEG FP1-REF","EEG F3-REF",
+    #                   "EEG C3-REF","EEG P3-REF","EEG FP2-REF","EEG F4-REF",
+    #                   "EEG C4-REF","EEG P4-REF"]
+    
+    # montage_list_2 = ["EEG F7-REF","EEG T3-REF","EEG T5-REF","EEG O1-REF",
+    #                   "EEG F8-REF","EEG T4-REF","EEG T6-REF","EEG O2-REF",
+    #                   "EEG T3-REF","EEG C3-REF","EEG CZ-REF","EEG C4-REF",
+    #                   "EEG T4-REF","EEG A2-REF","EEG F3-REF","EEG C3-REF",
+    #                   "EEG P3-REF","EEG O1-REF","EEG F4-REF","EEG C4-REF",
+    #                   "EEG P4-REF","EEG O2-REF"]
     montage_list_1: List[str] = [
         "EEG FP1-REF", "EEG F7-REF", "EEG T3-REF", "EEG T5-REF",
         "EEG FP2-REF", "EEG F8-REF", "EEG T4-REF", "EEG T6-REF",
@@ -79,6 +92,8 @@ def get_channels_from_raw(
         "EEG F3-REF", "EEG C3-REF", "EEG P3-REF", "EEG O1-REF",
         "EEG F4-REF", "EEG C4-REF", "EEG P4-REF", "EEG O2-REF"
     ]
+
+    print("ch_names:", raw.ch_names)
 
     montage_indices_1: List[int] = [raw.ch_names.index(ch) for ch in montage_list_1]
     montage_indices_2: List[int] = [raw.ch_names.index(ch) for ch in montage_list_2]
@@ -297,3 +312,80 @@ def resample_data_in_each_channel(
         sigResampled.append(y)
 
     return sigResampled
+
+
+def summarize_raw(raw: mne.io.BaseRaw) -> Dict[str, Any]:
+    """
+    Muestra información esencial y genera gráficas de una señal EEG en formato MNE Raw.
+
+    Args:
+        raw (mne.io.BaseRaw): Objeto Raw con la señal EEG ya precargada en RAM.
+
+    Returns:
+        Dict[str, Any]: Diccionario con métricas y estadísticas básicas.
+    """
+    # 1. Información general
+    n_channels = raw.info["nchan"]
+    sfreq = raw.info["sfreq"]
+    duration_s = raw.n_times / sfreq
+    chan_types = raw.get_channel_types()
+    chan_names = raw.ch_names
+
+    print(f"Número de canales : {n_channels}")
+    print(f"Frecuencia muestreo: {sfreq:.1f} Hz")
+    print(f"Duración          : {duration_s:.1f} s")
+    print(f"Tipos de canal    : {np.unique(chan_types)}")
+    print(f"Nombres de canal  : {chan_names[:10]}{' …' if len(chan_names)>10 else ''}")
+
+    # 2. Estadísticas básicas por canal
+    data = raw.get_data()  # (n_channels, n_times)
+    means = np.mean(data, axis=1)
+    stds  = np.std(data, axis=1)
+
+    print("\nEstadísticas (primeros 5 canales):")
+    for idx in range(min(5, n_channels)):
+        print(f"  {chan_names[idx]:<10} – µ={means[idx]:.3f}, σ={stds[idx]:.3f}")
+
+    # 3. Gráfica: fragmento de señal (primeros 5 s y 5 canales)
+    t_ms = np.arange(data.shape[1]) / sfreq
+    fig, ax = plt.subplots(figsize=(10, 4))
+    for idx in range(min(5, n_channels)):
+        ax.plot(t_ms[: int(5*sfreq)], data[idx, : int(5*sfreq)] + idx*stds[idx]*5,
+                label=chan_names[idx])
+    ax.set_xlabel("Tiempo (s)")
+    ax.set_ylabel("Amplitud (offset por canal)")
+    ax.set_title("Primeros 5 s de los primeros 5 canales")
+    ax.legend(loc="upper right", fontsize="small")
+    plt.tight_layout()
+    plt.show()
+
+    # 4. Gráfica: PSD promedio
+    fig2, ax2 = plt.subplots(figsize=(8, 4))
+    raw.plot_psd(average=True, fmin=0.5, fmax=40.0, ax=ax2, show=True)
+    ax2.set_title("Densidad espectral de potencia (0.5–40 Hz)")
+    plt.tight_layout()
+    plt.show()
+
+    # 5. Devolver resumen
+    summary: Dict[str, Any] = {
+        "n_channels": n_channels,
+        "sfreq": sfreq,
+        "duration_s": duration_s,
+        "channel_types": chan_types,
+        "channel_names": chan_names,
+        "means": means,
+        "stds": stds,
+    }
+    return summary
+
+def sumaAlCuadrado(a: int, b: int) -> int:
+    """Suma dos números enteros.
+
+    Args:
+        a (int): Primer número.
+        b (int): Segundo número.
+
+    Returns:
+        int: La suma de a y b.
+    """
+    return a + b
