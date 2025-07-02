@@ -10,6 +10,8 @@ void startRecommendationSystem(){
 	cout << "\t3. Calculate similitud del coseno entre userA and userB" << endl;
 	cout << "\t4. Calcular coeficiente de correlacion de pearson entre userA and userB" << endl;
     cout << "\t5. Calcular KNN" << endl;
+    cout << "\t6. Recomendar peliculas a un usuario" << endl;
+    cout << "\t7. Recomendar movies a un usuario" << endl;
 
     int choise;
     while(true){
@@ -113,6 +115,44 @@ void startRecommendationSystem(){
                 }
                 log02 << "[KNN] knn(n, user, metrica) END\n\n" << endl;
                 break;
+            }
+            case 6:{
+                /*
+                    Recomendar peliculas a un usuario
+                */
+                int userA;
+                vector<pair<int, float>> knnResults;
+                knnResults.clear();
+                int n, idUser; string metrica;
+                cout << "insertar idUser-n-metrica(euclidean, manhattan, cosine, pearson)" << endl;
+                cin >> idUser >> n >> metrica;
+                knnResults = recommendationSystem.knn(n, idUser, metrica);
+                if(knnResults.empty()){
+                    cout << "\tNo hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
+                    break;
+                }
+                recommendationSystem.recomendar(knnResults, idUser);
+                break;
+            }
+            case 7: {
+                /*
+                    Recomendacion con promedio a un usuario X
+                */
+                int userA;
+                vector<pair<int, float>> knnResults;
+                knnResults.clear();
+                int n, idUser; string metrica;
+                cout << "insertar idUser-n-metrica(euclidean, manhattan, cosine, pearson)" << endl;
+                cin >> idUser >> n >> metrica;
+                knnResults = recommendationSystem.knn(n, idUser, metrica);
+                if(knnResults.empty()){
+                    cout << "\tNo hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
+                    break;
+                }
+                unordered_map<int, vector<pair<float, int>>> recomendaciones;
+                recomendaciones = recommendationSystem.recomendar(knnResults, idUser);
+                recommendationSystem.recomendarMovie(recomendaciones, idUser);
+                cout << "Eso es todo !!!" << endl;
             }
             default:
                 cout << "\tOpción inválida. Intente nuevamente." << endl << endl;

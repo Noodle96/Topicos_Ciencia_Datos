@@ -16,6 +16,9 @@ const float DISTANCIA_MAXIMA = 1e9;
 
 // DEFINICION DE UMBRALES
 const float UMBRAL_RATING_VECINO = 3.0;
+const int UMBRAL_PELICULAS_COMUNES = 5;
+const float UMBRAL_COSINE_SIMILARITY = 0.5; // Umbral para similitud del coseno
+const float UMBRAL_PEARSON_CORRELATION = 0.5; // Umbral para correlación de Pearson
 
 
 
@@ -66,12 +69,18 @@ class RecommendationSystem {
         void addMovie(int, const string, const vector<string>&);
 
         /*
+            Funcion que retorna el numero de peliculas que ha calificado un usuario
+            userId: int
+            return: int
+        */
+        int getNumberOfRatedMovies(int);
+        /*
 			Calculo de la distancia euclidiana entre el usuario A y el usuario B
             userA: int
             userB: int
             commonMovies: int&
             return: pair<float, bool>
-		*/
+		*/        
 		pair<float, bool> calculateEuclideanDistance(int, int, int &);
         pair<float, bool> calculateEuclideanDistanceDebug(int, int, int &);
 
@@ -126,7 +135,15 @@ class RecommendationSystem {
             knn_result: vector<pair<int, float>>
             idUser: int 
         */
-        void recomendar(vector<pair<int, float>>&, int);
+        unordered_map<int, vector<pair<float, int>>> recomendar(vector<pair<int, float>>&, int);
+
+        /*
+            La funcion recomendarCancion retorna un vector de pares con el id de la cancion
+            y su RATING CALCULADO.
+            peliculasRecomendadasPorUsuarios: unordered_map<int,vector<pair<float, int>>>
+            userARecomendar: int
+        */
+        void recomendarMovie(unordered_map<int,vector<pair<float, int>>> &, int);
 
         /*
             printUser()
