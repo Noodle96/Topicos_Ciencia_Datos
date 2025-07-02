@@ -1,0 +1,20 @@
+[EUCLIDEAN DISTANCE] calculateEuclideanDistanceDebug() BEGIN
+	[EUCLIDEAN DISTANCE] distance between 12 and 13
+	[EUCLIDEAN DISTANCE] smaller size: 23
+	[EUCLIDEAN DISTANCE] larger size: 65
+	[EUCLIDEAN DISTANCE] commonMovies: 4
+	[Timer] Calculate Euclidean Distance: 2.6975e-05 seg
+	[EUCLIDEAN DISTANCE] euclidean distance: 3.04138136
+[EUCLIDEAN DISTANCE] calculateEuclideanDistanceDebug() END
+
+
+[COSINE SIMILARITY] calculateCosineSimilarityDebug() BEGIN
+	[COSINE SIMILARITY] similarity between 12 and 13
+	[COSINE SIMILARITY] smaller size: 23
+	[COSINE SIMILARITY] larger size: 65
+	[COSINE SIMILARITY] commonMovies: 4
+	[Timer] Calculate Cosine Similarity: 0.00003237 seg
+	[COSINE SIMILARITY] cosine similarity: 0.95083880
+[COSINE SIMILARITY] calculateCosineSimilarityDebug() END
+
+
