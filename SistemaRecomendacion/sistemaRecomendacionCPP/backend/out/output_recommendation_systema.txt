@@ -1,0 +1,14 @@
+[RECOMMENDATION SYSTEM] RecommendationSystem()
+	[RECOMMENDATION SYSTEM] Load ratings.csv BEGIN
+		[Timer] Load ratings.csv: 33.2672 seg
+	[RECOMMENDATION SYSTEM] Load ratings.csv END
+
+	[RECOMMENDATION SYSTEM] printUser() BEGIN
+	[PRINTUSER] Usuario con maximo peliculas calificadas: 33332
+		[Timer] write users.txt: 0.109422 seg
+	[RECOMMENDATION SYSTEM] printUser() END
+
+	[RECOMMENDATION SYSTEM] Load movies.csv BEGIN
+		[Timer] Load movies.csv: 0.185221 seg
+	[RECOMMENDATION SYSTEM] Load movies.csv END
+

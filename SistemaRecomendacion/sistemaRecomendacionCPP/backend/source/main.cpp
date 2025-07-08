@@ -260,3 +260,5 @@ int main(){
 }
 
 // g++ -std=c++17 -pthread main.cpp recommendationSystem.cpp -o recommendation_system
+// with crow -Iinclude
+//g++ -std=c++17 main.cpp recommendationSystem.cpp -o server -lpthread -lboost_system -I../include
