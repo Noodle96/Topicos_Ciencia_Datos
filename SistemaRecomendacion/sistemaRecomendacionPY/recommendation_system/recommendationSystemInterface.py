@@ -159,6 +159,11 @@ class RecommendationSystem:
 
     def printMMovies(self):
         pass
+    '''
+        Imprimir el movies2.txt las peliculas id con la frecuencia de usuarios que lo ha calificado
+    '''
+    def printMoviesByUserRating(self):
+        pass
 
     '''
         calificarPeliculas

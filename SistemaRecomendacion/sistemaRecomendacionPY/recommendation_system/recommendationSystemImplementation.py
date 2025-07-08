@@ -9,7 +9,7 @@ import csv
 # DEFINICIÓN DE UMBRALES
 DISTANCIA_MAXIMA: float = 1e9
 UMBRAL_RATING_VECINO: float = 3.0 # Umbral para el rating de un vecino
-UMBRAL_PELICULAS_COMUNES: int = 1 # Umbral para delrecommended_moviesimitar el número mínimo de películas comunes entre dos usuarios para considerar su similitud
+UMBRAL_PELICULAS_COMUNES: int = 5 # Umbral para delrecommended_moviesimitar el número mínimo de películas comunes entre dos usuarios para considerar su similitud
 UMBRAL_COSINE_SIMILARITY: float = 0.5 # Umbral para similitud del coseno
 UMBRAL_PEARSON_CORRELATION: float = 0.5 # Umbral para correlación de Pearson
 # UMBRAL_VECINOS_SIMILARES:int = 15
@@ -76,6 +76,7 @@ class RecommendationSystem(BaseRS):
             timer.printElapsed(self.cout_debug_file)
             self.cout_debug_file.write("\t[RECOMMENDATION SYSTEM] Load movies.csv END\n\n")
             self.printMMovies()
+            # self.printMoviesByUserRating()
         except FileNotFoundError:
             self.cout_debug_file.write("\tError al abrir el archivo movies.csv\n")
 
@@ -568,8 +569,8 @@ class RecommendationSystem(BaseRS):
         for movieId, ratings in movie_vectorRatings.items():
             suma = sum(ratings)
             count = len(ratings)
-            if count < UMBRAL_VECINOS_SIMILARES:
-                continue
+            #if count < UMBRAL_VECINOS_SIMILARES:
+            #    continue
             totalVecinos = len(peliculasRecomendadasPorUsuarios)
             score = (suma * count) / totalVecinos
             respuestaFinal.append((score, movieId))
@@ -642,6 +643,7 @@ class RecommendationSystem(BaseRS):
         timer.printElapsed(out)
         out.write("\t[RECOMMENDATION SYSTEM] printUser() END\n")
 
+
     '''
         Imprimir en el archivo de salida las películas
         que se han agregado al sistema.
@@ -663,6 +665,30 @@ class RecommendationSystem(BaseRS):
         out.write("\t\t")
         timer.printElapsed(out)
         out.write("\t[RECOMMENDATION SYSTEM] printMMovies() END\n")
+        return None
+    
+
+    '''
+        Imprimir el movies2.txt las peliculas id con la frecuencia de usuarios que lo ha calificado
+    '''
+    def printMoviesByUserRating(self):
+        out = self.cout_debug_file
+        out.write("[RECOMMENDATION SYSTEM] printMoviesByUserRating() BEGIN\n")
+        timer = Timer("write movies2.txt")
+
+        base_dir = os.path.dirname(__file__)
+        movies2_path = os.path.abspath(os.path.join(base_dir, "..", "out", "movies2.txt"))
+        try:
+            with open(movies2_path, "w", buffering=1) as movie_file:
+                for movieId, (title, genres) in self.movies.items():
+                    user_count = len([user for user in self.users if movieId in self.user_movie_ratings.get(user, {})])
+                    movie_file.write(f"{movieId},{title},{user_count}\n")
+        except Exception as e:
+            out.write(f"Error writing to movies2.txt: {e}\n")
+
+        out.write("\t\t")
+        timer.printElapsed(out)
+        out.write("\t[RECOMMENDATION SYSTEM] printMoviesByUserRating() END\n")
         return None
 
 
