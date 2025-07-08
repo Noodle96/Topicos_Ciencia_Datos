@@ -1,2 +1,17 @@
 datasets/
 __pycache__/
+frames_output/
+*.mkv
+*.csv
+videos/
+dataset/
+
+# MovieLens/
+
+#temporales(luego quietar)
+tusz_dashboard/
+tusz_dashboard_v2/
+preictal_no_supervisado/
+assets/
+
+**/out/

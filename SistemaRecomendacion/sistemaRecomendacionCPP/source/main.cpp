@@ -12,6 +12,8 @@ void startRecommendationSystem(){
     cout << "\t5. Calcular KNN" << endl;
     cout << "\t6. Recomendar peliculas a un usuario" << endl;
     cout << "\t7. Recomendar movies a un usuario" << endl;
+    cout << "\t8.- Agregar un nuevo usuario" << endl;
+    cout << "\t9.- Calificar peliculas de un usuario" << endl;
 
     int choise;
     while(true){
@@ -99,7 +101,48 @@ void startRecommendationSystem(){
                 cout << "\tCalculating KNN for user " << userA << " with n = " << n << " and metric = " << metric << endl;
                 log02 << "\t[KNN] Calculating KNN for user " << userA << " with n = " << n << " and metric = " << metric << endl;
                 knnResults.clear();
+                Timer timerknn("[KNN main]");
                 knnResults = recommendationSystem.knn(n, userA, metric);
+                log02 << "\t";
+                timerknn.printElapsed(log02, "seg");
+                log02 << "\t[KNN] knn(n, user, metrica) END\n" << endl;
+                if(knnResults.empty()){
+                    cout << "\tNo hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
+                    log02 << "\t[KNN] No hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
+
+                } else {
+                    cout << "\tKNN Results for user " << userA << ":" << endl;
+                    log02 << "\tKNN Results for user " << userA << ":" << endl;
+                    string str = (metric == "euclidean" || metric == "manhattan") ? "Distance" : (metric == "cosine" ? "Similaridad": "Correlacion");
+                    for(const auto& [userId, distance] : knnResults){
+                        // cout << "\tUser ID: " << userId << ", Distance: " << distance << endl;
+                        log02 << "\t\tUser ID: " << userId << ", " << str <<": "<< fixed << setprecision(8) << distance << endl;
+                    }
+                }
+                log02 << "[KNN] knn(n, user, metrica) END\n\n" << endl;
+                break;
+            }
+            case 500:{
+                /*
+                    Calcular KNN
+                */
+                int userA;
+                int n;
+                string metric;
+                vector<pair<int, float>> knnResults;
+                ofstream& log02 = recommendationSystem.getCoutDebugFile02CalcularKNN();
+                log02 << "[KNN] knn(n, user, metrica) BEGIN" << endl;
+                cout << "\tInsert user id, n (number of neighbors) and metric (euclidean, manhattan, cosine, pearson): " << endl;
+                cin >> userA >> n >> metric;
+
+                cout << "\tCalculating KNN for user " << userA << " with n = " << n << " and metric = " << metric << endl;
+                log02 << "\t[KNN] Calculating KNN for user " << userA << " with n = " << n << " and metric = " << metric << endl;
+                knnResults.clear();
+                Timer timerknn("[KNN main]");
+                knnResults = recommendationSystem.knnParalelo(n, userA, metric);
+                log02 << "\t";
+                timerknn.printElapsed(log02, "seg");
+                log02 << "\t[KNN] knn(n, user, metrica) END\n" << endl;
                 if(knnResults.empty()){
                     cout << "\tNo hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
                     log02 << "\t[KNN] No hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
@@ -126,7 +169,7 @@ void startRecommendationSystem(){
                 int n, idUser; string metrica;
                 cout << "insertar idUser-n-metrica(euclidean, manhattan, cosine, pearson)" << endl;
                 cin >> idUser >> n >> metrica;
-                knnResults = recommendationSystem.knn(n, idUser, metrica);
+                knnResults = recommendationSystem.knnParalelo(n, idUser, metrica);
                 if(knnResults.empty()){
                     cout << "\tNo hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
                     break;
@@ -144,15 +187,59 @@ void startRecommendationSystem(){
                 int n, idUser; string metrica;
                 cout << "insertar idUser-n-metrica(euclidean, manhattan, cosine, pearson)" << endl;
                 cin >> idUser >> n >> metrica;
-                knnResults = recommendationSystem.knn(n, idUser, metrica);
+                ofstream& log4 = recommendationSystem.getCoutDebugFile04PeliculasRecomendar();
+                log4 << "\t[KNN main] knn+recomendarMovie begin" << endl;
+                Timer timer("\t[KNN main]");
+                knnResults = recommendationSystem.knnParalelo(n, idUser, metrica);
                 if(knnResults.empty()){
                     cout << "\tNo hay usuarios con peliculas en comun o no hay usuarios registrados.\n\n" << endl;
                     break;
                 }
                 unordered_map<int, vector<pair<float, int>>> recomendaciones;
                 recomendaciones = recommendationSystem.recomendar(knnResults, idUser);
+                log4 << "\t";
+                timer.printElapsed(log4, "seg");
+                log4 << "\t[KNN main] knn+recomendarMovie END" << endl;
                 recommendationSystem.recomendarMovie(recomendaciones, idUser);
                 cout << "Eso es todo !!!" << endl;
+                break;
+            }
+            case 8:{
+                /*
+                    Agregar un nuevo usuario
+                */
+                cout << "\tAgregando un nuevo usuario..." << endl;
+                recommendationSystem.addUser();
+                cout << "\tUsuario agregado exitosamente." << endl;
+                break;
+            }
+            case 9:{
+                /*
+                    Calificar peliculas de un usuario
+                */
+                int idUser;
+                cout << "\t Inserte el id del Usuario: " << endl;
+                cin >> idUser;
+                vector<pair<int, float>> peliculas;
+                while(1){
+                    try{
+                        int peliculaId;
+                        cout << "\tInserte ID de la pelicula (0 para terminar): ";
+                        cin>> peliculaId;
+                        if(peliculaId == 0) break; // salir del bucle si se ingresa 0
+                        float rating;
+                        cout << "\tInserte rating de la pelicula: ";
+                        cin>> rating;
+                        peliculas.emplace_back(peliculaId, rating);
+                    }
+                    catch(const std::exception& e){
+                        std::cerr << e.what() << " russel say: entrada invalida, ingrese números"<<  '\n';
+                    }
+                    
+                }
+                recommendationSystem.calificarPeliculas(idUser, peliculas);
+                cout << "\tPeliculas calificadas exitosamente para el usuario " << idUser << "." << endl;
+                break;
             }
             default:
                 cout << "\tOpción inválida. Intente nuevamente." << endl << endl;
@@ -171,3 +258,5 @@ int main(){
     startRecommendationSystem();
     return 0;
 }
+
+// g++ -std=c++17 -pthread main.cpp recommendationSystem.cpp -o recommendation_system

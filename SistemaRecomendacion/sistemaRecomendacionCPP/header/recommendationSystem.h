@@ -10,6 +10,8 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <thread>  // std::thread
+
 
 using namespace std;
 const float DISTANCIA_MAXIMA = 1e9;
@@ -19,6 +21,7 @@ const float UMBRAL_RATING_VECINO = 3.0;
 const int UMBRAL_PELICULAS_COMUNES = 5;
 const float UMBRAL_COSINE_SIMILARITY = 0.5; // Umbral para similitud del coseno
 const float UMBRAL_PEARSON_CORRELATION = 0.5; // Umbral para correlación de Pearson
+const int UMBRAL_VECINOS_SIMILARES = 2; // Umbral para el número de vecinos similares
 
 
 
@@ -128,6 +131,7 @@ class RecommendationSystem {
             Esta funcion es utilizada para obtener las recomendaciones de un usuario.
         */
         vector<pair<int, float>> knn(int, int, string);
+        vector<pair<int, float>> knnParalelo(int, int, string);
 
         /*
             La funcion recomendar recibe lo que me retorno la funcio knn 
@@ -136,6 +140,7 @@ class RecommendationSystem {
             idUser: int 
         */
         unordered_map<int, vector<pair<float, int>>> recomendar(vector<pair<int, float>>&, int);
+        unordered_map<int, vector<pair<float, int>>> recomendarDebug(vector<pair<int, float>>&, int);
 
         /*
             La funcion recomendarCancion retorna un vector de pares con el id de la cancion
@@ -144,6 +149,19 @@ class RecommendationSystem {
             userARecomendar: int
         */
         void recomendarMovie(unordered_map<int,vector<pair<float, int>>> &, int);
+
+        /*
+            Agregar un usuaior
+        */
+        void addUser();
+
+        /*
+            CalificarPelicula
+            Allow a user to rate multiple movies at once.
+            idUser: ID of the user
+            peliculas: List of movie IDs and their ratings
+        */
+        void calificarPeliculas(int, const vector<pair<int, float>>&);
 
         /*
             printUser()

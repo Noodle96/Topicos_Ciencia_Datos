@@ -591,6 +591,85 @@ vector<pair<int, float>> RecommendationSystem::knn(int n, int userX, string metr
 	}
 	return distances;
 }
+
+vector<pair<int, float>> RecommendationSystem::knnParalelo(int n, int userX, string metrica){
+    vector<pair<int, float>> final_distances;
+    int num_threads = thread::hardware_concurrency();
+	cout << "num:threads: " << num_threads << endl;
+    if (num_threads == 0) num_threads = 4; // valor por defecto si no se detecta
+
+    // Copiar usuarios a un vector para indexado fácil
+    vector<int> all_users;
+    for (const auto& user : users) {
+        if (user != userX) all_users.push_back(user);
+    }
+
+    size_t total_users = all_users.size();
+    size_t block_size = (total_users + num_threads - 1) / num_threads;
+
+    // Cada hilo tendrá su vector local
+    vector<vector<pair<int, float>>> partial_results(num_threads);
+    vector<thread> threads;
+
+    for (int t = 0; t < num_threads; ++t) {
+        size_t start = t * block_size;
+        size_t end = min(start + block_size, total_users);
+
+        threads.emplace_back([&, t, start, end]() {
+            int commonMovies = 0;
+            for (size_t i = start; i < end; ++i) {
+                int userY = all_users[i];
+                pair<float, bool> distance;
+
+                if (metrica == "euclidean") {
+                    distance = calculateEuclideanDistance(userX, userY, commonMovies);
+                } else if (metrica == "manhattan") {
+                    distance = calculateManhattanDistance(userX, userY, commonMovies);
+                } else if (metrica == "cosine") {
+                    distance = calculateCosineSimilarity(userX, userY, commonMovies);
+                    if (distance.first < UMBRAL_COSINE_SIMILARITY) continue;
+                } else if (metrica == "pearson") {
+                    distance = calculatePearsonCorrelation(userX, userY, commonMovies);
+                    if (distance.first < UMBRAL_PEARSON_CORRELATION) continue;
+                } else {
+                    // métrica no válida
+                    continue;
+                }
+
+                if (distance.second && commonMovies >= UMBRAL_PELICULAS_COMUNES) {
+                    partial_results[t].emplace_back(userY, distance.first);
+                }
+            }
+        });
+    }
+
+    // Esperar a que todos los hilos terminen
+    for (auto& th : threads) th.join();
+
+    // Fusionar resultados
+    for (const auto& local_vec : partial_results) {
+        final_distances.insert(final_distances.end(), local_vec.begin(), local_vec.end());
+    }
+
+    // Ordenar
+    if (metrica == "euclidean" || metrica == "manhattan") {
+        sort(final_distances.begin(), final_distances.end(),
+            [](const pair<int, float>& a, const pair<int, float>& b) {
+                return a.second < b.second;
+            });
+    } else if (metrica == "cosine" || metrica == "pearson") {
+        sort(final_distances.begin(), final_distances.end(),
+            [](const pair<int, float>& a, const pair<int, float>& b) {
+                return a.second > b.second;
+            });
+    }
+
+    if ((int)final_distances.size() > n) {
+        final_distances.resize(n);
+    }
+
+    return final_distances;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 												  END KNN 02
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -606,6 +685,34 @@ vector<pair<int, float>> RecommendationSystem::knn(int n, int userX, string metr
 // 												BEGIN RECOMENDAR 03
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 unordered_map<int, vector<pair<float, int>>> RecommendationSystem::recomendar(vector<pair<int, float>>& knn_result, int userARecomendar){
+	unordered_map<int, vector<pair<float, int>>> recommended_movies; // Peliculas recomendadas y sus ratings
+	if(users.find(userARecomendar) == users.end()){
+		return recommended_movies; // Usuario no encontrado
+	}
+	auto& hash_movie_rating_userARecomendar = user_movie_ratings[userARecomendar];
+	for(auto & [userX, distance] : knn_result){
+		auto& hash_movie_rating_userX = user_movie_ratings[userX];
+		// debemos de recomendar las peliculas que el usuarioX halla visto y el usuarioARecomendar no haya visto
+		for(const auto& [movie, rating] : hash_movie_rating_userX){
+			if(rating < UMBRAL_RATING_VECINO) continue; // Si la calificacion es menor a 3, no la recomendamos
+			auto movieFound = hash_movie_rating_userARecomendar.find(movie);
+			// este if dice que la pelicula no ha sido vista por el usuarioARecomendar
+			if( movieFound == hash_movie_rating_userARecomendar.end() ){
+				// si la pelicula no esta en el hash de ratings del usuarioARecomendar, la recomendamos
+				auto& movieInfo = this->movies[movie];
+				// recommended_movies[userX].emplace_back(make_pair(rating,movieInfo.first));
+				recommended_movies[userX].emplace_back(make_pair(rating,movie));
+
+			}
+		}
+		// ordenamos el valor del hash
+		sort(recommended_movies[userX].begin(), recommended_movies[userX].end(), [](const pair<float, int>& a, const pair<float, int>& b) {
+			return a.first > b.first; // Ordenar por rating descendente
+		});
+	}
+	return recommended_movies;
+}
+unordered_map<int, vector<pair<float, int>>> RecommendationSystem::recomendarDebug(vector<pair<int, float>>& knn_result, int userARecomendar){
 	unordered_map<int, vector<pair<float, int>>> recommended_movies; // Peliculas recomendadas y sus ratings
 
 	cout_debug_file_03_calcular_recomendaciones << "[RECOMENDAR] recomendar() BEGIN" << endl;
@@ -647,7 +754,8 @@ unordered_map<int, vector<pair<float, int>>> RecommendationSystem::recomendar(ve
 	}
 	cout_debug_file_03_calcular_recomendaciones << "\t\t[RECOMENDAR] Peliculas calificadas por el usuario " << userARecomendar << " = " << this->getNumberOfRatedMovies(userARecomendar)<< endl;
 	int vecino = 1;
-	Timer timer2("second timer");
+	// Timer timer2("second timer");
+	timer.reset();
 	int contadorTest = 0;
 	for (const auto& [userX, movies] : recommended_movies) {
 		cout_debug_file_03_calcular_recomendaciones << "\t\t[RECOMENDAR] Recomendaciones del User " << userX << "[" << this->getNumberOfRatedMovies(userX) << "]"
@@ -660,7 +768,7 @@ unordered_map<int, vector<pair<float, int>>> RecommendationSystem::recomendar(ve
 		if(contadorTest >= 20) break;
 	}
 	cout_debug_file_03_calcular_recomendaciones << "\t[RECOMENDAR] Time taken to process recommendations: ";
-	timer2.printElapsed(cout_debug_file_03_calcular_recomendaciones, "seg");
+	timer.printElapsed(cout_debug_file_03_calcular_recomendaciones, "seg");
 	cout_debug_file_03_calcular_recomendaciones << "[RECOMENDAR] recomendar() END" << endl;
 	return recommended_movies;
 }
@@ -689,15 +797,17 @@ void RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, 
 			movie_vectorRatings[movieId].push_back(rating);
 		}
 	}
-	cout_debug_file_04_peliculas_recomendar << "\t";
-	timer.printElapsed(cout_debug_file_04_peliculas_recomendar, "seg");
+	// cout_debug_file_04_peliculas_recomendar << "\t";
+	// timer.printElapsed(cout_debug_file_04_peliculas_recomendar, "seg");
 
 	vector<pair<float, int>> respuestaFinal;
-	Timer timer2("calculo all score");
+	// Timer timer2("calculo all score");
 	for(const auto&[movieId, ratings]: movie_vectorRatings){
 		float suma = 0;
 		for(auto rating: ratings) suma += rating;
 		int count = (int)ratings.size();
+		if(count < UMBRAL_VECINOS_SIMILARES) continue; // Si hay menos de 3 vecinos, no recomendamos
+		// Calcular el score final
 		int totalVecinos = (int)peliculasRecomendadasByUser.size();
 		float score = (suma*count)/ totalVecinos;
 		respuestaFinal.emplace_back(score, movieId);
@@ -706,7 +816,7 @@ void RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, 
 		return a.first > b.first; // Ordenar por score descendente
 	});
 	cout_debug_file_04_peliculas_recomendar << "\t";
-	timer2.printElapsed(cout_debug_file_04_peliculas_recomendar,"seg");
+	timer.printElapsed(cout_debug_file_04_peliculas_recomendar,"seg");
 
 	Timer timer3("write recomendacion movies");
 	cout_debug_file_04_peliculas_recomendar << "\t[RECOMENDAR MOVIE] write recomendacion movies" << endl;
@@ -732,6 +842,46 @@ void RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 												BEGIN OTHERS
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+    Agregar un usuario
+*/
+void RecommendationSystem::addUser(){
+	cout_debug_file << "[RECOMMENDATION SYSTEM] addUser() BEGIN" << endl;
+	int new_user_id = users.size() + 1; // Asignar un nuevo ID de usuario
+	if(users.find(new_user_id) != users.end()){
+		cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << new_user_id << " already exists." << endl;
+		return;
+	}
+	users.insert(new_user_id);
+	user_movie_ratings[new_user_id] = unordered_map<int, float>(); // Inicializar con un hash vacío
+	cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << new_user_id << " added successfully." << endl;
+	cout_debug_file << "[RECOMMENDATION SYSTEM] addUser() END\n" << endl;
+	printUser(); // Print the user ratings after adding
+}
+/*
+	CalificarPelicula
+	Allow a user to rate multiple movies at once.
+	idUser: ID of the user
+	peliculas: List of movie IDs and their ratings
+*/
+void RecommendationSystem::calificarPeliculas(int idUser, const vector<pair<int, float>>& peliculas){
+	cout_debug_file << "[RECOMMENDATION SYSTEM] calificarPeliculas() BEGIN" << endl;
+	if(users.find(idUser) == users.end()){
+		cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << idUser << " not found." << endl;
+		return;
+	}
+	for(const auto& [movieId, rating] : peliculas){
+		if(movies.find(movieId) == movies.end()){
+			cout_debug_file << "\t[RECOMMENDATION SYSTEM] Movie ID " << movieId << " not found." << endl;
+			continue; // Skip if movie does not exist
+		}
+		user_movie_ratings[idUser][movieId] = rating; // Add or update the rating
+		cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << idUser << " rated movie ID " << movieId 
+						<< " with rating: " << fixed << setprecision(1) << rating << endl;
+	}
+	cout_debug_file << "[RECOMMENDATION SYSTEM] calificarPeliculas() END\n" << endl;
+	printUser(); // Print the user ratings after adding
+}
 void RecommendationSystem::printUser() {
 	cout_debug_file << "[RECOMMENDATION SYSTEM] printUser() BEGIN" << endl;
     Timer timer("write users.txt");
@@ -740,9 +890,13 @@ void RecommendationSystem::printUser() {
 		cout_debug_file << "No se pudo abrir el archivo users.txt\n";
 		return;
 	}
+	int maximo = 0;
 	for (const auto& user : users) {
+		int size = user_movie_ratings[user].size();
+		maximo = max(maximo, size);
 		user_file << "User ID: "<<user << " -> " << user_movie_ratings[user].size() << " ratings\n";
 	}
+	cout_debug_file << "\t[PRINTUSER] Usuario con maximo peliculas calificadas: " << maximo << endl;
 	user_file.close();
 	cout_debug_file << "\t\t";
 	timer.printElapsed(cout_debug_file);
