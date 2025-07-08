@@ -9,7 +9,7 @@ void startRecommendationSystem(){
 	cout << "\t2. Calcular distancia de manhattan entre userA and userB" << endl;
 	cout << "\t3. Calculate similitud del coseno entre userA and userB" << endl;
 	cout << "\t4. Calcular coeficiente de correlacion de pearson entre userA and userB" << endl;
-    cout << "\t5. Calcular KNN" << endl;
+    cout << "\t5 y 500(kn paralelo). Calcular KNN" << endl;
     cout << "\t6. Recomendar peliculas a un usuario" << endl;
     cout << "\t7. Recomendar movies a un usuario" << endl;
     cout << "\t8.- Agregar un nuevo usuario" << endl;
@@ -209,8 +209,8 @@ void startRecommendationSystem(){
                     Agregar un nuevo usuario
                 */
                 cout << "\tAgregando un nuevo usuario..." << endl;
-                recommendationSystem.addUser();
-                cout << "\tUsuario agregado exitosamente." << endl;
+                int newUser = recommendationSystem.addUser();
+                cout << "\tUsuario agregado exitosamente con el id: " << newUser<< endl;
                 break;
             }
             case 9:{

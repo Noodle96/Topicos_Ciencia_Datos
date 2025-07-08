@@ -153,7 +153,7 @@ class RecommendationSystem {
         /*
             Agregar un usuaior
         */
-        void addUser();
+        int addUser();
 
         /*
             CalificarPelicula
@@ -169,6 +169,17 @@ class RecommendationSystem {
             This function is used for debugging purposes.
         */
         void printUser();
+
+        /*
+            Verifica si un usuario existe en el sistema
+            userId: int
+            return: bool
+            Esta funcion es utilizada para verificar si un usuario existe en el sistema
+            y es llamada desde la interfaz de usuario.
+            Se usa en el endpoint /api/verify_user.
+            Si el usuario existe, retorna true, de lo contrario false.
+        */
+        bool userExists(int);
 };
 
 #endif // RECOMENDATION_SYSTEM_H

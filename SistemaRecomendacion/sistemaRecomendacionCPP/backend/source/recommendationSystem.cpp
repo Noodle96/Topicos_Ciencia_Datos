@@ -845,18 +845,19 @@ void RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, 
 /*
     Agregar un usuario
 */
-void RecommendationSystem::addUser(){
+int RecommendationSystem::addUser(){
 	cout_debug_file << "[RECOMMENDATION SYSTEM] addUser() BEGIN" << endl;
 	int new_user_id = users.size() + 1; // Asignar un nuevo ID de usuario
 	if(users.find(new_user_id) != users.end()){
 		cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << new_user_id << " already exists." << endl;
-		return;
+		return -1;
 	}
 	users.insert(new_user_id);
 	user_movie_ratings[new_user_id] = unordered_map<int, float>(); // Inicializar con un hash vacío
 	cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << new_user_id << " added successfully." << endl;
 	cout_debug_file << "[RECOMMENDATION SYSTEM] addUser() END\n" << endl;
 	printUser(); // Print the user ratings after adding
+	return new_user_id; // Retornar el ID del nuevo usuario
 }
 /*
 	CalificarPelicula
@@ -901,6 +902,9 @@ void RecommendationSystem::printUser() {
 	cout_debug_file << "\t\t";
 	timer.printElapsed(cout_debug_file);
 	cout_debug_file << "\t[RECOMMENDATION SYSTEM] printUser() END\n" << endl;
+}
+bool RecommendationSystem::userExists(int idUser){
+	return this->users.find(idUser) != this->users.end();
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 											END OTHERS
