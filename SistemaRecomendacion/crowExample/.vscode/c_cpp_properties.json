@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/server/include",
+                "/usr/include",
+                "/usr/include/c++/13",                      // Ajusta si usas otra versión de g++
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/include/boost"                  // para Boost
+            ],
+            "defines": [
+                "CROW_MAIN",
+                "CROW_USE_BOOST"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
