@@ -30,6 +30,7 @@ class RecommendationSystem {
         unordered_map<int, unordered_map<int, float>> user_movie_ratings;
         unordered_set<int> users;
         unordered_map<int, pair<string, vector<string>>> movies;
+        unordered_map<string, int> genres_map;
         ofstream cout_debug_file;
         ofstream cout_debug_file_01_validar_distancias,
                  cout_debug_file_02_calcular_knn,
@@ -38,6 +39,17 @@ class RecommendationSystem {
     public:
         RecommendationSystem();
 		~RecommendationSystem();
+
+        const std::unordered_set<int>& getUsers() const {
+            return users;
+        }
+        const std::unordered_map<int, std::pair<std::string, std::vector<std::string>>>& getMovies() const {
+            return movies;
+        }
+        const std::unordered_map<int, std::unordered_map<int, float>>& getUserMovieRatings() const {
+            return user_movie_ratings;
+        }
+
 
         // implementar una funcion get para usar cout_debug_file_01_validar_distancias fuera de la clase
         ofstream& getCoutDebugFile01ValidarDistancias(){
@@ -171,6 +183,14 @@ class RecommendationSystem {
         void printUser();
 
         /*
+            printGenresFrequency()
+            Prints the frequency of each genre in the system to out/genres_frequency.txt
+            This function is used for debugging purposes.
+            It iterates through the genres_map and prints the genre and its frequency.
+        */
+        void printGenresFrequency();
+
+        /*
             Verifica si un usuario existe en el sistema
             userId: int
             return: bool
@@ -180,6 +200,54 @@ class RecommendationSystem {
             Si el usuario existe, retorna true, de lo contrario false.
         */
         bool userExists(int);
+
+        /*
+            Esta funcion se encarga de recalificar una pelicula
+            y se usa en el endpoint /api/recalificar_pelicula.
+            idUser: int, idMovie: int, rating: float
+            Esta funcion es utilizada para recalificar una pelicula
+            y actualizar la calificacion del usuario en la pelicula.
+            Si el usuario no ha calificado la pelicula, se agrega una nueva calificacion.
+            Si el usuario ya ha calificado la pelicula, se actualiza la calificacion.
+        */
+        void recalificarPelicula(int, int, float);
+
+        /*
+            Esta funcion se encarga de validar las distancias entre los usuarios
+            y las peliculas que han calificado.
+            Se usa en el endpoint /api/validate_distances.
+            Esta funcion es utilizada para verificar si las distancias entre los usuarios
+            son correctas y si las peliculas que han calificado son correctas.
+        */
+        void validarDistancias();
+
+        /*
+            Esta funcion se encarga de calcular las recomendaciones de un usuario
+            y se usa en el endpoint /api/recommendations.
+        */
+        void calcularRecomendaciones(int, const string&);
+
+        /*
+            Esta funcion se encarga de calcular las recomendaciones de un usuario
+            y se usa en el endpoint /api/recommendations_parallel.
+        */
+        void calcularRecomendacionesParalelo(int, const string&);
+
+        /*
+            getUnratedMoviesByGenre
+            Esta funcion retorna una lista de peliculas no calificadas por un usuario
+            que pertenecen a un genero especifico.
+            userId: int, genre: string, limit: int
+            Esta funcion es utilizada para obtener las peliculas no calificadas por un usuario
+            que pertenecen a un genero especifico.
+            Se usa en el endpoint /api/unrated_movies_by_genre.
+            userId: ID del usuario
+            genre: Genero de la pelicula
+            limit: Limite de peliculas a retornar (default 20)
+            return: vector<tuple<int, string, vector<string>>>
+        */
+        vector<tuple<int, string, vector<string>>> getUnratedMoviesByGenre(int userId, const string& genre, int limit = 20);
+
 };
 
 #endif // RECOMENDATION_SYSTEM_H

@@ -1,0 +1,76 @@
+/* src/pages/MainPage.css */
+.main-container {
+  padding-top: 2rem;
+  padding-left: 10rem;
+  padding-right: 10rem;
+  padding-bottom: 10rem;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.main-title {
+  color: #1e3799;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.logout-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #c23616;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.main-header.redesigned {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 1.5rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 1.2rem;
+  color: #1e3799;
+}
+
+.user-avatar {
+  font-size: 1.5rem;
+  background-color: #dff0ff;
+  padding: 0.4rem;
+  border-radius: 50%;
+}
+
+.tab-bar {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.tab-button {
+  background-color: #dcdde1;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tab-button.active {
+  background-color: #2e86de;
+  color: white;
+}
+
+.tab-content {
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.1);
+}

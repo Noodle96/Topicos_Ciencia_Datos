@@ -62,21 +62,48 @@ RecommendationSystem::RecommendationSystem() {
 	// Verificar si el archivo se abrió correctamente
 	if (archivo_csv_movies.is_open()) {
 		while (getline(archivo_csv_movies, linea)) {
-			stringstream ss(linea);
 			string movieIdStr, title, genres;
-			getline(ss, movieIdStr, ',');
-			getline(ss, title, ',');
-			getline(ss, genres, ',');
-			movieId = stoi(movieIdStr);
+			if (linea.find('"') != string::npos) {
+				// Caso con comillas: id,"title, possibly with commas",genres
+				size_t firstComma = linea.find(',');
+				movieIdStr = linea.substr(0, firstComma);
+
+				size_t firstQuote = linea.find('"', firstComma);
+				size_t secondQuote = linea.find('"', firstQuote + 1);
+				title = linea.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+
+				// Después de la segunda comilla + coma → vienen los géneros
+				size_t genreStart = linea.find(',', secondQuote);
+				genres = linea.substr(genreStart + 1);
+			} else {
+				// Caso sin comillas, separado normalmente
+				stringstream ss(linea);
+				getline(ss, movieIdStr, ',');
+				getline(ss, title, ',');
+				getline(ss, genres, ',');
+			}
+
+			// Conversión y almacenamiento
+			int movieId = stoi(movieIdStr);
 			vector<string> genreList;
 			stringstream genreStream(genres);
+			// cout_debug_file << "\tmovieId: " << movieId << ", title: " << title << ", genres: " << genres << endl;
 			while (getline(genreStream, genre, '|')) {
+				// Limpieza
+				genre.erase(remove(genre.begin(), genre.end(), '\r'), genre.end());
+				genre.erase(remove(genre.begin(), genre.end(), '\n'), genre.end());
+				genre.erase(remove(genre.begin(), genre.end(), '\t'), genre.end());
+
 				genreList.push_back(genre);
+				genres_map[genre]++;
 			}
-			// Eliminar " y " del title
-			title.erase(remove(title.begin(), title.end(), '\"'), title.end());
+
+			// Limpiar comillas residuales si quedan
+			// title.erase(remove(title.begin(), title.end(), '\"'), title.end());
+
 			addMovie(movieId, title, genreList);
 		}
+
 		archivo_csv_movies.close();
 		cout_debug_file << "\t\t";
 		timer.printElapsed(cout_debug_file);
@@ -84,6 +111,7 @@ RecommendationSystem::RecommendationSystem() {
 	} else{
 		cout_debug_file << "\tError al abrir el archivo movies.csv" << std::endl;
 	}
+	printGenresFrequency();
 }
 
 // Implementacion del destructor
@@ -903,9 +931,68 @@ void RecommendationSystem::printUser() {
 	timer.printElapsed(cout_debug_file);
 	cout_debug_file << "\t[RECOMMENDATION SYSTEM] printUser() END\n" << endl;
 }
+
+
+void RecommendationSystem::printGenresFrequency(){
+	cout_debug_file << "[RECOMMENDATION SYSTEM] printGenresFrequency() BEGIN" << endl;
+	Timer timer("write genres_frequency.txt");
+	ofstream genres_file("../out/genres_frequency.txt");
+	if (!genres_file) {
+		cout_debug_file << "No se pudo abrir el archivo genres_frequency.txt\n";
+		return;
+	}
+	for (const auto& [genre, count] : this->genres_map) {
+		genres_file << genre << ": " << count << "\n";
+	}
+	cout_debug_file << "\t\t";
+	timer.printElapsed(cout_debug_file);
+	cout_debug_file << "\t[RECOMMENDATION SYSTEM] printGenresFrequency() END\n" << endl;
+}
+
+
 bool RecommendationSystem::userExists(int idUser){
 	return this->users.find(idUser) != this->users.end();
 }
+
+void RecommendationSystem::recalificarPelicula(int idUser, int idMovie, float rating){
+	cout_debug_file << "[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN" << endl;
+	if(users.find(idUser) == users.end()){
+		cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << idUser << " not found." << endl;
+		return;
+	}
+	if(movies.find(idMovie) == movies.end()){
+		cout_debug_file << "\t[RECOMMENDATION SYSTEM] Movie ID " << idMovie << " not found." << endl;
+		return; // Skip if movie does not exist
+	}
+	user_movie_ratings[idUser][idMovie] = rating; // Update the rating
+	cout_debug_file << "\t[RECOMMENDATION SYSTEM] User " << idUser << " recalified movie ID " << idMovie 
+					<< " with rating: " << fixed << setprecision(1) << rating << endl;
+	cout_debug_file << "[RECOMMENDATION SYSTEM] recalificarPelicula() END\n" << endl;
+	// printUser(); // Print the user ratings after updating
+}
+
+vector<tuple<int, string, vector<string>>> RecommendationSystem::getUnratedMoviesByGenre(int userId, const string& genre, int limit){
+	vector<tuple<int, string, vector<string>>> resultado;
+
+    if (user_movie_ratings.find(userId) == user_movie_ratings.end()) return resultado;
+
+    const auto& peliculasVistas = user_movie_ratings[userId];
+
+    for (const auto& [movieId, info] : movies) {
+        if (peliculasVistas.find(movieId) != peliculasVistas.end()) continue; // ya la calificó
+
+        const auto& [titulo, generos] = info;
+
+        if (find(generos.begin(), generos.end(), genre) != generos.end()) {
+            resultado.emplace_back(movieId, titulo, generos);
+            if ((int)resultado.size() >= limit) break;
+        }
+    }
+
+    return resultado;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 											END OTHERS
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

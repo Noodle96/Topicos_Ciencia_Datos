@@ -1,40 +1,41 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useUser } from '../context/UserContext'
 import Modal from '../components/Modal'
 import './LoginPage.css'
 
 const LoginPage = () => {
-  const [userId, setUserId] = useState('')
+  const [userIdInput, setUserIdInput] = useState('')
   const [modalMessage, setModalMessage] = useState(null)
+  const navigate = useNavigate()
+  const { setUserId } = useUser()
 
   const crearNuevoUsuario = async () => {
     try {
       const res = await fetch('http://localhost:8080/api/add_user')
       const data = await res.json()
-      const nuevoId = data.user_id
-      setModalMessage(`Tu usuario ha sido creado exitosamente. Tu código es: ${nuevoId}`)
-    } catch (err) {
-      setModalMessage('Hubo un error al crear el usuario.')
+      setModalMessage(`Tu usuario ha sido creado exitosamente. Tu código es: ${data.user_id}`)
+    } catch {
+      setModalMessage('Error al crear usuario.')
     }
   }
 
   const verificarUsuario = async () => {
-    if (!userId || isNaN(userId)) {
+    if (!userIdInput || isNaN(userIdInput)) {
       setModalMessage('Por favor, ingresa un ID de usuario válido.')
       return
     }
 
     try {
-      const res = await fetch(`http://localhost:8080/api/verify_user?user_id=${userId}`)
+      const res = await fetch(`http://localhost:8080/api/verify_user?user_id=${userIdInput}`)
       const data = await res.json()
       if (data.exists) {
-        // Usuario válido, redirigir o continuar
-        console.log(`Usuario ${userId} verificado. Redirigiendo...`)
-        // TODO: Aquí iría la navegación (React Router, Context, etc.)
-        setModalMessage(`Bienvenido, usuario ${userId}.`)  // temporal
+        setUserId(Number(userIdInput))
+        navigate('/main')
       } else {
-        setModalMessage(`El usuario con ID ${userId} no existe. Intenta de nuevo.`)
+        setModalMessage(`El usuario con ID ${userIdInput} no existe.`)
       }
-    } catch (err) {
+    } catch {
       setModalMessage('Error al verificar usuario.')
     }
   }
@@ -49,8 +50,8 @@ const LoginPage = () => {
           type="text"
           placeholder="Código de usuario"
           className="login-input"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
+          value={userIdInput}
+          onChange={(e) => setUserIdInput(e.target.value)}
         />
         <button className="login-button" onClick={verificarUsuario}>Ingresar</button>
       </div>

@@ -1,0 +1,61 @@
+/* src/components/ui/PeliculaCard.css */
+
+.pelicula-card {
+  background: #f9f9f9;
+  color: #333;
+  padding: 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.pelicula-card:hover {
+  transform: scale(1.03);
+}
+
+.pelicula-titulo {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.pelicula-imagen {
+  width: 100%;
+  border-radius: 5px;
+  margin-bottom: 0.5rem;
+}
+
+.pelicula-rating {
+  font-size: 2.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.pelicula-generos {
+  font-size: 0.8rem;
+  color: #555;
+}
+.star.full {
+  color: gold;
+}
+
+.star.half {
+  color: goldenrod;
+}
+
+.star.empty {
+  color: #ccc;
+}
+
+.mensaje-rating {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background-color: #0ff548; /* fondo amarillo suave */
+  color: #4e342e;             /* marrón oscuro para contraste */
+  border: 1px solid #196805;  /* borde amarillo más fuerte */
+  border-radius: 5px;
+  font-size: 0.85rem;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.15);
+  transition: opacity 0.3s ease-in-out;
+}
