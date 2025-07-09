@@ -237,6 +237,72 @@ int main() {
 
 
 
+
+
+    // http://localhost:8080/api/recomendar?user_id=12&n=5&metric=cosine
+    CROW_ROUTE(app, "/api/recomendar").methods("GET"_method)
+    ([&sistema](const crow::request& req) {
+        crow::json::wvalue response;
+
+        const char* user_id_str = req.url_params.get("user_id");
+        const char* n_str = req.url_params.get("n");
+        const char* metric_str = req.url_params.get("metric");
+
+        if (!user_id_str || !n_str || !metric_str) {
+            response["error"] = "Faltan parámetros requeridos (user_id, n, metric)";
+            return crow::response(400, response);
+        }
+
+        int user_id = std::stoi(user_id_str);
+        int n = std::stoi(n_str);
+        std::string metric = metric_str;
+
+        if (sistema.getUsers().find(user_id) == sistema.getUsers().end()) {
+            response["error"] = "Usuario no encontrado";
+            return crow::response(404, response);
+        }
+
+        ofstream& log4 = sistema.getCoutDebugFile04PeliculasRecomendar();
+        log4 << "\t[KNN main] KNN+ + RECOMENDAR + RECOMENDARMOVIE begin" << endl;
+        Timer timer("\t[KNN+ + RECOMENDAR + RECOMENDARMOVIE]");
+        auto vecinos = sistema.knnParalelo(n, user_id, metric);
+        if (vecinos.empty()) {
+            response["error"] = "No se encontraron vecinos válidos";
+            return crow::response(404, response);
+        }
+
+        auto recomendaciones_por_usuario = sistema.recomendar(vecinos, user_id);
+        log4 << "\t";
+        timer.printElapsed(log4, "seg");
+        log4 << "\t[KNN main] knn+recomendarMovie END" << endl;
+        auto finales = sistema.recomendarMovie(recomendaciones_por_usuario, user_id);
+        log4 << "\t[KNN main] KNN+ + RECOMENDAR + RECOMENDARMOVIE end" << endl;
+
+        const auto& movieInfo = sistema.getMovies();
+        crow::json::wvalue result = crow::json::wvalue::list();
+
+        int i = 0;
+        for (const auto& [score, movie_id] : finales) {
+            if (movieInfo.find(movie_id) == movieInfo.end()) continue;
+
+            const auto& [title, genres] = movieInfo.at(movie_id);
+            result[i]["movie_id"] = movie_id;
+            result[i]["title"] = title;
+            result[i]["score"] = score;
+            result[i]["genres"] = crow::json::wvalue::list();
+
+            for (size_t j = 0; j < genres.size(); ++j) {
+                result[i]["genres"][j] = genres[j];
+            }
+            ++i;
+        }
+        return crow::response(200, result);
+    });
+
+
+
+
+
     std::cout << "Servidor corriendo en http://localhost:8080" << std::endl;
     app.port(8080).multithreaded().run();
 }

@@ -18,10 +18,10 @@ const float DISTANCIA_MAXIMA = 1e9;
 
 // DEFINICION DE UMBRALES
 const float UMBRAL_RATING_VECINO = 3.0;
-const int UMBRAL_PELICULAS_COMUNES = 5;
+const int UMBRAL_PELICULAS_COMUNES = 3;
 const float UMBRAL_COSINE_SIMILARITY = 0.5; // Umbral para similitud del coseno
 const float UMBRAL_PEARSON_CORRELATION = 0.5; // Umbral para correlación de Pearson
-const int UMBRAL_VECINOS_SIMILARES = 2; // Umbral para el número de vecinos similares
+const int UMBRAL_VECINOS_SIMILARES = 0; // Umbral para el número de vecinos similares
 
 
 
@@ -160,7 +160,7 @@ class RecommendationSystem {
             peliculasRecomendadasPorUsuarios: unordered_map<int,vector<pair<float, int>>>
             userARecomendar: int
         */
-        void recomendarMovie(unordered_map<int,vector<pair<float, int>>> &, int);
+        vector<pair<float, int>> recomendarMovie(unordered_map<int,vector<pair<float, int>>> &, int);
 
         /*
             Agregar un usuaior

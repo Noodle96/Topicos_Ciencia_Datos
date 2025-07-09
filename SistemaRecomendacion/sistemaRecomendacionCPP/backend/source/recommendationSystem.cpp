@@ -814,7 +814,7 @@ unordered_map<int, vector<pair<float, int>>> RecommendationSystem::recomendarDeb
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 										BEGIN RECOMENDATION SYSTEM 04
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-void RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, int>>>& peliculasRecomendadasByUser, int userARecomendar){
+vector<pair<float, int>> RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, int>>>& peliculasRecomendadasByUser, int userARecomendar){
 	// recommended_movies[userX].emplace_back(make_pair(rating,movie));
 	cout_debug_file_04_peliculas_recomendar << "[RECOMENDAR MOVIE] recomendarCancion() BEGIN" << endl;
 	cout_debug_file_04_peliculas_recomendar << "\t[RECOMENDAR MOVIE] Recomendacion para el user: " << userARecomendar << endl;
@@ -855,6 +855,7 @@ void RecommendationSystem::recomendarMovie(unordered_map<int,vector<pair<float, 
 	cout_debug_file_04_peliculas_recomendar << "\t";
 	timer3.printElapsed(cout_debug_file_04_peliculas_recomendar);
 	cout_debug_file_04_peliculas_recomendar << "[RECOMENDAR MOVIE] recomendarCancion() END" << endl;
+	return respuestaFinal;
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 										END RECOMENDATION SYSTEM 04

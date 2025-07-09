@@ -4,6 +4,7 @@ import { useUser } from '../context/UserContext'
 import './MainPage.css'
 import MisCalificaciones from './MisCalificaciones'
 import CalificarNuevas from './CalificarNuevas'
+import Recomendaciones from '../components/recomendar/Recomendaciones'
 
 const MainPage = () => {
 
@@ -67,7 +68,8 @@ const MainPage = () => {
 
         )}
         {activeTab === 'recomendar' && (
-          <div>Aquí se mostrarán recomendaciones para ti</div>
+          // <div>Aquí se mostrarán recomendaciones para ti</div>
+          <Recomendaciones />
         )}
         {activeTab === 'calificar' && (
           // <div>Aquí podrás calificar nuevas películas</div>

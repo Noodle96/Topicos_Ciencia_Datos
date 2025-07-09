@@ -1,0 +1,65 @@
+/* src/components/recomendar/Recomendaciones.css */
+
+.recomendaciones-container {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.boton-recomendar {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  transition: background-color 0.3s ease;
+}
+
+.boton-recomendar:hover {
+  background-color: #2980b9;
+}
+
+.mensaje-cargando{
+  font-size: 1.2rem;
+  color: #088804;
+  margin-top: 1rem;
+}
+.mensaje-error {
+  font-size: 1rem;
+  margin-top: 1rem;
+  color: #e74c3c;
+}
+
+.recomendaciones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.recomendaciones-paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.recomendaciones-paginacion button {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+  background-color: #34495e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.recomendaciones-paginacion button:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
