@@ -246,7 +246,7 @@ class RecommendationSystem {
             limit: Limite de peliculas a retornar (default 20)
             return: vector<tuple<int, string, vector<string>>>
         */
-        vector<tuple<int, string, vector<string>>> getUnratedMoviesByGenre(int userId, const string& genre, int limit = 20);
+        vector<tuple<int, string, vector<string>>> getUnratedMoviesByGenre(int userId, const string& genre, int limit = 30);
 
 };
 

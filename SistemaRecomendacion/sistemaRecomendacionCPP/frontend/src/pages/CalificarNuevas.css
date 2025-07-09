@@ -1,0 +1,47 @@
+.calificar-nuevas-container {
+  padding: 1.5rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.calificar-nuevas-titulo{
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 1rem;
+    /* centrar */
+    text-align: center;
+}
+
+.calificar-nuevas-selector {
+  margin-bottom: 1rem;
+}
+
+.peliculas-genero-container {
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.peliculas-genero-titulo {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.peliculas-genero-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.peliculas-genero-loading,
+.peliculas-genero-vacio {
+  font-style: italic;
+  color: #666;
+}

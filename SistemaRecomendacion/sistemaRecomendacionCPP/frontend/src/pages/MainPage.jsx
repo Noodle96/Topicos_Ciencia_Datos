@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '../context/UserContext'
 import './MainPage.css'
-import Calificaciones3D from '../components/3d/Calificaciones3D'
 import MisCalificaciones from './MisCalificaciones'
+import CalificarNuevas from './CalificarNuevas'
 
 const MainPage = () => {
 
@@ -70,7 +70,8 @@ const MainPage = () => {
           <div>Aquí se mostrarán recomendaciones para ti</div>
         )}
         {activeTab === 'calificar' && (
-          <div>Aquí podrás calificar nuevas películas</div>
+          // <div>Aquí podrás calificar nuevas películas</div>
+          <CalificarNuevas />
         )}
       </div>
     </div>
