@@ -154,11 +154,13 @@ int main() {
         int i = 0;
         for (const auto& [movie_id, rating] : ratings) {
             if (movieInfo.find(movie_id) == movieInfo.end()) continue;
+            int tmdbIdInt = sistema.getLinks().at(movie_id);
 
             const auto& [title, genres] = movieInfo.at(movie_id);
             arr[i]["movie_id"] = movie_id;
             arr[i]["title"] = title;
             arr[i]["rating"] = rating;
+            arr[i]["tmdbId"] = tmdbIdInt;
             arr[i]["genres"] = crow::json::wvalue::list();
             for (size_t j = 0; j < genres.size(); ++j) {
                 arr[i]["genres"][j] = genres[j];

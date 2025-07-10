@@ -30,6 +30,8 @@ class RecommendationSystem {
         unordered_map<int, unordered_map<int, float>> user_movie_ratings;
         unordered_set<int> users;
         unordered_map<int, pair<string, vector<string>>> movies;
+        unordered_map<int, int> links;
+
         unordered_map<string, int> genres_map;
         ofstream cout_debug_file;
         ofstream cout_debug_file_01_validar_distancias,
@@ -48,6 +50,9 @@ class RecommendationSystem {
         }
         const std::unordered_map<int, std::unordered_map<int, float>>& getUserMovieRatings() const {
             return user_movie_ratings;
+        }
+        const std::unordered_map<int, int>& getLinks() const {
+            return links;
         }
 
 
@@ -181,6 +186,7 @@ class RecommendationSystem {
             This function is used for debugging purposes.
         */
         void printUser();
+        void printLinks();
 
         /*
             printGenresFrequency()

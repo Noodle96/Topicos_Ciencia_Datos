@@ -112,6 +112,38 @@ RecommendationSystem::RecommendationSystem() {
 		cout_debug_file << "\tError al abrir el archivo movies.csv" << std::endl;
 	}
 	printGenresFrequency();
+
+	// Agregando requerimineto links.csv
+	std::ifstream archivo_csv_links("../../dataset_32M/links.csv");
+	getline(archivo_csv_links, linea); // omitir la linea de cabecera
+	// Verificar si el archivo se abrió correctamente
+	if (archivo_csv_links.is_open()) {
+		while (getline(archivo_csv_links, linea)) {
+			stringstream ss(linea);
+			string movieIdStr, imdIDStr, tmdbIdStr;
+			getline(ss, movieIdStr, ',');
+			getline(ss, imdIDStr, ',');
+			getline(ss, tmdbIdStr, ',');
+			// cout_debug_file << "movieIdStr: " << movieIdStr << ", imdIDStr: " << imdIDStr << ", tmdbIdStr: " << tmdbIdStr << endl;
+			int movieId = stoi(movieIdStr);
+			int tmdbIdInt;
+			tmdbIdStr.erase(std::remove_if(tmdbIdStr.begin(), tmdbIdStr.end(),
+                [](unsigned char c) { return !std::isdigit(c); }),
+                tmdbIdStr.end());
+
+			if (!tmdbIdStr.empty()) {
+				tmdbIdInt = stoi(tmdbIdStr);
+			} else {
+				tmdbIdInt = -1;
+			}
+			links[movieId] = tmdbIdInt;
+		}
+		archivo_csv_links.close();
+		cout_debug_file << "\t[RECOMMENDATION SYSTEM] Load links.csv END" << endl;
+	} else {
+		cout_debug_file << "\tError al abrir el archivo links.csv" << std::endl;
+	}
+	printLinks();
 }
 
 // Implementacion del destructor
@@ -933,6 +965,21 @@ void RecommendationSystem::printUser() {
 	cout_debug_file << "\t[RECOMMENDATION SYSTEM] printUser() END\n" << endl;
 }
 
+void RecommendationSystem::printLinks(){
+	cout_debug_file << "[RECOMMENDATION SYSTEM] printLinks() BEGIN" << endl;
+	Timer timer("write links.txt");
+	ofstream links_file("../out/links.txt");
+	if (!links_file) {
+		cout_debug_file << "No se pudo abrir el archivo links.txt\n";
+		return;
+	}
+	for (const auto& [movieId, tmdbId] : links) {
+		links_file << "Movie ID: " << movieId << " -> TMDB ID: " << tmdbId << "\n";
+	}
+	cout_debug_file << "\t\t";
+	timer.printElapsed(cout_debug_file);
+	cout_debug_file << "\t[RECOMMENDATION SYSTEM] printLinks() END\n" << endl;
+}
 
 void RecommendationSystem::printGenresFrequency(){
 	cout_debug_file << "[RECOMMENDATION SYSTEM] printGenresFrequency() BEGIN" << endl;

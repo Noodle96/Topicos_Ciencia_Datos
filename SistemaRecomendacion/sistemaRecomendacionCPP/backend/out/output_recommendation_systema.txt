@@ -1,211 +1,23 @@
 [RECOMMENDATION SYSTEM] RecommendationSystem()
 	[RECOMMENDATION SYSTEM] Load ratings.csv BEGIN
-		[Timer] Load ratings.csv: 33.4193 seg
+		[Timer] Load ratings.csv: 32.3629 seg
 	[RECOMMENDATION SYSTEM] Load ratings.csv END
 
 	[RECOMMENDATION SYSTEM] printUser() BEGIN
 	[PRINTUSER] Usuario con maximo peliculas calificadas: 33332
-		[Timer] write users.txt: 0.102953 seg
+		[Timer] write users.txt: 0.0855059 seg
 	[RECOMMENDATION SYSTEM] printUser() END
 
 	[RECOMMENDATION SYSTEM] Load movies.csv BEGIN
-		[Timer] Load movies.csv: 0.258371 seg
+		[Timer] Load movies.csv: 0.272062 seg
 	[RECOMMENDATION SYSTEM] Load movies.csv END
 
 [RECOMMENDATION SYSTEM] printGenresFrequency() BEGIN
-		[Timer] write genres_frequency.txt: 7.3537e-05 seg
+		[Timer] write genres_frequency.txt: 5.5474e-05 seg
 	[RECOMMENDATION SYSTEM] printGenresFrequency() END
 
-[RECOMMENDATION SYSTEM] addUser() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 added successfully.
-[RECOMMENDATION SYSTEM] addUser() END
-
-[RECOMMENDATION SYSTEM] printUser() BEGIN
-	[PRINTUSER] Usuario con maximo peliculas calificadas: 33332
-		[Timer] write users.txt: 0.110826 seg
-	[RECOMMENDATION SYSTEM] printUser() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292757 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292469 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291895 with rating: 2.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291451 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291176 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290791 with rating: 2.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292391 with rating: 3.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289525 with rating: 2.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289291 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290049 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290787 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289973 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290711 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290747 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292607 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291136 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292613 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292531 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292467 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292313 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291893 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291845 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291300 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291264 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291092 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290749 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290489 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290213 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290187 with rating: 3.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 292583 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291521 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291310 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291158 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291100 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290497 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290059 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289981 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 291483 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290783 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290325 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 290125 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289983 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289915 with rating: 4.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 289797 with rating: 5.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 593 with rating: 3.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
-
-[RECOMMENDATION SYSTEM] recalificarPelicula() BEGIN
-	[RECOMMENDATION SYSTEM] User 200949 recalified movie ID 4993 with rating: 3.0
-[RECOMMENDATION SYSTEM] recalificarPelicula() END
+	[RECOMMENDATION SYSTEM] Load links.csv END
+[RECOMMENDATION SYSTEM] printLinks() BEGIN
+		[Timer] write links.txt: 0.0173098 seg
+	[RECOMMENDATION SYSTEM] printLinks() END
 
