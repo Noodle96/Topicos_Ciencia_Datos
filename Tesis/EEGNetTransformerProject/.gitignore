@@ -1,0 +1,35 @@
+# Carpetas de caché de Python
+__pycache__/
+*.pyc
+
+# Dataset completo (NO subir al repo)
+dataset/
+
+# Pesos, checkpoints y archivos grandes de modelos
+*.pkl
+*.pt
+*.pth
+*.ckpt
+*.weights
+*.model
+*.onnx
+*.onnxruntime
+
+# Archivos de datos y logs
+*.csv
+*.json
+*.log
+*.txt
+*.npy
+*.h5
+*.hdf5
+
+# Archivos comprimidos
+*.zip
+*.tar.gz
+*.tar
+*.tar.bz2
+*.tar.xz
+
+# Nota:
+# (irem​os modificando también según nuestra conveniencia)
