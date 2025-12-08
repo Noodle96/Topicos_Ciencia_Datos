@@ -31,5 +31,5 @@ dataset/
 *.tar.bz2
 *.tar.xz
 
-# Nota:
-# (irem​os modificando también según nuestra conveniencia)
+# environments virtuales
+eeg-env/

@@ -133,15 +133,16 @@ def main() -> None:
         dropout_eegnet=0.3,
         eegnet_pooling_1=5,
         eegnet_pooling_2=5,
-        MSA_num_heads=2,              # para 6GB VRAM
+        MSA_num_heads=2,  # para 6GB VRAM
         flag_positional_encoding=True,
         transformer_dim_feedforward=256,  # reducido para tu GPU
-        num_transformer_layers=1,    # menos capas para reducir uso de memoria
+        num_transformer_layers=1,  # menos capas para reducir uso de memoria
     ).to(device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    num_epochs: int = 150  # número pequeño para prueba
+    # num_epochs: int = 150  # número pequeño para prueba
+    num_epochs: int = 5  # número pequeño para prueba
 
     print("\nEntrenando modelo...")
     train_losses: List[float] = []
