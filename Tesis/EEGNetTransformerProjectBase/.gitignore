@@ -32,4 +32,4 @@ dataset/
 *.tar.xz
 
 # environments virtuales
-eeg-env/
+eeg-environment/
