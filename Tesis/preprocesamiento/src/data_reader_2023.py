@@ -42,6 +42,8 @@ def get_all_TUSZ_2023_session_paths(
 
             for reference_type in reference_types:
                 reference_type: str
+                # if reference_type != "01_tcp_ar":
+                #     continue
                 reference_type_count[reference_type] = (
                     reference_type_count.get(reference_type, 0) + 1
                 )
@@ -641,7 +643,7 @@ def cubo(a: int) -> int:
     Returns:
         int: El cubo de a.
     """
-    return a**3 + 1
+    return a**3 + 3
 
 
 def get_channel_frequencies_from_edf(edf_path: str) -> List[Tuple[str, float]]:
