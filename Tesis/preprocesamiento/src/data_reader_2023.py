@@ -643,7 +643,7 @@ def cubo(a: int) -> int:
     Returns:
         int: El cubo de a.
     """
-    return a**3 + 3
+    return a**3 + 1
 
 
 def get_channel_frequencies_from_edf(edf_path: str) -> List[Tuple[str, float]]:
@@ -692,6 +692,9 @@ def get_labels_complete_from_csv_bi_clasificacion_binaria(
 
     label_csv: str = data_path[:-4] + ".csv_bi"
 
+    # print("data_path:", data_path)
+    # print("label_csv:", label_csv)
+
     with open(label_csv, "r") as f:
         header_lines = []
         content_lines = []
@@ -702,11 +705,16 @@ def get_labels_complete_from_csv_bi_clasificacion_binaria(
             else:
                 content_lines.append(line)
 
+    # print("Header lines:", header_lines)
+    # print("Content lines:", content_lines)
+
     # Extraer duración
     for line in header_lines:
         if line.lower().startswith("# duration"):
             parts = line.split("=")
             duration_sec = int(float(parts[1].strip().split()[0]))
+            # print("\tparts:", parts)
+            # print("\tduration_sec:", duration_sec)
             break
 
     if duration_sec == -1:
@@ -714,8 +722,9 @@ def get_labels_complete_from_csv_bi_clasificacion_binaria(
 
     # Leer intervalos (solo seiz y bckg)
     reader = csv.DictReader(content_lines)
-
+    # print("data_path", data_path)
     for row in reader:
+        # print("\trow:", row)
         label = row["label"].lower()
         if label not in {"seiz", "seizure", "bckg", "background"}:
             continue

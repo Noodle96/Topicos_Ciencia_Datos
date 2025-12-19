@@ -79,7 +79,8 @@ def seizure_seconds_from_labels(labels: List[Tuple[int, int, str]]) -> int:
 
 #     return total
 
-
+# En Python, el * NO es un parámetro. Es un separador sintáctico que significa:
+# A partir de aquí, TODOS los parámetros deben pasarse por nombre (keyword-only)
 def scan_patient_summaries(
     edf_paths: List[str],
     *,
@@ -115,6 +116,7 @@ def scan_patient_summaries(
 
         for edf_path in paths:
             try:
+                # print("In try\n")
                 labels: List[Tuple[int, int, str]] = get_labels_complete_fn(edf_path)
                 total_seiz += seizure_seconds_from_labels(labels)
                 ok_paths.append(edf_path)
