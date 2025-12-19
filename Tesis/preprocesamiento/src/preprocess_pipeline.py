@@ -54,6 +54,7 @@ def extract_patient_session_id(edf_path: str) -> str:
     Devuelve el nombre base para el archivo .npy
     Ej: aaaaaauj_s004_t000 (sin extensión).
     """
+    """Returns the final component of a pathname"""
     base: str = os.path.basename(edf_path)
     return base[:-4]  # remove ".edf"
 
@@ -70,7 +71,7 @@ def bandpass_and_notch_filter(
 ) -> List[np.ndarray]:
     """
     Aplica bandpass + notch(1Hz) + notch(60Hz) a cada canal.
-    Retorna lista de arrays 1D (uno por canal), igual que tu notebook original.
+    Retorna lista de arrays 1D (uno por canal)
     """
     # Notch sobre resampleFS (igual que tu notebook)
     notch_1_b: np.ndarray
@@ -146,27 +147,39 @@ def process_one_edf(
     if ref_type in params.skip_reference_types:
         return {}
 
-    # Cargar EDF
+    # -------------------------------------------------
+    # 1)        Carga de la señal cruda EDF           -
+    # -------------------------------------------------
     raw: mne.io.BaseRaw = mne.io.read_raw_edf(edf_path, preload=True, verbose="warning")
+
     thisFS: int = int(raw.info["sfreq"])
 
-    # Extraer canales (montaje diferencial)
+    # --------------------------------------------------
+    # 2)   Extracción de canales(montaje diferencial)  -
+    # --------------------------------------------------
     flag_wrong: bool
     signals: np.ndarray
     flag_wrong, signals = get_channels_from_raw(raw)
     if flag_wrong:
         return {}
 
-    # Filtrado bandpass+notch
+    # --------------------------------------------------
+    # 3)           Filtrado bandpass + notch           -
+    # --------------------------------------------------
     filtered_signals: List[np.ndarray] = bandpass_and_notch_filter(signals, params=params)
 
-    # Remuestreo a resampleFS (250)
+    # --------------------------------------------------
+    # 4)        Remuestreo a resampleFS (250)          -
+    # --------------------------------------------------
     if thisFS == params.resampleFS:
         resampled_signals: List[np.ndarray] = filtered_signals[:]
     else:
-        resampled_signals = resample_data_in_each_channel(filtered_signals, thisFS, params.resampleFS)
+        resampled_signals: List[np.ndarray] = resample_data_in_each_channel(filtered_signals, thisFS, params.resampleFS)
 
-    # Leer labels binarios completos desde csv_bi
+
+    # --------------------------------------------------
+    # 5) Leer siempre el CSV binario y completar huecos- 
+    # --------------------------------------------------
     labels: List[Tuple[int, int, str]] = get_labels_complete_from_csv_bi_clasificacion_binaria(edf_path)
 
     # Segmentación binaria
@@ -234,6 +247,7 @@ def run_preprocessing_for_split(
 
     for edf_path in edf_paths:
         if max_edfs is not None and processed >= max_edfs:
+            print("[run_preprocessing_for_split] first conditional")
             break
 
         counts: Dict[str, int] = process_one_edf(
