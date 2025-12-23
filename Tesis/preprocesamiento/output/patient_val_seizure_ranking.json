@@ -1,0 +1,16 @@
+[
+  {
+    "patient_id": "aaaaakfo",
+    "seizure_seconds": 7355.0,
+    "seizure_minutes": 122.58333333333333,
+    "bckg_seconds": 3253.0,
+    "bckg_minutes": 54.21666666666667
+  },
+  {
+    "patient_id": "aaaaanme",
+    "seizure_seconds": 3889.0,
+    "seizure_minutes": 64.81666666666666,
+    "bckg_seconds": 80109.0,
+    "bckg_minutes": 1335.15
+  }
+]

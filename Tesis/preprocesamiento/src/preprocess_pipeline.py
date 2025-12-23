@@ -19,6 +19,9 @@ from data_reader_2023 import (
     cubo,
 )
 
+from patient_statistics import (
+    accumulate_patient_label_stats
+)
 
 @dataclass(frozen=True)
 class PreprocessParams:
@@ -47,6 +50,16 @@ def extract_reference_type_from_path(edf_path: str) -> str:
     idx_edf: int = parts.index("edf")
     reference_type: str = parts[idx_edf + 4]
     return reference_type
+
+def extract_patient_id_from_path(edf_path: str) -> str:
+    """
+    Extrae patient_id desde EDF path:
+    .../edf/{split}/{patient}/{session}/{reference_type}/{file}.edf
+    """
+    parts: List[str] = edf_path.split(os.sep)
+    idx_edf: int = parts.index("edf")
+    patient_id: str = parts[idx_edf + 2]
+    return patient_id
 
 
 def extract_patient_session_id(edf_path: str) -> str:
@@ -135,6 +148,7 @@ def process_one_edf(
     split_name: str,
     out_base: str,
     params: PreprocessParams,
+    patient_stats_accumulator: Optional[Dict[str, Dict[str, float]]]=None,
 ) -> Dict[str, int]:
     """
     Procesa 1 EDF completo y guarda sus segmentos.
@@ -182,6 +196,13 @@ def process_one_edf(
     # --------------------------------------------------
     labels: List[Tuple[int, int, str]] = get_labels_complete_from_csv_bi_clasificacion_binaria(edf_path)
 
+    # Esta funcion es llamada por referencia desde el notebook principal
+    # para motivas de estadisticas por paciente
+    accumulate_patient_label_stats(
+        extract_patient_id_from_path(edf_path),
+        labels,
+        patient_stats_accumulator,
+    )
     # Segmentación binaria
     segments: List[List[List[np.ndarray]]] = slice_signals_into_binary_segments(
         resampled_signals,
@@ -227,6 +248,7 @@ def run_preprocessing_for_split(
     out_base: str,
     params: PreprocessParams,
     max_edfs: Optional[int],
+    patient_stats_accumulator: Optional[Dict[str, Dict[str, float]]]=None,
 ) -> Dict[str, int]:
     """
     Procesa una lista de EDF para un split (train/val/test).
@@ -255,6 +277,7 @@ def run_preprocessing_for_split(
             split_name=split_name,
             out_base=out_base,
             params=params,
+            patient_stats_accumulator=patient_stats_accumulator,
         )
 
         # counts devuelve "total_after" por archivo, pero para el resumen
