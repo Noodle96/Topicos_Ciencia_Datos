@@ -254,14 +254,95 @@ def scan_patient_summaries(
             "ratio": total_seiz/(total_seiz + total_backg) if (total_seiz + total_backg) > 0 else 0.0,
         })
         outJson.sort(
-            key=lambda x: x["seizure_minutes"],
-            # key=lambda x: x["ratio"],
+            # key=lambda x: x["seizure_minutes"],
+            key=lambda x: x["ratio"],
             reverse=True,
         )
         os.makedirs(os.path.dirname(path_json_output), exist_ok=True)
         with open(path_json_output, "w", encoding="utf-8") as f:
             json.dump(outJson, f, indent=2)
     return out
+
+
+
+
+# Con esta funcion guardamos en en "path_json_output" los detalles de 
+# la particion  (train | val | test)  seleccionada 
+def save_SELECTED_PARTITION(
+    edf_paths: List[str],
+    path_json_output: str,
+    *,
+    get_labels_complete_fn,  # función: (edf_path:str) -> List[(s,e,label)]
+) -> None:
+    """
+    Escanea EDF paths y produce un resumen por paciente usando SOLO csv_bi.
+
+    Importante:
+    - NO carga la señal EDF.
+    - Solo llama a get_labels_complete_fn(edf_path) que lee el csv_bi asociado.
+
+    Returns:
+        None
+    """
+    # Si la clave no existe, crea una lista vacía automáticamente
+    paths_by_patient: Dict[str, List[str]] = defaultdict(list)
+
+    # 1) agrupar EDF por paciente (filtrando referencias no deseadas)
+    for p in edf_paths:
+        patient_id, _ = extract_patient_and_reference_from_path(p)
+        paths_by_patient[patient_id].append(p)
+
+    # En outjson veremos las estadisticas por paciente
+    outJson: List[Dict[str, float]] = []
+    
+    static_id: int = 0
+    for patient_id, paths in paths_by_patient.items():
+        total_seiz: int = 0
+        total_backg: int = 0
+        total = 0
+        total_seizure_intervals: int = 0
+        total_bckg_intervals: int = 0
+        ok_paths: List[str] = []
+        static_id += 1
+
+        for edf_path in paths:
+            try:
+                # print("In try\n")
+                labels: List[Tuple[int, int, str]] = get_labels_complete_fn(edf_path)
+                total_seiz += seizure_seconds_from_labels(labels)
+                total_backg += background_seconds_from_labels(labels)
+                total += total_seconds_from_edf_path(edf_path)
+                total_seizure_intervals += seizure_intervals(labels)
+                total_bckg_intervals += background_intervals(labels)
+                ok_paths.append(edf_path)
+            except Exception as e:
+                # Si falta csv_bi o hay error, lo saltamos (sin detener todo)
+                print(f"[WARN] labels fail: {edf_path} -> {e}")
+                continue
+        outJson.append({
+            "static_id": static_id,
+            "patient_id": patient_id,
+            "total_minutes": total / 60.0,
+            "total_seconds": total,
+            "total_seconds_accounted": total_seiz + total_backg,
+            "bool_verified_total": total == (total_seiz + total_backg),
+            "seizure_seconds": total_seiz,
+            "seizure_minutes": total_seiz / 60.0,
+            "bckg_seconds": total_backg,
+            "bckg_minutes": total_backg / 60.0,
+            "seizure_intervals": total_seizure_intervals,
+            "bckg_intervals": total_bckg_intervals,
+            "ratio": total_seiz/(total_seiz + total_backg) if (total_seiz + total_backg) > 0 else 0.0,
+        })
+        outJson.sort(
+            # key=lambda x: x["seizure_minutes"],
+            key=lambda x: x["ratio"],
+            reverse=True,
+        )
+        os.makedirs(os.path.dirname(path_json_output), exist_ok=True)
+        with open(path_json_output, "w", encoding="utf-8") as f:
+            json.dump(outJson, f, indent=2)
+
 
 
 def select_top_patients_by_seizure_seconds(
@@ -315,6 +396,7 @@ def select_top_patients_by_some_criteria(
         for pid, summary in patient_map.items()
         if summary.seizure_seconds >= min_seizure_seconds
     ]
+    # items.sort(key=lambda x: x[1], reverse=False)
     items.sort(key=lambda x: x[1], reverse=True)
 
     if k is None:

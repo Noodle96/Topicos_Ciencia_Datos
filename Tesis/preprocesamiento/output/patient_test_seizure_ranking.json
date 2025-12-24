@@ -1,16 +1,16 @@
 [
   {
-    "patient_id": "aaaaahie",
-    "seizure_seconds": 7887.0,
-    "seizure_minutes": 131.45,
-    "bckg_seconds": 371712.0,
-    "bckg_minutes": 6195.2
+    "patient_id": "aaaaakfk",
+    "seizure_seconds": 1140.0,
+    "seizure_minutes": 19.0,
+    "bckg_seconds": 1636.0,
+    "bckg_minutes": 27.266666666666666
   },
   {
-    "patient_id": "aaaaamqq",
-    "seizure_seconds": 5539.0,
-    "seizure_minutes": 92.31666666666666,
-    "bckg_seconds": 63523.0,
-    "bckg_minutes": 1058.7166666666667
+    "patient_id": "aaaaaajy",
+    "seizure_seconds": 1096.0,
+    "seizure_minutes": 18.266666666666666,
+    "bckg_seconds": 553.0,
+    "bckg_minutes": 9.216666666666667
   }
 ]

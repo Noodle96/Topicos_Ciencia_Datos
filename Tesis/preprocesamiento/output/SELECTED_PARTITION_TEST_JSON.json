@@ -1,0 +1,17 @@
+[
+  {
+    "static_id": 1,
+    "patient_id": "aaaaaajy",
+    "total_minutes": 27.483333333333334,
+    "total_seconds": 1649,
+    "total_seconds_accounted": 1649,
+    "bool_verified_total": true,
+    "seizure_seconds": 1096,
+    "seizure_minutes": 18.266666666666666,
+    "bckg_seconds": 553,
+    "bckg_minutes": 9.216666666666667,
+    "seizure_intervals": 13,
+    "bckg_intervals": 18,
+    "ratio": 0.6646452395391146
+  }
+]

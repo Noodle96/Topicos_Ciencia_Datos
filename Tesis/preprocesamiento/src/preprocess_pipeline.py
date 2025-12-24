@@ -157,6 +157,7 @@ def process_one_edf(
         dict con conteos por clase: {"bckg": n, "seizure": m}
         Si se salta, retorna {}.
     """
+    print("[process_one_edf] Processing:", edf_path)
     ref_type: str = extract_reference_type_from_path(edf_path)
     if ref_type in params.skip_reference_types:
         return {}
@@ -175,6 +176,7 @@ def process_one_edf(
     signals: np.ndarray
     flag_wrong, signals = get_channels_from_raw(raw)
     if flag_wrong:
+        print("[process_one_edf] skipping EDF due to wrong channels:", edf_path)
         return {}
 
     # --------------------------------------------------
