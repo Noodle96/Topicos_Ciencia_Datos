@@ -643,7 +643,7 @@ def cubo(a: int) -> int:
     Returns:
         int: El cubo de a.
     """
-    return a**3 + 1
+    return a**3 + 7
 
 
 def get_channel_frequencies_from_edf(edf_path: str) -> List[Tuple[str, float]]:

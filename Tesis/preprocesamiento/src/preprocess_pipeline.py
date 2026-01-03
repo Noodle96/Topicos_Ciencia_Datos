@@ -118,22 +118,55 @@ def save_segments_append(
     label_name: str,
     patient_session: str,
     windows: List[np.ndarray],
+    debug: bool = False,
 ) -> int:
     """
-    Guarda ventanas (cada una shape [22, L]) en:
+    Guarda ventanas EEG en formato .npy con dtype float32.
+
+    Estructura:
       out_base/split/label/patient_session.npy
 
-    Si existe, concatena.
-    Retorna cuántas ventanas se guardaron (después de concatenar).
+    Cada ventana tiene shape (22, L).
+
+    Retorna el número total de ventanas guardadas.
     """
     folder_base: str = os.path.join(out_base, split_name, label_name)
     os.makedirs(folder_base, exist_ok=True)
 
     save_file: str = os.path.join(folder_base, f"{patient_session}.npy")
-    new_arr: np.ndarray = np.array(windows)
 
+    # =========================
+    # DEBUG ANTES DE CONVERSIÓN
+    # =========================
+    if debug and len(windows) > 0:
+        w0: np.ndarray = windows[0]
+        print(
+            f"[DEBUG BEFORE] window dtype={w0.dtype}, "
+            f"shape={w0.shape}, "
+            f"bytes={w0.nbytes}"
+        )
+
+    # new_arr: np.ndarray = np.array(windows)
+    new_arr: np.ndarray = np.asarray(windows, dtype=np.float32)
+
+    # =========================
+    # DEBUG DESPUÉS DE CONVERSIÓN
+    # =========================
+    if debug:
+        bytes_per_window: float = new_arr.nbytes / new_arr.shape[0]
+        print(
+            f"[DEBUG AFTER ] array dtype={new_arr.dtype}, "
+            f"shape={new_arr.shape}, "
+            f"bytes total={new_arr.nbytes}, "
+            f"bytes/window={int(bytes_per_window)}"
+        )
+
+    # =========================
+    # GUARDADO / CONCATENACIÓN
+    # =========================
     if os.path.isfile(save_file):
-        existing_data: np.ndarray = np.load(save_file, allow_pickle=True)
+        # existing_data: np.ndarray = np.load(save_file, allow_pickle=True)
+        existing_data: np.ndarray = np.load(save_file, mmap_mode=None)
         merged: np.ndarray = np.concatenate((existing_data, new_arr), axis=0)
         np.save(save_file, merged)
         return int(merged.shape[0])

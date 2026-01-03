@@ -255,7 +255,8 @@ def scan_patient_summaries(
         })
         outJson.sort(
             # key=lambda x: x["seizure_minutes"],
-            key=lambda x: x["ratio"],
+            key=lambda x: x["ratio"],# cloud-test
+            # key=lambda x: x["total_minutes"],
             reverse=True,
         )
         os.makedirs(os.path.dirname(path_json_output), exist_ok=True)
