@@ -1,128 +1,43 @@
 # train.py
 
 import os
-import time
-from typing import List
+from typing import List, Dict
 
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import torch
 import torch.nn as nn
-from sklearn.metrics import classification_report, confusion_matrix
-from torch.utils.data import DataLoader
 
 from config.settings import (
-    nclasses,
-    sequence_length,
-    num_eeg_channels,
     batch_size,
-    device,
     data_root,
-    debug_mode_flag,
+    device,
+    nclasses,
+    num_eeg_channels,
+    sequence_length,
 )
-from data.dataloader import get_dataloaders
+from data.dataloader import get_train_val_loaders
 from models.eegnet_transformer import EEGTransformerNet
-
-
-def train_one_epoch(
-    model: nn.Module,
-    dataloader: DataLoader,
-    criterion,
-    optimizer,
-    epoch: int,
-) -> float:
-    model.train()
-    running_loss: float = 0.0
-
-    for inputs, labels in dataloader:
-        inputs, labels = inputs.to(device), labels.to(device)
-
-        optimizer.zero_grad()
-        outputs = model(inputs.float())
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item() * inputs.size(0)
-
-    epoch_loss: float = running_loss / len(dataloader.dataset)
-    print(f"Epoch {epoch} - Training loss: {epoch_loss:.4f}")
-    return epoch_loss
-
-
-def evaluate(
-    model: nn.Module,
-    dataloader: DataLoader,
-    criterion,
-) -> float:
-    model.eval()
-    running_loss: float = 0.0
-
-    with torch.no_grad():
-        for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs.float())
-            loss = criterion(outputs, labels)
-            running_loss += loss.item() * inputs.size(0)
-
-    val_loss: float = running_loss / len(dataloader.dataset)
-    print(f"Validation loss: {val_loss:.4f}")
-    return val_loss
-
-
-def evaluate_metrics(
-    model: nn.Module,
-    dataloader: DataLoader,
-) -> None:
-    model.eval()
-    all_preds: List[int] = []
-    all_labels: List[int] = []
-
-    with torch.no_grad():
-        for inputs, labels in dataloader:
-            inputs = inputs.to(device)
-            outputs = model(inputs.float())
-            preds = torch.argmax(outputs, dim=1).cpu().numpy()
-
-            all_preds.extend(preds)
-            all_labels.extend(labels.numpy())
-
-    # Matriz de confusión
-    cm = confusion_matrix(all_labels, all_preds)
-    print("Matriz de confusión:")
-    print(cm)
-
-    sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        xticklabels=["bckg", "seiz"],
-        yticklabels=["bckg", "seiz"],
-    )
-    plt.xlabel("Predicho")
-    plt.ylabel("Real")
-    plt.title("Matriz de Confusión")
-    plt.show()
-
-    # Reporte de métricas
-    report = classification_report(
-        all_labels,
-        all_preds,
-        target_names=["bckg", "seiz"],
-        digits=4,
-    )
-    print("Reporte de métricas:")
-    print(report)
+from training.trainer import train_one_epoch, validate_one_epoch
+from evaluation.metrics import compute_classification_metrics
 
 
 def main() -> None:
-    print("\nCargando datos...")
-    # train_loader, val_loader, test_loader = get_dataloaders(data_root, batch_size)
-    train_loader, _, val_loader = get_dataloaders(data_root, batch_size)
 
-    print("Instanciando modelo...")
+    results_root: str = "results/baseline"
+    loss_dir: str = os.path.join(results_root, "losses")
+    metrics_dir: str = os.path.join(results_root, "metrics")
+    model_dir: str = os.path.join(results_root, "model")
+
+    for d in [loss_dir, metrics_dir, model_dir]:
+        os.makedirs(d, exist_ok=True)
+
+    print("\n📦 Cargando dataloaders para train y val...")
+    train_loader, val_loader = get_train_val_loaders(
+        data_root=data_root,
+        batch_size=batch_size,
+    )
+
+    print("🧠 Instanciando modelo baseline...")
     model = EEGTransformerNet(
         nb_classes=nclasses,
         sequence_length=sequence_length,
@@ -133,55 +48,100 @@ def main() -> None:
         dropout_eegnet=0.3,
         eegnet_pooling_1=5,
         eegnet_pooling_2=5,
-        MSA_num_heads=2,  # para 6GB VRAM
+        MSA_num_heads=2,
         flag_positional_encoding=True,
-        transformer_dim_feedforward=256,  # reducido para tu GPU
-        num_transformer_layers=1,  # menos capas para reducir uso de memoria
+        transformer_dim_feedforward=256,
+        num_transformer_layers=1,
     ).to(device)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    # num_epochs: int = 150  # número pequeño para prueba
-    num_epochs: int = 5  # número pequeño para prueba
+    criterion: nn.Module = nn.CrossEntropyLoss()
+    optimizer: torch.optim.Optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=1e-4,
+    )
 
-    print("\nEntrenando modelo...")
+    num_epochs: int = 30
     train_losses: List[float] = []
     val_losses: List[float] = []
 
+    print("\n🚀 Iniciando entrenamiento...")
     for epoch in range(1, num_epochs + 1):
-        # Entrenamiento para una época, retorna pérdida promedio
-        avg_train_loss: float = train_one_epoch(
-            model,
-            train_loader,
-            criterion,
-            optimizer,
-            epoch,
+        train_loss: float = train_one_epoch(
+            model=model,
+            dataloader=train_loader,
+            criterion=criterion,
+            optimizer=optimizer,
+            epoch=epoch,
         )
 
-        # Evaluación sobre conjunto de validación
-        val_loss: float = evaluate(model, val_loader, criterion)
+        val_loss: float = validate_one_epoch(
+            model=model,
+            dataloader=val_loader,
+            criterion=criterion,
+        )
 
-        # Registro de pérdidas para graficar
-        train_losses.append(avg_train_loss)
+        train_losses.append(train_loss)
         val_losses.append(val_loss)
 
-    print("\nEntrenamiento finalizado. Evaluando en test...")
-    # evaluate(model, test_loader, criterion)
-    evaluate(model, val_loader, criterion)
+    print("\n📊 Evaluando métricas finales (VAL)... y guardando")
+    metrics: Dict[str, object] = compute_classification_metrics(
+        model=model,
+        dataloader=val_loader,
+        target_names=["bckg", "seizure"],
+    )
 
-    model_path: str = os.path.join("results", "EEGTransformerNet.pth")
-    torch.save(model.state_dict(), model_path)
+    # ===============================
+    # Guardar métricas de VALIDATION
+    # ===============================
+    np.save(
+        os.path.join(metrics_dir, "val_confusion.npy"),
+        metrics["confusion_matrix"],
+    )
 
-    print("\n🔍 Evaluando métricas finales...")
-    # evaluate_metrics(model, test_loader)
-    evaluate_metrics(model, val_loader)  # aquí val_loader es el test_loader
+    np.save(
+        os.path.join(metrics_dir, "val_y_true.npy"),
+        metrics["y_true"],
+    )
 
-    print(f"Modelo guardado en: {model_path}")
+    np.save(
+        os.path.join(metrics_dir, "val_y_pred.npy"),
+        metrics["y_pred"],
+    )
 
-    os.makedirs("results/loss_data", exist_ok=True)
-    np.save("results/loss_data/train_losses.npy", np.array(train_losses))
-    np.save("results/loss_data/val_losses.npy", np.array(val_losses))
-    print("Pérdidas guardadas en results/loss_data/")
+    with open(
+        os.path.join(metrics_dir, "val_classification_report.txt"),
+        "w",
+    ) as f:
+        f.write(metrics["classification_report"])
+
+    print("📁 Métricas de VALIDATION guardadas.")
+
+
+    print("\n💾 Guardando modelo y pérdidas...")
+    torch.save(
+        model.state_dict(),
+        os.path.join(model_dir, "EEGNetTransformerNet.pth"),
+    )
+
+    np.save(
+        os.path.join(loss_dir, "train_losses.npy"),
+        np.array(train_losses),
+    )
+
+    np.save(
+        os.path.join(loss_dir, "val_losses.npy"),
+        np.array(val_losses),
+    )
+
+    print("✅ Entrenamiento baseline finalizado.")
+
+    # ======================================================
+    # LIBERAR MEMORIA DE TRAIN Y VAL LOADERS
+    # ======================================================
+    del train_loader
+    del val_loader
+    torch.cuda.empty_cache()
+    print("[INFO] Train y Val loaders liberados de memoria.")
 
 
 if __name__ == "__main__":

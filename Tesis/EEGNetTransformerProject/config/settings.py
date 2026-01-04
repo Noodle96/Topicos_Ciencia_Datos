@@ -6,7 +6,6 @@ import torch
 
 # ===== General flags =====
 binary_classifier_flag: bool = True
-balanced_training_flag: bool = False
 debug_mode_flag: bool = False
 
 
@@ -26,21 +25,12 @@ seizure_types: List[str] = (
 
 # ===== Ruta al dataset según flags =====
 data_root: str = os.path.join(
-    "dataset",
-    "tuh_eeg_seizure",
-    "v2.0.3",
-    (
-        "TUSZ_processed_binary_balanced_individual_segments"
-        if binary_classifier_flag and balanced_training_flag
-        else (
-            "TUSZ_processed_binary_individual_segments"
-            if binary_classifier_flag
-            else "TUSZ_processed_multiclass_individual_segments"
-        )
-    ),
+    "..",
+    "data_procesada",
+    "TUSZ_processed_binary_individual_segments",
     f"segment_interval_{segment_interval}_sec",
 )
-print(f"Data root set to: {data_root}")
+# print(f"Data root set to: {data_root}")
 # Si es binario y balanceado → usa TUSZ_processed_binary_balanced_individual_segments
 # Si es binario no balanceado → usa TUSZ_processed_binary_individual_segments
 # Si es multiclass → usa TUSZ_processed_multiclass_individual_segments
@@ -48,3 +38,4 @@ print(f"Data root set to: {data_root}")
 
 # # ===== Device =====
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# print(f"Using device: {device}")
