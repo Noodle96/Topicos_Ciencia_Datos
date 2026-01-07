@@ -7,13 +7,14 @@ import os
 import json
 import random
 
+
 # Esta clase es principalmente para almacenar datos, no lógica compleja
 # genera métodos automáticamente:
 #    __init__ (constructor)
 #    __repr__ (para imprimir bonito)
 #    __eq__ (comparación)
 #    opcionalmente __hash__, __lt__, etc.
-@dataclass(frozen=True) # hace que la instancia sea INMUTABLE
+@dataclass(frozen=True)  # hace que la instancia sea INMUTABLE
 class PatientSummary:
     """
     Resumen por paciente para el criterio de selección.
@@ -24,12 +25,14 @@ class PatientSummary:
         edf_count: Cantidad de EDF considerados para este paciente
         edf_paths: Lista de EDF paths pertenecientes al paciente (filtrados por referencia)
     """
+
     patient_id: str
     seizure_seconds: int
     bckg_seconds: int
     ratio: float
     edf_count: int
     edf_paths: List[str]
+
 
 @dataclass(frozen=True)
 class PatientJsonSummary:
@@ -44,11 +47,13 @@ class PatientJsonSummary:
         bckg_intervals: cantidad de intervalos de bckg
 
     """
+
     patient_id: str
     seizure_minutes: float
     bckg_minutes: float
     seizure_intervals: int
     bckg_intervals: int
+
 
 def extract_patient_and_reference_from_path(edf_path: str) -> Tuple[str, str]:
     """
@@ -63,7 +68,7 @@ def extract_patient_and_reference_from_path(edf_path: str) -> Tuple[str, str]:
     parts: List[str] = edf_path.split(os.sep)
     # print(f"parts: {parts}")
     idx_edf: int = parts.index("edf")
-    # print(f"idx_edf: {idx_edf}")    
+    # print(f"idx_edf: {idx_edf}")
     patient_id: str = parts[idx_edf + 2]
     # print(f"patient_id: {patient_id}")
     reference_type: str = parts[idx_edf + 4]
@@ -81,12 +86,11 @@ def seizure_seconds_from_labels(labels: List[Tuple[int, int, str]]) -> int:
     for s, e, lab in labels:
         lab_norm: str = lab.lower()
         if lab_norm in {"seiz", "seizure"} and e > s:
-            total += (e - s)
+            total += e - s
     return total
 
-def background_seconds_from_labels(
-    labels: List[Tuple[int, int, str]]
-) -> int:
+
+def background_seconds_from_labels(labels: List[Tuple[int, int, str]]) -> int:
     """
     Suma la duración total (en segundos) de intervalos con etiqueta bckg.
 
@@ -96,8 +100,9 @@ def background_seconds_from_labels(
     for s, e, lab in labels:
         lab_norm: str = lab.lower()
         if lab_norm in {"bckg", "background"} and e > s:
-            total += (e - s)
+            total += e - s
     return total
+
 
 def seizure_intervals(labels: List[Tuple[int, int, str]]) -> int:
     """
@@ -112,6 +117,7 @@ def seizure_intervals(labels: List[Tuple[int, int, str]]) -> int:
             total += 1
     return total
 
+
 def background_intervals(labels: List[Tuple[int, int, str]]) -> int:
     """
     Cuenta la cantidad de intervalos con etiqueta bckg.
@@ -125,8 +131,9 @@ def background_intervals(labels: List[Tuple[int, int, str]]) -> int:
             total += 1
     return total
 
+
 # extraer el total de segundos del path asociado al EDF
-def total_seconds_from_edf_path( edf_path: str) -> int:
+def total_seconds_from_edf_path(edf_path: str) -> int:
     """
     Extrae la duración total (en segundos) desde el EDF path.
 
@@ -149,7 +156,7 @@ def total_seconds_from_edf_path( edf_path: str) -> int:
                 parts = line.split("=")
                 duration_sec = int(float(parts[1].strip().split()[0]))
                 return duration_sec
-    return -1 # imposible case
+    return -1  # imposible case
 
 
 # def seizure_seconds_from_labels(
@@ -168,6 +175,7 @@ def total_seconds_from_edf_path( edf_path: str) -> int:
 #             total += (e - s)
 
 #     return total
+
 
 # En Python, el * NO es un parámetro. Es un separador sintáctico que significa:
 # A partir de aquí, TODOS los parámetros deben pasarse por nombre (keyword-only)
@@ -204,7 +212,7 @@ def scan_patient_summaries(
 
     # En outjson veremos las estadisticas por paciente
     # outJson: List[Dict[str, float]] = [] # pasado por referencia
-    
+
     static_id: int = 0
     for patient_id, paths in paths_by_patient.items():
         total_seiz: int = 0
@@ -234,28 +242,38 @@ def scan_patient_summaries(
             patient_id=patient_id,
             seizure_seconds=int(total_seiz),
             bckg_seconds=int(total_backg),
-            ratio=float(total_seiz)/(total_seiz + total_backg) if (total_seiz + total_backg) > 0 else 0.0,
+            ratio=(
+                float(total_seiz) / (total_seiz + total_backg)
+                if (total_seiz + total_backg) > 0
+                else 0.0
+            ),
             edf_count=int(len(ok_paths)),
             edf_paths=ok_paths,
         )
-        outJson.append({
-            "static_id": static_id,
-            "patient_id": patient_id,
-            "total_minutes": total / 60.0,
-            "total_seconds": total,
-            "total_seconds_accounted": total_seiz + total_backg,
-            "bool_verified_total": total == (total_seiz + total_backg),
-            "seizure_seconds": total_seiz,
-            "seizure_minutes": total_seiz / 60.0,
-            "bckg_seconds": total_backg,
-            "bckg_minutes": total_backg / 60.0,
-            "seizure_intervals": total_seizure_intervals,
-            "bckg_intervals": total_bckg_intervals,
-            "ratio": total_seiz/(total_seiz + total_backg) if (total_seiz + total_backg) > 0 else 0.0,
-        })
+        outJson.append(
+            {
+                "static_id": static_id,
+                "patient_id": patient_id,
+                "total_minutes": total / 60.0,
+                "total_seconds": total,
+                "total_seconds_accounted": total_seiz + total_backg,
+                "bool_verified_total": total == (total_seiz + total_backg),
+                "seizure_seconds": total_seiz,
+                "seizure_minutes": total_seiz / 60.0,
+                "bckg_seconds": total_backg,
+                "bckg_minutes": total_backg / 60.0,
+                "seizure_intervals": total_seizure_intervals,
+                "bckg_intervals": total_bckg_intervals,
+                "ratio": (
+                    total_seiz / (total_seiz + total_backg)
+                    if (total_seiz + total_backg) > 0
+                    else 0.0
+                ),
+            }
+        )
         outJson.sort(
             # key=lambda x: x["seizure_minutes"],
-            key=lambda x: x["ratio"],# cloud-test
+            key=lambda x: x["ratio"],  # cloud-test
             # key=lambda x: x["total_minutes"],
             reverse=True,
         )
@@ -265,10 +283,8 @@ def scan_patient_summaries(
     return out
 
 
-
-
-# Con esta funcion guardamos en en "path_json_output" los detalles de 
-# la particion  (train | val | test)  seleccionada 
+# Con esta funcion guardamos en en "path_json_output" los detalles de
+# la particion  (train | val | test)  seleccionada
 def save_SELECTED_PARTITION(
     edf_paths: List[str],
     path_json_output: str,
@@ -295,7 +311,7 @@ def save_SELECTED_PARTITION(
 
     # En outjson veremos las estadisticas por paciente
     outJson: List[Dict[str, float]] = []
-    
+
     static_id: int = 0
     for patient_id, paths in paths_by_patient.items():
         total_seiz: int = 0
@@ -320,21 +336,27 @@ def save_SELECTED_PARTITION(
                 # Si falta csv_bi o hay error, lo saltamos (sin detener todo)
                 print(f"[WARN] labels fail: {edf_path} -> {e}")
                 continue
-        outJson.append({
-            "static_id": static_id,
-            "patient_id": patient_id,
-            "total_minutes": total / 60.0,
-            "total_seconds": total,
-            "total_seconds_accounted": total_seiz + total_backg,
-            "bool_verified_total": total == (total_seiz + total_backg),
-            "seizure_seconds": total_seiz,
-            "seizure_minutes": total_seiz / 60.0,
-            "bckg_seconds": total_backg,
-            "bckg_minutes": total_backg / 60.0,
-            "seizure_intervals": total_seizure_intervals,
-            "bckg_intervals": total_bckg_intervals,
-            "ratio": total_seiz/(total_seiz + total_backg) if (total_seiz + total_backg) > 0 else 0.0,
-        })
+        outJson.append(
+            {
+                "static_id": static_id,
+                "patient_id": patient_id,
+                "total_minutes": total / 60.0,
+                "total_seconds": total,
+                "total_seconds_accounted": total_seiz + total_backg,
+                "bool_verified_total": total == (total_seiz + total_backg),
+                "seizure_seconds": total_seiz,
+                "seizure_minutes": total_seiz / 60.0,
+                "bckg_seconds": total_backg,
+                "bckg_minutes": total_backg / 60.0,
+                "seizure_intervals": total_seizure_intervals,
+                "bckg_intervals": total_bckg_intervals,
+                "ratio": (
+                    total_seiz / (total_seiz + total_backg)
+                    if (total_seiz + total_backg) > 0
+                    else 0.0
+                ),
+            }
+        )
         outJson.sort(
             # key=lambda x: x["seizure_minutes"],
             key=lambda x: x["ratio"],
@@ -343,7 +365,6 @@ def save_SELECTED_PARTITION(
         os.makedirs(os.path.dirname(path_json_output), exist_ok=True)
         with open(path_json_output, "w", encoding="utf-8") as f:
             json.dump(outJson, f, indent=2)
-
 
 
 def select_top_patients_by_seizure_seconds(
@@ -422,7 +443,7 @@ def split_train_val_patients(
     rng.shuffle(pool)
 
     train_patients: List[str] = pool[:k_train]
-    val_patients: List[str] = pool[k_train:k_train + k_val]
+    val_patients: List[str] = pool[k_train : k_train + k_val]
     return train_patients, val_patients
 
 
@@ -453,7 +474,9 @@ def summarize_patients(
     """
     Imprime un resumen rápido de seizure_seconds para un conjunto de pacientes.
     """
-    secs: List[int] = [patient_map[p].seizure_seconds for p in patient_ids if p in patient_map]
+    secs: List[int] = [
+        patient_map[p].seizure_seconds for p in patient_ids if p in patient_map
+    ]
     if not secs:
         print(f"{name}: (sin datos)")
         return
