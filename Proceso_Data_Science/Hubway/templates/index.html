@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hubway Dashboard</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+    
+        body {
+            font-family: Arial, sans-serif;
+            padding: 10px 12px;
+            box-sizing: border-box;
+            background-color: #f7f7f7;
+            overflow: hidden;
+        }
+    
+        h1 {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+        }
+    
+        .controls {
+            margin-bottom: 10px;
+        }
+    
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: stretch;
+            height: calc(100vh - 80px);
+        }
+    
+        .left-panel,
+        .right-panel {
+            display: grid;
+            gap: 10px;
+            min-height: 0;
+        }
+    
+        .left-panel {
+            grid-template-rows: 1fr 1fr;
+        }
+    
+        .right-panel {
+            grid-template-rows: 1fr 1fr 1fr;
+        }
+    
+        .panel {
+            background-color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 8px;
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+    
+        .panel-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+    
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            flex: 1;
+            min-height: 0;
+        }
+    
+        .axis-label {
+            font-size: 12px;
+        }
+    
+        .avg-line {
+            stroke: gray;
+            stroke-width: 1.5;
+            stroke-dasharray: 5 5;
+        }
+    
+        .avg-label {
+            fill: gray;
+            font-size: 11px;
+        }
+    
+        .line-point {
+            stroke-width: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Hubway - Uso y condiciones meteorológicas</h3>
+
+    <div class="controls">
+        <label for="station-select">Municipalidad:</label>
+        <select id="station-select"></select>
+    </div>
+
+    <div class="dashboard">
+        <div class="left-panel">
+            <div class="panel">
+                <div class="panel-title" id="usage-title">Frecuencia mensual de uso</div>
+                <svg id="usage-chart"></svg>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title" id="combined-title">Clima combinado</div>
+                <svg id="combined-weather-chart"></svg>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel">
+                <div class="panel-title" id="temperature-title">Temperatura</div>
+                <svg id="temperature-chart"></svg>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title" id="wind-title">Viento</div>
+                <svg id="wind-chart"></svg>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title" id="rain-title">Lluvia</div>
+                <svg id="rain-chart"></svg>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
