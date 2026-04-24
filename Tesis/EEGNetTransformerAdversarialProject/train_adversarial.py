@@ -96,7 +96,7 @@ def main() -> None:
     # Entrenamiento
     # ======================================================
     num_epochs: int = 30
-    lambda_max: float = 0.3
+    lambda_max: float = 0.25
 
     train_stats: List[AdversarialEpochStats] = []
     val_stats: List[AdversarialEpochStats] = []

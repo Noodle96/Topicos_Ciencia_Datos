@@ -1,0 +1,8 @@
+              precision    recall  f1-score   support
+
+        bckg     0.8639    0.8238    0.8434     80943
+     seizure     0.5199    0.5951    0.5549     25942
+
+    accuracy                         0.7683    106885
+   macro avg     0.6919    0.7095    0.6992    106885
+weighted avg     0.7804    0.7683    0.7734    106885
