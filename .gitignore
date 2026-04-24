@@ -5,6 +5,7 @@ frames_output/
 *.csv
 videos/
 dataset/
+data_procesada/
 
 # MovieLens/
 
