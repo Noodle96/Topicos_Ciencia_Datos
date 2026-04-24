@@ -337,6 +337,28 @@ def api_stations() -> Any:
     return jsonify(municipals_payload)
 
 
+@app.route("/api/stations-spatial")
+def api_stations_spatial() -> Any:
+    """
+    Devuelve información espacial de las estaciones para construir
+    un mapa esquemático en el frontend.
+    """
+    stations_df: pd.DataFrame = load_stations()
+
+    payload: list[dict[str, Any]] = [
+        {
+            "id": int(row["id"]),
+            "station": str(row["station"]),
+            "municipal": str(row["municipal"]),
+            "lat": float(row["lat"]),
+            "lng": float(row["lng"]),
+        }
+        for _, row in stations_df.iterrows()
+    ]
+
+    return jsonify(payload)
+
+
 @app.route("/api/station-monthly-usage")
 def api_station_monthly_usage() -> Any:
     """
