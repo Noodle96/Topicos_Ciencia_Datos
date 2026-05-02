@@ -31,8 +31,8 @@ class RecommendationSystem {
         unordered_set<int> users;
         unordered_map<int, pair<string, vector<string>>> movies;
         unordered_map<int, int> links;
-
         unordered_map<string, int> genres_map;
+
         ofstream cout_debug_file;
         ofstream cout_debug_file_01_validar_distancias,
                  cout_debug_file_02_calcular_knn,
@@ -54,9 +54,15 @@ class RecommendationSystem {
         const std::unordered_map<int, int>& getLinks() const {
             return links;
         }
+        const std::unordered_map<std::string, int> &getGenresMap() const{
+            return genres_map;
+        }
 
 
         // implementar una funcion get para usar cout_debug_file_01_validar_distancias fuera de la clase
+        ofstream& getCoutDebugFile(){
+            return cout_debug_file;
+        }
         ofstream& getCoutDebugFile01ValidarDistancias(){
             return cout_debug_file_01_validar_distancias;
         }
@@ -147,7 +153,7 @@ class RecommendationSystem {
             return: vector<pair<int, float>>
             Esta funcion es utilizada para obtener las recomendaciones de un usuario.
         */
-        vector<pair<int, float>> knn(int, int, string);
+        vector<pair<int, float>> knn(int, int, string&);
         vector<pair<int, float>> knnParalelo(int, int, string);
 
         /*

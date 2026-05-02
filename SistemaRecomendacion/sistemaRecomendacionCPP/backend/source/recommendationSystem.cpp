@@ -27,9 +27,10 @@ RecommendationSystem::RecommendationSystem() {
     cout_debug_file << "[RECOMMENDATION SYSTEM] RecommendationSystem()" << endl;
     cout_debug_file << "\t[RECOMMENDATION SYSTEM] Load ratings.csv BEGIN" << endl;
     Timer timer("Load ratings.csv");
-    std::ifstream archivo_csv_ratings("../../dataset_32M/ratings.csv");
+    std::ifstream archivo_csv_ratings("../../../dataset/32M/ml-32m/ratings.csv");
     getline(archivo_csv_ratings,linea); // omitir la linea de cabecera
-	// Verificar si el archivo se abrió correctamente
+    cout_debug_file << "\t linea de cabecera: " << linea << "\n";
+    // Verificar si el archivo se abrió correctamente
 	if (archivo_csv_ratings.is_open()) {
 		while (getline(archivo_csv_ratings, linea)) {
             stringstream ss(linea);
@@ -53,12 +54,15 @@ RecommendationSystem::RecommendationSystem() {
 	} else {
 		cout_debug_file << "\tError al abrir el archivo rating.csv" << std::endl;
 	}
+    cout_debug_file << "\t linea de cabecera: " << linea << "\n";
+
 
 	string genre;
 	cout_debug_file << "\t[RECOMMENDATION SYSTEM] Load movies.csv BEGIN" << endl;
 	timer.reset("Load movies.csv");
-	std::ifstream archivo_csv_movies("../../dataset_32M/movies.csv");
+	std::ifstream archivo_csv_movies("../../../dataset/32M/ml-32m/movies.csv");
 	getline(archivo_csv_movies, linea); // omitir la linea de cabecera
+    cout_debug_file << "\t linea de cabecera: " << linea << "\n";
 	// Verificar si el archivo se abrió correctamente
 	if (archivo_csv_movies.is_open()) {
 		while (getline(archivo_csv_movies, linea)) {
@@ -607,7 +611,7 @@ pair<float, bool> RecommendationSystem::calculatePearsonCorrelationDebug(int use
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // 										    	BEGIN KNN 02
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-vector<pair<int, float>> RecommendationSystem::knn(int n, int userX, string metrica){
+vector<pair<int, float>> RecommendationSystem::knn(int n, int userX, string& metrica){
 	vector<pair<int, float>> distances;
 	int commonMovies = 0;
 
@@ -676,8 +680,8 @@ vector<pair<int, float>> RecommendationSystem::knnParalelo(int n, int userX, str
         size_t end = min(start + block_size, total_users);
 
         threads.emplace_back([&, t, start, end]() {
-            int commonMovies = 0;
             for (size_t i = start; i < end; ++i) {
+                int commonMovies = 0;
                 int userY = all_users[i];
                 pair<float, bool> distance;
 
@@ -745,6 +749,7 @@ vector<pair<int, float>> RecommendationSystem::knnParalelo(int n, int userX, str
 // 												BEGIN RECOMENDAR 03
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 unordered_map<int, vector<pair<float, int>>> RecommendationSystem::recomendar(vector<pair<int, float>>& knn_result, int userARecomendar){
+    // Significa que el user "Y" le recomienda al usuario "userARecomendar" con [rating "X" la pelicula "Z"]
 	unordered_map<int, vector<pair<float, int>>> recommended_movies; // Peliculas recomendadas y sus ratings
 	if(users.find(userARecomendar) == users.end()){
 		return recommended_movies; // Usuario no encontrado
