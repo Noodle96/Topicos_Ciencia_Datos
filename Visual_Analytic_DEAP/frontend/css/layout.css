@@ -1,0 +1,49 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f7fb;
+    color: #1f2937;
+}
+
+.app-header {
+    padding: 24px 32px;
+    background: #111827;
+    color: white;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.app-header p {
+    margin: 8px 0 0;
+    color: #d1d5db;
+}
+
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    padding: 24px;
+}
+
+.dashboard-panel {
+    background: white;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-panel h2 {
+    margin-top: 0;
+    font-size: 20px;
+}
+
+#connection-status {
+    font-weight: bold;
+}
