@@ -9,17 +9,105 @@
 </head>
 
 <body>
-    <header class="app-header">
-        <h1>Visual Analytic DEAP</h1>
-        <p>Fase 1: Análisis y exploración de datos</p>
-    </header>
+    <div class="app-layout">
 
-    <main class="dashboard-layout">
-        <section class="dashboard-panel">
-            <h2>Conexión Backend / Frontend</h2>
-            <p id="connection-status">Verificando conexión...</p>
-        </section>
-    </main>
+        <aside class="sidebar">
+            <h2>H1 Overview</h2>
+
+            <div class="control-group">
+                <label for="participant-select">Participant</label>
+                <select id="participant-select">
+                    <option value="all">All</option>
+                    <script>
+                        for (let i = 1; i <= 32; i++) {
+                            document.write(
+                                `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
+                            );
+                        }
+                    </script>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="experiment-select">Experiment</label>
+                <select id="experiment-select">
+                    <option value="all">All</option>
+                    <script>
+                        for (let i = 1; i <= 40; i++) {
+                            document.write(
+                                `<option value="${i}">Experiment ${i}</option>`
+                            );
+                        }
+                    </script>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="x-axis-select">X Axis</label>
+                <select id="x-axis-select">
+                    <option value="Valence">Valence</option>
+                    <option value="Arousal">Arousal</option>
+                    <option value="Dominance">Dominance</option>
+                    <option value="Liking">Liking</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="y-axis-select">Y Axis</label>
+                <select id="y-axis-select">
+                    <option value="Arousal">Arousal</option>
+                    <option value="Valence">Valence</option>
+                    <option value="Dominance">Dominance</option>
+                    <option value="Liking">Liking</option>
+                </select>
+            </div>
+
+            <button id="update-chart-button">
+                Update
+            </button>
+            <div class="sidebar-channel-section">
+                <h3>Channel Selection</h3>
+                <div id="channel-selector-container"></div>
+            </div>
+
+        </aside>
+
+        <main class="main-content">
+
+            <section class="overview-row">
+                <div class="chart-panel">
+                    <h3>Emotion Space</h3>
+                    <div id="emotion-space-chart"></div>
+                    <div id="selected-trial-info" class="selected-trial-card">
+                        Select a point to inspect a trial.
+                    </div>
+                </div>
+                <div class="details-panel">
+                    <h3>Summary Metrics</h3>
+                    <div id="summary-metrics-container">
+                        Selecciona un trial para visualizar métricas.
+                    </div>
+                </div>
+            </section>
+
+            <section class="timeline-panel">
+                <h3>Signal Exploration View</h3>
+                <div id="signal-view-controls">
+                    <label id="normalize-checkbox-label">
+                        <input type="checkbox" id="normalize-toggle">
+                        Normalize channels
+                    </label>
+                </div>
+
+                <div id="signal-tracks-container">
+                    <p>
+                        Selecciona un punto del Emotion Space para cargar señales reales.
+                    </p>
+                </div>
+            </section>
+
+        </main>
+    </div>
 
     <script type="module" src="./js/main.js"></script>
 </body>

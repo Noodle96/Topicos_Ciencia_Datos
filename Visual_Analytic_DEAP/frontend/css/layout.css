@@ -5,45 +5,357 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #f5f7fb;
-    color: #1f2937;
+    background: #f4f6fb;
+    color: #111827;
 }
 
-.app-header {
-    padding: 24px 32px;
-    background: #111827;
-    color: white;
-}
-
-.app-header h1 {
-    margin: 0;
-    font-size: 28px;
-}
-
-.app-header p {
-    margin: 8px 0 0;
-    color: #d1d5db;
-}
-
-.dashboard-layout {
+.app-layout {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 24px;
-    padding: 24px;
+    grid-template-columns: 280px 1fr;
+    height: 100vh;
+    overflow: hidden;
 }
 
-.dashboard-panel {
+/* Sidebar compacto */
+.sidebar {
     background: white;
-    border-radius: 14px;
-    padding: 20px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    border-right: 1px solid #d1d5db;
+    padding: 12px;
+    height: 100vh;
+    overflow-y: auto;
 }
 
-.dashboard-panel h2 {
-    margin-top: 0;
-    font-size: 20px;
+.sidebar h2 {
+    margin: 0 0 14px;
+    font-size: 16px;
 }
 
-#connection-status {
+.control-group {
+    margin-bottom: 12px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
     font-weight: bold;
+}
+
+.control-group select {
+    width: 100%;
+    padding: 6px;
+    font-size: 12px;
+}
+
+#update-chart-button {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+.main-content {
+  height: 100vh;
+  padding: 12px;
+  display: grid;
+  grid-template-rows: 48% 52%;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* Panel superior compacto */
+.overview-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 32% 68%;
+  gap: 10px;
+}
+
+.chart-panel,
+.details-panel {
+  min-height: 0;
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.chart-panel h3,
+.details-panel h3 {
+    margin-top: 0;
+    font-size: 15px;
+}
+
+#emotion-space-chart {
+  width: 100%;
+  height: 260px;
+}
+
+.timeline-panel {
+  min-height: 0;
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.emotion-tooltip {
+    position: absolute;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px;
+    pointer-events: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    font-size: 12px;
+}
+
+#channel-selector-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.channel-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.channel-label {
+    font-weight: bold;
+}
+
+#signal-timeseries-chart {
+    width: 100%;
+    min-height: 440px;
+}
+
+#signal-view-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+
+    margin-bottom: 10px;
+}
+
+#normalize-checkbox-label {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#signal-tracks-container {
+  width: 100%;
+  height: calc(100% - 70px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px;
+  background-color: white;
+}
+
+.signal-track {
+    margin-bottom: 24px;
+}
+
+.signal-track-title {
+    font-size: 13px;
+    font-weight: bold;
+
+    margin-bottom: 6px;
+}
+
+.signal-track-svg {
+    width: 100%;
+}
+
+
+#summary-metrics-container {
+  height: calc(100% - 34px);
+  overflow-y: auto;
+  padding-right: 6px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.summary-channel-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 0;
+  background: #ffffff;
+}
+
+.summary-channel-title {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.summary-mini-charts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.summary-mini-chart {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.selected-trial-card {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
+
+.selected-trial-card p {
+  margin: 0;
+}
+
+.timeline-panel h3,
+.chart-panel h3,
+.details-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.summary-tooltip {
+  position: absolute;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px;
+  pointer-events: none;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  z-index: 1000;
+}
+
+.signal-zoom-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.reset-zoom-button {
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.reset-zoom-button:hover {
+  background: #e5e7eb;
+}
+
+.zoom-brush .selection {
+  fill: #60a5fa;
+  fill-opacity: 0.25;
+  stroke: #2563eb;
+}
+
+.emotion-tooltip-thumbnail {
+  width: 180px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.selected-trial-thumbnail-wrapper {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.selected-trial-thumbnail {
+  width: 180px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+}
+
+.channel-group {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px;
+  background: #f9fafb;
+}
+
+.channel-group-title {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #374151;
+}
+
+.channel-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sidebar-channel-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sidebar-channel-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.channel-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.channel-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.channel-label {
+  font-weight: bold;
+}
+
+#signal-tracks-container.normalized-mode {
+  overflow: hidden;
+}
+
+#signal-tracks-container.raw-mode {
+  overflow-y: auto;
+  overflow-x: hidden;
 }

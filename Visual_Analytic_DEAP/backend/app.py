@@ -6,6 +6,13 @@ from pathlib import Path
 from typing import Any
 
 from backend.routes.metadata_routes import metadata_blueprint
+from backend.routes.emotion_routes import emotion_blueprint
+from backend.routes.signal_routes import signal_blueprint
+
+# TO H2
+from backend.routes.h2_relationship_routes import (h2_relationship_bp,)
+from backend.routes.h2_timeseries_routes import (h2_timeseries_bp,)
+from backend.routes.h2_local_relationship_routes import (h2_local_relationship_bp,)
 
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
 FRONTEND_DIR: Path = BASE_DIR / "frontend"
@@ -19,6 +26,13 @@ def create_app() -> Flask:
     CORS(app)
 
     app.register_blueprint(metadata_blueprint)
+    app.register_blueprint(emotion_blueprint)
+    app.register_blueprint(signal_blueprint)
+    
+    # TO H2
+    app.register_blueprint(h2_relationship_bp,url_prefix="/api/h2",)
+    app.register_blueprint(h2_timeseries_bp,url_prefix="/api/h2",)
+    app.register_blueprint(h2_local_relationship_bp,url_prefix="/api/h2",)
 
     @app.route("/api/health", methods=["GET"])
     def health_check() -> Any:
