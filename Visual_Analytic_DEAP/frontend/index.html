@@ -9,105 +9,202 @@
 </head>
 
 <body>
-    <div class="app-layout">
+    <header class="top-navigation">
+        <div class="top-navigation-title">
+            DEAP
+        </div>
 
-        <aside class="sidebar">
-            <h2>H1 Overview</h2>
-
-            <div class="control-group">
-                <label for="participant-select">Participant</label>
-                <select id="participant-select">
-                    <option value="all">All</option>
-                    <script>
-                        for (let i = 1; i <= 32; i++) {
-                            document.write(
-                                `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
-                            );
-                        }
-                    </script>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="experiment-select">Experiment</label>
-                <select id="experiment-select">
-                    <option value="all">All</option>
-                    <script>
-                        for (let i = 1; i <= 40; i++) {
-                            document.write(
-                                `<option value="${i}">Experiment ${i}</option>`
-                            );
-                        }
-                    </script>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="x-axis-select">X Axis</label>
-                <select id="x-axis-select">
-                    <option value="Valence">Valence</option>
-                    <option value="Arousal">Arousal</option>
-                    <option value="Dominance">Dominance</option>
-                    <option value="Liking">Liking</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label for="y-axis-select">Y Axis</label>
-                <select id="y-axis-select">
-                    <option value="Arousal">Arousal</option>
-                    <option value="Valence">Valence</option>
-                    <option value="Dominance">Dominance</option>
-                    <option value="Liking">Liking</option>
-                </select>
-            </div>
-
-            <button id="update-chart-button">
-                Update
+        <nav class="hypothesis-tabs">
+            <button id="h1-tab-button" class="hypothesis-tab active">
+                H1 Temporal Exploration
             </button>
-            <div class="sidebar-channel-section">
-                <h3>Channel Selection</h3>
-                <div id="channel-selector-container"></div>
-            </div>
 
-        </aside>
+            <button id="h2-tab-button" class="hypothesis-tab">
+                H2 Multimodal Relationships
+            </button>
+        </nav>
+    </header>
 
-        <main class="main-content">
+    <section id="h1-view" class="view-container active-view">
+        <div class="app-layout">
 
-            <section class="overview-row">
-                <div class="chart-panel">
-                    <h3>Emotion Space</h3>
-                    <div id="emotion-space-chart"></div>
-                    <div id="selected-trial-info" class="selected-trial-card">
-                        Select a point to inspect a trial.
+            <aside class="sidebar">
+                <h2>H1 Overview</h2>
+
+                <div class="control-group">
+                    <label for="participant-select">Participant</label>
+                    <select id="participant-select">
+                        <option value="all">All</option>
+                        <script>
+                            for (let i = 1; i <= 32; i++) {
+                                document.write(
+                                    `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
+                                );
+                            }
+                        </script>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="experiment-select">Experiment</label>
+                    <select id="experiment-select">
+                        <option value="all">All</option>
+                        <script>
+                            for (let i = 1; i <= 40; i++) {
+                                document.write(
+                                    `<option value="${i}">Experiment ${i}</option>`
+                                );
+                            }
+                        </script>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="x-axis-select">X Axis</label>
+                    <select id="x-axis-select">
+                        <option value="Valence">Valence</option>
+                        <option value="Arousal">Arousal</option>
+                        <option value="Dominance">Dominance</option>
+                        <option value="Liking">Liking</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="y-axis-select">Y Axis</label>
+                    <select id="y-axis-select">
+                        <option value="Arousal">Arousal</option>
+                        <option value="Valence">Valence</option>
+                        <option value="Dominance">Dominance</option>
+                        <option value="Liking">Liking</option>
+                    </select>
+                </div>
+
+                <button id="update-chart-button">
+                    Update
+                </button>
+
+                <div class="sidebar-channel-section">
+                    <h3>Channel Selection</h3>
+                    <div id="channel-selector-container"></div>
+                </div>
+            </aside>
+
+            <main class="main-content">
+
+                <section class="overview-row">
+                    <div class="chart-panel">
+                        <h3>Emotion Space</h3>
+                        <div id="emotion-space-chart"></div>
+                        <div id="selected-trial-info" class="selected-trial-card">
+                            Select a point to inspect a trial.
+                        </div>
                     </div>
-                </div>
-                <div class="details-panel">
-                    <h3>Summary Metrics</h3>
-                    <div id="summary-metrics-container">
-                        Selecciona un trial para visualizar métricas.
+
+                    <div class="details-panel">
+                        <h3>Summary Metrics</h3>
+                        <div id="summary-metrics-container">
+                            Selecciona un trial para visualizar métricas.
+                        </div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section class="timeline-panel">
-                <h3>Signal Exploration View</h3>
-                <div id="signal-view-controls">
-                    <label id="normalize-checkbox-label">
-                        <input type="checkbox" id="normalize-toggle">
-                        Normalize channels
-                    </label>
+                <section class="timeline-panel">
+                    <h3>Signal Exploration View</h3>
+
+                    <div id="signal-view-controls">
+                        <label id="normalize-checkbox-label">
+                            <input type="checkbox" id="normalize-toggle">
+                            Normalize channels
+                        </label>
+                    </div>
+
+                    <div id="signal-tracks-container">
+                        <p>
+                            Selecciona un punto del Emotion Space para cargar señales reales.
+                        </p>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </section>
+
+    <section id="h2-view" class="view-container hidden-view">
+        <div class="h2-layout">
+
+            <aside class="sidebar h2-sidebar">
+                <h2>H2 Overview</h2>
+
+                <div class="control-group">
+                    <label for="h2-participant-select">Participant</label>
+                    <select id="h2-participant-select">
+                        <script>
+                            for (let i = 1; i <= 32; i++) {
+                                document.write(
+                                    `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
+                                );
+                            }
+                        </script>
+                    </select>
                 </div>
 
-                <div id="signal-tracks-container">
-                    <p>
-                        Selecciona un punto del Emotion Space para cargar señales reales.
+                <div class="control-group">
+                    <label for="h2-experiment-select">Experiment</label>
+                    <select id="h2-experiment-select">
+                        <script>
+                            for (let i = 1; i <= 40; i++) {
+                                document.write(
+                                    `<option value="${i}">Experiment ${i}</option>`
+                                );
+                            }
+                        </script>
+                    </select>
+                </div>
+
+                <button id="h2-update-button">
+                    Update H2
+                </button>
+
+                <div class="h2-selected-relation-card">
+                    <h3>Selected Relation</h3>
+                    <p id="h2-selected-relation-text">
+                        Select a cell from the matrix.
                     </p>
                 </div>
-            </section>
+            </aside>
 
-        </main>
-    </div>
+            <main class="h2-main-content">
+                <section class="h2-panel h2-matrix-panel">
+                    <h3>Correlation Matrix EEG × Peripheral</h3>
+                    <p class="h2-panel-description">
+                        Pearson relationships during the stimulus phase.
+                    </p>
+                    <div id="h2-correlation-matrix"></div>
+                </section>
+
+                <section class="h2-panel h2-timeseries-panel">
+                    <h3>Cross-modal Temporal Explorer</h3>
+                    <p class="h2-panel-description">
+                        Select a matrix cell to inspect synchronized EEG and peripheral signals.
+                    </p>
+                    <div id="h2-timeseries-pair">
+                        Select a relation to load the temporal explorer.
+                    </div>
+                </section>
+
+                <section class="h2-panel h2-local-panel">
+                    <h3>Local Relationship</h3>
+                    <p class="h2-panel-description">
+                        A temporal brush will later recalculate local correlation.
+                    </p>
+                    <div id="h2-local-relationship">
+                        No temporal window selected yet.
+                    </div>
+                </section>
+            </main>
+
+        </div>
+    </section>
 
     <script type="module" src="./js/main.js"></script>
 </body>

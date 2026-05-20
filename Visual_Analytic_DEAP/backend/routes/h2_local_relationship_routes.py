@@ -4,6 +4,9 @@ from typing import Any
 
 from flask import Blueprint, jsonify, request
 
+from backend.services.h2_relationship_service import (
+    find_trial_by_experiment,
+)
 from backend.services.h2_local_relationship_service import (
     build_local_relationship,
 )
@@ -18,7 +21,7 @@ h2_local_relationship_bp: Blueprint = Blueprint(
 # Uso:
 # /api/h2/local-relationship
 # ?participant=1
-# &trial=1
+# &experiment=5
 # &eeg=Fp1
 # &peripheral=GSR1
 # &start_sec=10
@@ -30,10 +33,13 @@ h2_local_relationship_bp: Blueprint = Blueprint(
 def get_h2_local_relationship() -> tuple[Any, int]:
     """
     Devuelve la correlación local EEG ↔ periférica dentro de una
-    ventana temporal seleccionada durante la fase During.
+    ventana temporal seleccionada durante During.
+
+    La consulta usa participant + experiment.
+    Internamente se resuelve el trial correspondiente.
     """
     participant_arg: str | None = request.args.get("participant")
-    trial_arg: str | None = request.args.get("trial")
+    experiment_arg: str | None = request.args.get("experiment")
     eeg_channel: str | None = request.args.get("eeg")
     peripheral_channel: str | None = request.args.get("peripheral")
     start_sec_arg: str | None = request.args.get("start_sec")
@@ -41,7 +47,7 @@ def get_h2_local_relationship() -> tuple[Any, int]:
 
     if (
         participant_arg is None
-        or trial_arg is None
+        or experiment_arg is None
         or eeg_channel is None
         or peripheral_channel is None
         or start_sec_arg is None
@@ -50,7 +56,7 @@ def get_h2_local_relationship() -> tuple[Any, int]:
         return jsonify(
             {
                 "error": (
-                    "Parámetros requeridos: participant, trial, eeg, "
+                    "Parámetros requeridos: participant, experiment, eeg, "
                     "peripheral, start_sec y end_sec."
                 )
             }
@@ -58,9 +64,14 @@ def get_h2_local_relationship() -> tuple[Any, int]:
 
     try:
         participant_id: int = int(participant_arg)
-        trial: int = int(trial_arg)
+        experiment_id: int = int(experiment_arg)
         start_sec: float = float(start_sec_arg)
         end_sec: float = float(end_sec_arg)
+
+        trial: int = find_trial_by_experiment(
+            participant_id=participant_id,
+            experiment_id=experiment_id,
+        )
 
         data: dict[str, Any] = build_local_relationship(
             participant_id=participant_id,

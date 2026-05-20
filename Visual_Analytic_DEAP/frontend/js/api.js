@@ -59,14 +59,62 @@ export async function fetchTrialSignals({
 
 
 // TO H2
-export async function fetchH2Relationships(participant, trial) {
-  const response = await fetch(
-    `/api/h2/relationships?participant=${participant}&trial=${trial}`
-  );
+/**
+ * Obtiene la matriz de relaciones H2 para un participante
+ * y un experimento específico.
+ */
+export async function fetchH2Relationships(participant, experiment) {
+    const response = await fetch(
+        `${API_BASE_URL}/h2/relationships?participant=${participant}&experiment=${experiment}`
+    );
 
-  if (!response.ok) {
-    throw new Error("Error loading H2 relationships");
-  }
+    if (!response.ok) {
+        throw new Error("Error loading H2 relationships");
+    }
 
-  return await response.json();
+    return await response.json();
+}
+
+/**
+ * Obtiene un par temporal sincronizado EEG ↔ periférica
+ * para un participante y experimento específico.
+ */
+export async function fetchH2TimeseriesPair({
+    participant,
+    experiment,
+    eeg,
+    peripheral,
+}) {
+    const response = await fetch(
+        `${API_BASE_URL}/h2/timeseries-pair?participant=${participant}&experiment=${experiment}&eeg=${eeg}&peripheral=${peripheral}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading H2 timeseries pair");
+    }
+
+    return await response.json();
+}
+
+/**
+ * Calcula la correlación local H2 dentro de una ventana temporal
+ * seleccionada durante la fase During.
+ */
+export async function fetchH2LocalRelationship({
+    participant,
+    experiment,
+    eeg,
+    peripheral,
+    startSec,
+    endSec,
+}) {
+    const response = await fetch(
+        `${API_BASE_URL}/h2/local-relationship?participant=${participant}&experiment=${experiment}&eeg=${eeg}&peripheral=${peripheral}&start_sec=${startSec}&end_sec=${endSec}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading H2 local relationship");
+    }
+
+    return await response.json();
 }

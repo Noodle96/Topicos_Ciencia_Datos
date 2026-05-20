@@ -49,6 +49,40 @@ def load_trial_relationships(
 
     return load_json(relationship_file)
 
+def find_trial_by_experiment(
+    participant_id: int,
+    experiment_id: int,
+) -> int:
+    """
+    Busca qué trial corresponde a un Experiment_id para un participante.
+
+    En DEAP:
+    - Experiment_id representa el estímulo real.
+    - Trial representa el orden local de presentación para cada participante.
+    """
+    participant_code: str = f"s{participant_id:02d}"
+    participant_dir: Path = RELATIONSHIPS_DIR / participant_code
+
+    if not participant_dir.exists():
+        raise FileNotFoundError(
+            f"No existe carpeta de relaciones: {participant_dir}"
+        )
+
+    relationship_files: list[Path] = sorted(
+        participant_dir.glob("trial_*_relationships.json")
+    )
+
+    for relationship_file in relationship_files:
+        data: dict[str, Any] = load_json(relationship_file)
+
+        if int(data.get("experiment_id")) == experiment_id:
+            return int(data.get("trial"))
+
+    raise FileNotFoundError(
+        "No se encontró un trial para "
+        f"participant={participant_id}, experiment={experiment_id}"
+    )
+
 
 def build_relationship_matrix(
     participant_id: int,

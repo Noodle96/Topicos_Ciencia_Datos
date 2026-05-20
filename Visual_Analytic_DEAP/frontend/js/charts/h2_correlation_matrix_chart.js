@@ -1,3 +1,5 @@
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
 export function renderH2CorrelationMatrix({
   containerSelector,
   data,
@@ -6,14 +8,18 @@ export function renderH2CorrelationMatrix({
   const container = d3.select(containerSelector);
   container.selectAll("*").remove();
 
-  const margin = { top: 60, right: 30, bottom: 80, left: 80 };
-  const width = 520 - margin.left - margin.right;
-  const height = 420 - margin.top - margin.bottom;
+  const containerNode = container.node();
+  const containerWidth = containerNode.clientWidth || 520;
+  const containerHeight = containerNode.clientHeight || 360;
+
+  const margin = { top: 44, right: 20, bottom: 60, left: 64 };
+  const width = containerWidth - margin.left - margin.right;
+  const height = containerHeight - margin.top - margin.bottom;
 
   const svg = container
     .append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom);
+    .attr("width", containerWidth)
+    .attr("height", containerHeight);
 
   const chart = svg
     .append("g")
@@ -36,7 +42,7 @@ export function renderH2CorrelationMatrix({
 
   const colorScale = d3
     .scaleSequential()
-    .domain([-1, 1])
+    .domain([1, -1])
     .interpolator(d3.interpolateRdBu);
 
   chart
@@ -50,11 +56,11 @@ export function renderH2CorrelationMatrix({
     .attr("width", xScale.bandwidth())
     .attr("height", yScale.bandwidth())
     .attr("fill", d =>
-      d.correlation === null ? "#ddd" : colorScale(d.correlation)
+      d.correlation === null ? "#e5e7eb" : colorScale(d.correlation)
     )
     .attr("stroke", "#ffffff")
     .attr("cursor", "pointer")
-    .on("click", (event, d) => {
+    .on("click", (_, d) => {
       if (onCellClick) {
         onCellClick(d);
       }
@@ -78,9 +84,13 @@ export function renderH2CorrelationMatrix({
     .attr("text-anchor", "middle")
     .attr("dominant-baseline", "middle")
     .attr("font-size", "10px")
-    .attr("fill", "#111")
+    .attr("fill", "#111827")
+    .style("pointer-events", "none")
     .text(d => {
-      if (d.correlation === null) return "";
+      if (d.correlation === null) {
+        return "";
+      }
+
       return d.correlation.toFixed(2);
     });
 
@@ -96,26 +106,26 @@ export function renderH2CorrelationMatrix({
   svg
     .append("text")
     .attr("x", margin.left + width / 2)
-    .attr("y", 25)
+    .attr("y", 20)
     .attr("text-anchor", "middle")
-    .attr("font-size", "15px")
+    .attr("font-size", "13px")
     .attr("font-weight", "bold")
-    .text("H2 — Correlation Matrix EEG × Peripheral");
+    .text("Pearson correlation during stimulus");
 
   svg
     .append("text")
     .attr("x", margin.left + width / 2)
-    .attr("y", height + margin.top + 55)
+    .attr("y", containerHeight - 12)
     .attr("text-anchor", "middle")
-    .attr("font-size", "12px")
+    .attr("font-size", "11px")
     .text("Peripheral signals");
 
   svg
     .append("text")
     .attr("transform", "rotate(-90)")
     .attr("x", -(margin.top + height / 2))
-    .attr("y", 18)
+    .attr("y", 16)
     .attr("text-anchor", "middle")
-    .attr("font-size", "12px")
+    .attr("font-size", "11px")
     .text("EEG channels");
 }

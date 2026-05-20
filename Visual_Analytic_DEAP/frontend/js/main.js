@@ -1,5 +1,8 @@
-import { fetchEmotionSpace, fetchTrialSignals, fetchH2Relationships } from "./api.js";
+import { fetchEmotionSpace, fetchTrialSignals } from "./api.js";
 
+
+import { initializeViewNavigation } from "./view_navigation.js";
+import { initializeH2View } from "./h2_main.js";
 
 import {
     renderEmotionSpaceChart,
@@ -14,7 +17,6 @@ import {
     renderSummaryMetricsChart,
 } from "./charts/summary_metrics_chart.js";
 
-import { renderH2CorrelationMatrix } from "./charts/h2_correlation_matrix_chart.js";
 
 let selectedTrial = null;
 let normalizeSignals = false;
@@ -235,6 +237,9 @@ function initApp() {
     document
         .getElementById("update-chart-button")
         .addEventListener("click", updateEmotionSpace);
+    
+    initializeViewNavigation();
+    initializeH2View();
 
     updateEmotionSpace();
     renderChannelSelector();
