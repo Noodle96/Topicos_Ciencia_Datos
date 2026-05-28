@@ -13,6 +13,7 @@ from backend.routes.signal_routes import signal_blueprint
 from backend.routes.h2_relationship_routes import (h2_relationship_bp,)
 from backend.routes.h2_timeseries_routes import (h2_timeseries_bp,)
 from backend.routes.h2_local_relationship_routes import (h2_local_relationship_bp,)
+from backend.routes.h2_participant_profile_routes import (h2_participant_profile_bp,)
 
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
 FRONTEND_DIR: Path = BASE_DIR / "frontend"
@@ -33,6 +34,7 @@ def create_app() -> Flask:
     app.register_blueprint(h2_relationship_bp,url_prefix="/api/h2",)
     app.register_blueprint(h2_timeseries_bp,url_prefix="/api/h2",)
     app.register_blueprint(h2_local_relationship_bp,url_prefix="/api/h2",)
+    app.register_blueprint(h2_participant_profile_bp,url_prefix="/api/h2",)
 
     @app.route("/api/health", methods=["GET"])
     def health_check() -> Any:

@@ -22,8 +22,8 @@ h2_timeseries_bp: Blueprint = Blueprint(
 # /api/h2/timeseries-pair
 # ?participant=1
 # &experiment=5
-# &eeg=Fp1
-# &peripheral=GSR1
+# &channel_a=Fp1
+# &channel_b=GSR1
 @h2_timeseries_bp.route(
     "/timeseries-pair",
     methods=["GET"],
@@ -35,27 +35,27 @@ def get_h2_timeseries_pair() -> tuple[Any, int]:
     La consulta usa:
     - participant
     - experiment
-    - eeg
-    - peripheral
+    - channel_a
+    - channel_b
 
     Internamente se resuelve el trial correspondiente.
     """
     participant_arg: str | None = request.args.get("participant")
     experiment_arg: str | None = request.args.get("experiment")
-    eeg_channel: str | None = request.args.get("eeg")
-    peripheral_channel: str | None = request.args.get("peripheral")
+    channel_a: str | None = request.args.get("channel_a")
+    channel_b: str | None = request.args.get("channel_b")
 
     if (
         participant_arg is None
         or experiment_arg is None
-        or eeg_channel is None
-        or peripheral_channel is None
+        or channel_a is None
+        or channel_b is None
     ):
         return jsonify(
             {
                 "error": (
                     "Parámetros requeridos: "
-                    "participant, experiment, eeg, peripheral."
+                    "participant, experiment, channel_a y channel_b."
                 )
             }
         ), 400
@@ -72,8 +72,8 @@ def get_h2_timeseries_pair() -> tuple[Any, int]:
         data: dict[str, Any] = build_timeseries_pair(
             participant_id=participant_id,
             trial=trial,
-            eeg_channel=eeg_channel,
-            peripheral_channel=peripheral_channel,
+            channel_a=channel_a,
+            channel_b=channel_b,
         )
 
         return jsonify(data), 200

@@ -1,131 +1,192 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
 export function renderH2CorrelationMatrix({
-  containerSelector,
-  data,
-  onCellClick,
+    containerSelector,
+    data,
+    selectedParticipants,
+    onCellClick,
+    onParticipantToggle,
 }) {
-  const container = d3.select(containerSelector);
-  container.selectAll("*").remove();
+    const container = d3.select(containerSelector);
+    container.selectAll("*").remove();
 
-  const containerNode = container.node();
-  const containerWidth = containerNode.clientWidth || 520;
-  const containerHeight = containerNode.clientHeight || 360;
+    d3.select("#h2-matrix-tooltip").remove();
 
-  const margin = { top: 44, right: 20, bottom: 60, left: 64 };
-  const width = containerWidth - margin.left - margin.right;
-  const height = containerHeight - margin.top - margin.bottom;
+    const containerNode = container.node();
+    const containerWidth = containerNode.clientWidth || 620;
+    const containerHeight = containerNode.clientHeight || 420;
 
-  const svg = container
-    .append("svg")
-    .attr("width", containerWidth)
-    .attr("height", containerHeight);
+    if (!data || !data.row_channels || !data.participants) {
+        container.append("p").text("No relationship matrix data available.");
+        return;
+    }
 
-  const chart = svg
-    .append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
+    const margin = {
+        top: 26,
+        right: 12,
+        bottom: 48,
+        left: 58,
+    };
 
-  const eegChannels = data.eeg_channels;
-  const peripheralChannels = data.peripheral_channels;
+    const plotWidth = containerWidth - margin.left - margin.right;
+    const plotHeight = containerHeight - margin.top - margin.bottom;
 
-  const xScale = d3
-    .scaleBand()
-    .domain(peripheralChannels)
-    .range([0, width])
-    .padding(0.05);
+    const rowChannels = data.row_channels;
+    const participants = data.participants.map(
+        (participant) => participant.participant_label
+    );
 
-  const yScale = d3
-    .scaleBand()
-    .domain(eegChannels)
-    .range([0, height])
-    .padding(0.05);
+    const cellWidth = plotWidth / participants.length;
+    const cellHeight = plotHeight / rowChannels.length;
+    const cellSize = Math.min(cellWidth, cellHeight);
 
-  const colorScale = d3
-    .scaleSequential()
-    .domain([1, -1])
-    .interpolator(d3.interpolateRdBu);
+    const matrixWidth = cellSize * participants.length;
+    const matrixHeight = cellSize * rowChannels.length;
 
-  chart
-    .selectAll(".h2-cell")
-    .data(data.cells)
-    .enter()
-    .append("rect")
-    .attr("class", "h2-cell")
-    .attr("x", d => xScale(d.peripheral_channel))
-    .attr("y", d => yScale(d.eeg_channel))
-    .attr("width", xScale.bandwidth())
-    .attr("height", yScale.bandwidth())
-    .attr("fill", d =>
-      d.correlation === null ? "#e5e7eb" : colorScale(d.correlation)
-    )
-    .attr("stroke", "#ffffff")
-    .attr("cursor", "pointer")
-    .on("click", (_, d) => {
-      if (onCellClick) {
-        onCellClick(d);
-      }
-    })
-    .append("title")
-    .text(d => {
-      const value =
-        d.correlation === null ? "N/A" : d.correlation.toFixed(4);
+    const svg = container
+        .append("svg")
+        .attr("width", containerWidth)
+        .attr("height", containerHeight);
 
-      return `${d.eeg_channel} × ${d.peripheral_channel}\nPearson: ${value}`;
-    });
+    const chart = svg
+        .append("g")
+        .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-  chart
-    .selectAll(".h2-cell-label")
-    .data(data.cells)
-    .enter()
-    .append("text")
-    .attr("class", "h2-cell-label")
-    .attr("x", d => xScale(d.peripheral_channel) + xScale.bandwidth() / 2)
-    .attr("y", d => yScale(d.eeg_channel) + yScale.bandwidth() / 2)
-    .attr("text-anchor", "middle")
-    .attr("dominant-baseline", "middle")
-    .attr("font-size", "10px")
-    .attr("fill", "#111827")
-    .style("pointer-events", "none")
-    .text(d => {
-      if (d.correlation === null) {
-        return "";
-      }
+    const xScale = d3
+        .scaleBand()
+        .domain(participants)
+        .range([0, matrixWidth])
+        .padding(0.02);
 
-      return d.correlation.toFixed(2);
-    });
+    const yScale = d3
+        .scaleBand()
+        .domain(rowChannels)
+        .range([0, matrixHeight])
+        .padding(0.02);
 
-  chart
-    .append("g")
-    .attr("transform", `translate(0, ${height})`)
-    .call(d3.axisBottom(xScale));
+    const colorScale = d3
+        .scaleSequential()
+        .domain([1, -1])
+        .interpolator(d3.interpolateRdBu);
 
-  chart
-    .append("g")
-    .call(d3.axisLeft(yScale));
+    const tooltip = d3
+        .select("body")
+        .append("div")
+        .attr("id", "h2-matrix-tooltip")
+        .attr("class", "emotion-tooltip")
+        .style("opacity", 0);
 
-  svg
-    .append("text")
-    .attr("x", margin.left + width / 2)
-    .attr("y", 20)
-    .attr("text-anchor", "middle")
-    .attr("font-size", "13px")
-    .attr("font-weight", "bold")
-    .text("Pearson correlation during stimulus");
+    chart
+        .selectAll(".h2-cell")
+        .data(data.cells)
+        .enter()
+        .append("rect")
+        .attr("class", "h2-cell")
+        .attr("x", (d) => xScale(d.participant_label))
+        .attr("y", (d) => yScale(d.row_channel))
+        .attr("width", xScale.bandwidth())
+        .attr("height", yScale.bandwidth())
+        .attr("fill", (d) =>
+            d.correlation === null
+                ? "#e5e7eb"
+                : colorScale(d.correlation)
+        )
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 0.2)
+        .attr("cursor", "pointer")
+        .on("mouseover", function (event, d) {
+            d3.select(this)
+                .attr("stroke", "#facc15")
+                .attr("stroke-width", 1.4);
 
-  svg
-    .append("text")
-    .attr("x", margin.left + width / 2)
-    .attr("y", containerHeight - 12)
-    .attr("text-anchor", "middle")
-    .attr("font-size", "11px")
-    .text("Peripheral signals");
+            const correlationText =
+                d.correlation === null
+                    ? "N/A"
+                    : d.correlation.toFixed(4);
 
-  svg
-    .append("text")
-    .attr("transform", "rotate(-90)")
-    .attr("x", -(margin.top + height / 2))
-    .attr("y", 16)
-    .attr("text-anchor", "middle")
-    .attr("font-size", "11px")
-    .text("EEG channels");
+            tooltip
+                .style("opacity", 1)
+                .html(`
+                    <strong>Participant:</strong> ${d.participant_label}<br>
+                    <strong>Row group:</strong> ${d.row_group}<br>
+                    <strong>Row channel:</strong> ${d.row_channel}<br>
+                    <strong>Reference group:</strong> ${d.reference_group}<br>
+                    <strong>Reference channel:</strong> ${d.reference_channel}<br>
+                    <strong>Pearson:</strong> ${correlationText}
+                `)
+                .style("left", `${event.pageX + 14}px`)
+                .style("top", `${event.pageY - 20}px`);
+        })
+        .on("mouseout", function () {
+            d3.select(this)
+                .attr("stroke", "#ffffff")
+                .attr("stroke-width", 0.2);
+
+            tooltip.style("opacity", 0);
+        })
+        .on("click", (_, d) => {
+            if (onCellClick) {
+                onCellClick(d);
+            }
+        });
+
+    const xAxisGroup = chart
+        .append("g")
+        .attr("transform", `translate(0, ${matrixHeight})`)
+        .call(d3.axisBottom(xScale).tickSize(0));
+
+    xAxisGroup
+        .selectAll("text")
+        .attr("class", "h2-participant-axis-label")
+        .attr("font-size", 8)
+        // .attr("font-weight", "bold")
+        .attr("transform", "rotate(-60)")
+        .attr("text-anchor", "end")
+        .attr("dx", "-0.5em")
+        .attr("dy", "0.2em")
+        .attr("cursor", "pointer")
+        .attr("font-weight", (participantLabel) =>
+            selectedParticipants.includes(participantLabel) ? 900 : 700
+        )
+        .attr("fill", (participantLabel) =>
+            selectedParticipants.includes(participantLabel) ? "#ca8a04" : "#111827"
+        )
+        .on("click", (_, participantLabel) => {
+            if (onParticipantToggle) {
+                onParticipantToggle(participantLabel);
+            }
+        });
+
+    xAxisGroup
+        .selectAll(".tick")
+        .append("rect")
+        .attr("class", "h2-participant-selected-marker")
+        .attr("x", -8)
+        .attr("y", 4)
+        .attr("width", 16)
+        .attr("height", 3)
+        .attr("rx", 2)
+        .attr("fill", (participantLabel) =>
+            selectedParticipants.includes(participantLabel)
+                ? "#facc15"
+                : "transparent"
+        );
+
+    chart
+        .append("g")
+        .call(d3.axisLeft(yScale).tickSize(0))
+        .selectAll("text")
+        .attr("font-size", 8)
+        .attr("font-weight", "bold");
+
+    svg
+        .append("text")
+        .attr("x", margin.left + matrixWidth / 2)
+        .attr("y", 16)
+        .attr("text-anchor", "middle")
+        .attr("font-size", 12)
+        .attr("font-weight", "bold")
+        .text(
+            `${data.row_group} channels vs ${data.reference_channel} across participants`
+        );
 }

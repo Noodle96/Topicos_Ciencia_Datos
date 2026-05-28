@@ -11,37 +11,48 @@ import numpy as np
 from backend.utils.paths import DATASET_DIR
 
 
-# ---------------------------------------------------------------------
-# H2 configuration
-# ---------------------------------------------------------------------
-
 PROCESSED_TRIALS_DIR: Path = DATASET_DIR / "processed" / "trials"
 PROCESSED_EVENTS_DIR: Path = DATASET_DIR / "processed" / "events"
 OUTPUT_RELATIONSHIPS_DIR: Path = DATASET_DIR / "processed" / "relationships"
+
+
+CHANNEL_GROUPS: dict[str, list[str]] = {
+    "EEG": [
+        "Fp1", "AF3", "F7", "F3", "FC1", "FC5", "T7", "C3",
+        "CP1", "CP5", "P7", "P3", "Pz", "PO3", "O1", "Oz",
+        "O2", "PO4", "P4", "P8", "CP6", "CP2", "C4", "T8",
+        "FC6", "FC2", "F4", "F8", "AF4", "Fp2", "Fz", "Cz",
+    ],
+    "EXG": [
+        "EXG1", "EXG2", "EXG3", "EXG4",
+        "EXG5", "EXG6", "EXG7", "EXG8",
+    ],
+    "PERIPHERAL": [
+        "GSR1", "Resp", "Plet", "Temp",
+    ],
+}
+
+
+RELATIONSHIP_GROUP_PAIRS: list[tuple[str, str]] = [
+    ("EEG", "EEG"),
+    ("EEG", "EXG"),
+    ("EEG", "PERIPHERAL"),
+    ("EXG", "EXG"),
+    ("EXG", "PERIPHERAL"),
+    ("PERIPHERAL", "PERIPHERAL"),
+]
+
+
 def clean_output_directory() -> None:
     """
-    Elimina completamente la carpeta de relaciones procesadas.
+    Elimina completamente la carpeta de relaciones H2.
 
-    Esto permite regenerar todos los archivos desde cero
-    y mantener reproducibilidad del preprocessing.
+    Esto permite regenerar los archivos desde cero y evita mezclar
+    resultados antiguos con una nueva configuración del preprocessing.
     """
     if OUTPUT_RELATIONSHIPS_DIR.exists():
         shutil.rmtree(OUTPUT_RELATIONSHIPS_DIR)
         print(f"[INFO] Carpeta eliminada: {OUTPUT_RELATIONSHIPS_DIR}")
-
-EEG_CHANNELS_H2: list[str] = [
-    "Fp1", "Fp2",
-    "F3", "F4", "Fz",
-    "C3", "C4", "Cz",
-    "O1", "O2",
-]
-
-PERIPHERAL_CHANNELS_H2: list[str] = [
-    "GSR1",
-    "Resp",
-    "Plet",
-    "Temp",
-]
 
 
 def load_json(file_path: Path) -> dict[str, Any]:
@@ -60,12 +71,15 @@ def save_json(data: dict[str, Any], file_path: Path) -> None:
         json.dump(data, file, indent=2, ensure_ascii=False)
 
 
-def safe_pearson_correlation(x: np.ndarray, y: np.ndarray) -> float | None:
+def safe_pearson_correlation(
+    x: np.ndarray,
+    y: np.ndarray,
+) -> float | None:
     """
     Calcula correlación Pearson entre dos señales.
 
-    Retorna None si alguna señal está vacía, tiene longitud distinta
-    o tiene desviación estándar cero.
+    Retorna None si alguna señal está vacía, si tienen longitud distinta
+    o si alguna de ellas tiene desviación estándar cero.
     """
     if x.size == 0 or y.size == 0:
         return None
@@ -88,7 +102,10 @@ def safe_pearson_correlation(x: np.ndarray, y: np.ndarray) -> float | None:
     return correlation
 
 
-def get_channel_index(channels: list[str], channel_name: str) -> int | None:
+def get_channel_index(
+    channels: list[str],
+    channel_name: str,
+) -> int | None:
     """Devuelve el índice de un canal dentro de la lista de canales."""
     try:
         return channels.index(channel_name)
@@ -96,26 +113,36 @@ def get_channel_index(channels: list[str], channel_name: str) -> int | None:
         return None
 
 
-def extract_during_indices(event_info: dict[str, Any], times: np.ndarray) -> tuple[int, int]:
+def extract_during_indices(
+    event_info: dict[str, Any],
+    times: np.ndarray,
+) -> tuple[int, int]:
     """
     Obtiene los índices temporales correspondientes a la fase During.
 
-    Usa los tiempos procesados:
+    Usa:
     - processed_during_start_sec
     - processed_after_start_sec
 
-    Estos tiempos están expresados en segundos dentro del trial procesado.
+    Ambos tiempos están expresados en segundos dentro del trial procesado.
     """
     during_start_sec: float = float(event_info["processed_during_start_sec"])
     during_end_sec: float = float(event_info["processed_after_start_sec"])
 
-    start_index: int = int(np.searchsorted(times, during_start_sec, side="left"))
-    end_index: int = int(np.searchsorted(times, during_end_sec, side="right"))
+    start_index: int = int(
+        np.searchsorted(times, during_start_sec, side="left")
+    )
+
+    end_index: int = int(
+        np.searchsorted(times, during_end_sec, side="right")
+    )
 
     return start_index, end_index
 
 
-def load_trial_npz(trial_file: Path) -> tuple[np.ndarray, np.ndarray, list[str], float]:
+def load_trial_npz(
+    trial_file: Path,
+) -> tuple[np.ndarray, np.ndarray, list[str], float]:
     """
     Carga un archivo trial_XX.npz generado por H1.
 
@@ -129,10 +156,44 @@ def load_trial_npz(trial_file: Path) -> tuple[np.ndarray, np.ndarray, list[str],
 
     signals: np.ndarray = np.asarray(npz_data["signals"])
     times: np.ndarray = np.asarray(npz_data["times"])
-    channels: list[str] = [str(channel) for channel in npz_data["channels"].tolist()]
+    channels: list[str] = [
+        str(channel)
+        for channel in npz_data["channels"].tolist()
+    ]
     sfreq: float = float(npz_data["sfreq"])
 
     return signals, times, channels, sfreq
+
+
+def build_channel_signal_map(
+    signals: np.ndarray,
+    channels: list[str],
+    start_index: int,
+    end_index: int,
+) -> dict[str, np.ndarray]:
+    """
+    Construye un diccionario canal → señal recortada en During.
+
+    Solo incluye canales presentes en el archivo procesado.
+    """
+    channel_signal_map: dict[str, np.ndarray] = {}
+
+    for group_channels in CHANNEL_GROUPS.values():
+        for channel_name in group_channels:
+            channel_index: int | None = get_channel_index(
+                channels=channels,
+                channel_name=channel_name,
+            )
+
+            if channel_index is None:
+                continue
+
+            channel_signal_map[channel_name] = signals[
+                channel_index,
+                start_index:end_index,
+            ]
+
+    return channel_signal_map
 
 
 def build_trial_relationships(
@@ -142,10 +203,14 @@ def build_trial_relationships(
     event_info: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Construye las relaciones EEG ↔ periféricas para un trial.
+    Construye relaciones entre grupos de canales para un trial.
 
-    Solo utiliza la fase During y calcula correlación Pearson entre
-    cada canal EEG seleccionado y cada señal periférica seleccionada.
+    En esta versión se calculan relaciones durante During para:
+    - EEG ↔ PERIPHERAL
+    - EXG ↔ PERIPHERAL
+    - EEG ↔ EXG
+
+    Cada relación guarda grupo, canal y correlación.
     """
     signals, times, channels, sfreq = load_trial_npz(trial_file)
 
@@ -154,39 +219,49 @@ def build_trial_relationships(
         times=times,
     )
 
+    channel_signal_map: dict[str, np.ndarray] = build_channel_signal_map(
+        signals=signals,
+        channels=channels,
+        start_index=during_start_index,
+        end_index=during_end_index,
+    )
+
     relationships: list[dict[str, Any]] = []
 
-    for eeg_channel in EEG_CHANNELS_H2:
-        eeg_index: int | None = get_channel_index(channels, eeg_channel)
+    for source_group, target_group in RELATIONSHIP_GROUP_PAIRS:
+        source_channels: list[str] = CHANNEL_GROUPS[source_group]
+        target_channels: list[str] = CHANNEL_GROUPS[target_group]
 
-        if eeg_index is None:
-            continue
+        for source_channel in source_channels:
+            source_signal: np.ndarray | None = channel_signal_map.get(
+                source_channel
+            )
 
-        eeg_signal: np.ndarray = signals[eeg_index, during_start_index:during_end_index]
-
-        for peripheral_channel in PERIPHERAL_CHANNELS_H2:
-            peripheral_index: int | None = get_channel_index(channels, peripheral_channel)
-
-            if peripheral_index is None:
+            if source_signal is None:
                 continue
 
-            peripheral_signal: np.ndarray = signals[
-                peripheral_index,
-                during_start_index:during_end_index,
-            ]
+            for target_channel in target_channels:
+                target_signal: np.ndarray | None = channel_signal_map.get(
+                    target_channel
+                )
 
-            correlation: float | None = safe_pearson_correlation(
-                x=eeg_signal,
-                y=peripheral_signal,
-            )
+                if target_signal is None:
+                    continue
 
-            relationships.append(
-                {
-                    "eeg_channel": eeg_channel,
-                    "peripheral_channel": peripheral_channel,
-                    "correlation": correlation,
-                }
-            )
+                correlation: float | None = safe_pearson_correlation(
+                    x=source_signal,
+                    y=target_signal,
+                )
+
+                relationships.append(
+                    {
+                        "source_group": source_group,
+                        "source_channel": source_channel,
+                        "target_group": target_group,
+                        "target_channel": target_channel,
+                        "correlation": correlation,
+                    }
+                )
 
     result: dict[str, Any] = {
         "participant_id": participant_id,
@@ -197,6 +272,8 @@ def build_trial_relationships(
         "sfreq": sfreq,
         "during_start_sec": event_info.get("processed_during_start_sec"),
         "during_end_sec": event_info.get("processed_after_start_sec"),
+        "channel_groups": CHANNEL_GROUPS,
+        "relationship_group_pairs": RELATIONSHIP_GROUP_PAIRS,
         "relationships": relationships,
     }
 
@@ -235,7 +312,10 @@ def preprocess_participant_relationships(participant_id: int) -> None:
         trial: int = int(event_info["trial"])
 
         trial_file: Path = participant_trials_dir / f"trial_{trial:02d}.npz"
-        output_file: Path = participant_output_dir / f"trial_{trial:02d}_relationships.json"
+        output_file: Path = (
+            participant_output_dir
+            / f"trial_{trial:02d}_relationships.json"
+        )
 
         if not trial_file.exists():
             print(f"[WARN] No existe trial procesado: {trial_file}")
@@ -260,9 +340,10 @@ def preprocess_all_relationships() -> None:
         preprocess_participant_relationships(participant_id=participant_id)
 
 
-if __name__ == "__main__":
+def parse_arguments() -> argparse.Namespace:
+    """Define y procesa argumentos de línea de comandos."""
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description="Preprocessing H2: relaciones EEG ↔ periféricas"
+        description="Preprocessing H2: relaciones multimodales por grupos."
     )
 
     parser.add_argument(
@@ -271,7 +352,11 @@ if __name__ == "__main__":
         help="Elimina archivos previos antes de regenerar relaciones.",
     )
 
-    args: argparse.Namespace = parser.parse_args()
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args: argparse.Namespace = parse_arguments()
 
     if args.clean:
         clean_output_directory()

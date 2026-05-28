@@ -5,8 +5,7 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from backend.services.h2_relationship_service import (
-    build_relationship_matrix,
-    find_trial_by_experiment,
+    build_cross_participant_relationship_matrix,
 )
 
 
@@ -17,46 +16,57 @@ h2_relationship_bp: Blueprint = Blueprint(
 
 
 # Uso:
-# /api/h2/relationships?participant=1&experiment=5
+# /api/h2/relationships
+# ?experiment=5
+# &row_group=EEG
+# &reference_group=PERIPHERAL
+# &reference_channel=GSR1
 @h2_relationship_bp.route(
     "/relationships",
     methods=["GET"],
 )
 def get_h2_relationships() -> tuple[Any, int]:
     """
-    Devuelve la matriz de relaciones EEG × periféricas para H2.
+    Devuelve la matriz H2 de relaciones por participantes.
 
-    La consulta principal usa:
-    - participant
-    - experiment
+    Filas:
+    - canales del grupo Y seleccionado.
 
-    Internamente se resuelve el trial correspondiente.
+    Columnas:
+    - participantes S01...S32.
+
+    Celda:
+    - correlación entre el canal de la fila y el canal de referencia
+      durante el experimento seleccionado.
     """
-    participant_arg: str | None = request.args.get("participant")
     experiment_arg: str | None = request.args.get("experiment")
+    row_group: str | None = request.args.get("row_group")
+    reference_group: str | None = request.args.get("reference_group")
+    reference_channel: str | None = request.args.get("reference_channel")
 
-    if participant_arg is None or experiment_arg is None:
+    if (
+        experiment_arg is None
+        or row_group is None
+        or reference_group is None
+        or reference_channel is None
+    ):
         return jsonify(
             {
                 "error": (
-                    "Parámetros requeridos: "
-                    "participant y experiment."
+                    "Parámetros requeridos: experiment, row_group, "
+                    "reference_group y reference_channel."
                 )
             }
         ), 400
 
     try:
-        participant_id: int = int(participant_arg)
         experiment_id: int = int(experiment_arg)
 
-        trial: int = find_trial_by_experiment(
-            participant_id=participant_id,
+        data: dict[str, Any] = build_cross_participant_relationship_matrix(
             experiment_id=experiment_id,
-        )
-
-        data: dict[str, Any] = build_relationship_matrix(
-            participant_id=participant_id,
-            trial=trial,
+            row_group=row_group,
+            reference_group=reference_group,
+            reference_channel=reference_channel,
         )
 
         return jsonify(data), 200
@@ -64,22 +74,15 @@ def get_h2_relationships() -> tuple[Any, int]:
     except FileNotFoundError as error:
         return jsonify({"error": str(error)}), 404
 
-    except ValueError:
-        return jsonify(
-            {
-                "error": (
-                    "participant y experiment "
-                    "deben ser enteros."
-                )
-            }
-        ), 400
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 400
 
     except Exception as error:
         return jsonify(
             {
                 "error": (
-                    "Error interno al cargar "
-                    f"relaciones H2: {error}"
+                    "Error interno al cargar matriz H2 por participantes: "
+                    f"{error}"
                 )
             }
         ), 500

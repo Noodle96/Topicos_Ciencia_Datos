@@ -60,12 +60,25 @@ export async function fetchTrialSignals({
 
 // TO H2
 /**
- * Obtiene la matriz de relaciones H2 para un participante
- * y un experimento específico.
+ * Obtiene la matriz H2 por experimento.
+ *
+ * Filas:
+ * - canales del grupo Y.
+ *
+ * Columnas:
+ * - participantes S01...S32.
+ *
+ * Celda:
+ * - correlación entre el canal de fila y el canal de referencia.
  */
-export async function fetchH2Relationships(participant, experiment) {
+export async function fetchH2Relationships({
+    experiment,
+    rowGroup,
+    referenceGroup,
+    referenceChannel,
+}) {
     const response = await fetch(
-        `${API_BASE_URL}/h2/relationships?participant=${participant}&experiment=${experiment}`
+        `${API_BASE_URL}/h2/relationships?experiment=${experiment}&row_group=${rowGroup}&reference_group=${referenceGroup}&reference_channel=${referenceChannel}`
     );
 
     if (!response.ok) {
@@ -76,17 +89,17 @@ export async function fetchH2Relationships(participant, experiment) {
 }
 
 /**
- * Obtiene un par temporal sincronizado EEG ↔ periférica
+ * Obtiene un par temporal sincronizado canal A ↔ canal B
  * para un participante y experimento específico.
  */
 export async function fetchH2TimeseriesPair({
     participant,
     experiment,
-    eeg,
-    peripheral,
+    channelA,
+    channelB,
 }) {
     const response = await fetch(
-        `${API_BASE_URL}/h2/timeseries-pair?participant=${participant}&experiment=${experiment}&eeg=${eeg}&peripheral=${peripheral}`
+        `${API_BASE_URL}/h2/timeseries-pair?participant=${participant}&experiment=${experiment}&channel_a=${channelA}&channel_b=${channelB}`
     );
 
     if (!response.ok) {
@@ -114,6 +127,24 @@ export async function fetchH2LocalRelationship({
 
     if (!response.ok) {
         throw new Error("Error loading H2 local relationship");
+    }
+
+    return await response.json();
+}
+
+
+/**
+ * Obtiene comparación de perfiles humanos para participantes seleccionados.
+ */
+export async function fetchH2ParticipantProfiles(participants) {
+    const participantsQuery = participants.join(",");
+
+    const response = await fetch(
+        `${API_BASE_URL}/h2/participant-profiles?participants=${participantsQuery}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading H2 participant profiles");
     }
 
     return await response.json();

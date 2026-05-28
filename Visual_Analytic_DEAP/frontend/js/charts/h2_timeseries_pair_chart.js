@@ -4,7 +4,12 @@ import {
     CHANNEL_COLORS,
 } from "./signal_timeseries_chart.js";
 
-const MAX_VISUAL_POINTS = 1000;
+
+const MAX_VISUAL_POINTS = 1200;
+
+let currentXDomain = null;
+let lastRenderConfig = null;
+
 
 function normalizeValues(values) {
     const mean = d3.mean(values);
@@ -17,6 +22,7 @@ function normalizeValues(values) {
     return values.map((value) => (value - mean) / deviation);
 }
 
+
 function downsampleSamples(samples, maxPoints = MAX_VISUAL_POINTS) {
     if (samples.length <= maxPoints) {
         return samples;
@@ -27,12 +33,21 @@ function downsampleSamples(samples, maxPoints = MAX_VISUAL_POINTS) {
     return samples.filter((_, index) => index % step === 0);
 }
 
-function addLocalRelationshipBrush({
+
+function resetH2TimeseriesZoom() {
+    currentXDomain = null;
+
+    if (lastRenderConfig) {
+        renderH2TimeseriesPairChart(lastRenderConfig);
+    }
+}
+
+
+function addBrushZoom({
     plotGroup,
     xScale,
     plotWidth,
     plotHeight,
-    onBrushEnd,
 }) {
     const brush = d3
         .brushX()
@@ -47,18 +62,20 @@ function addLocalRelationshipBrush({
 
             const [x0, x1] = event.selection;
 
-            const startSec = xScale.invert(x0);
-            const endSec = xScale.invert(x1);
+            const selectedStart = xScale.invert(x0);
+            const selectedEnd = xScale.invert(x1);
 
-            if (Math.abs(endSec - startSec) < 0.5) {
+            if (Math.abs(selectedEnd - selectedStart) < 0.5) {
                 return;
             }
 
-            if (onBrushEnd) {
-                onBrushEnd({
-                    startSec,
-                    endSec,
-                });
+            currentXDomain = [
+                selectedStart,
+                selectedEnd,
+            ];
+
+            if (lastRenderConfig) {
+                renderH2TimeseriesPairChart(lastRenderConfig);
             }
         });
 
@@ -68,13 +85,18 @@ function addLocalRelationshipBrush({
         .call(brush);
 }
 
+
 export function renderH2TimeseriesPairChart({
     containerId,
     pairData,
-    onBrushEnd,
 }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
+
+    lastRenderConfig = {
+        containerId,
+        pairData,
+    };
 
     if (!pairData || !pairData.times) {
         container.innerHTML = `
@@ -85,8 +107,26 @@ export function renderH2TimeseriesPairChart({
         return;
     }
 
-    const width = container.clientWidth || 520;
-    const height = container.clientHeight || 320;
+    const controls = document.createElement("div");
+    controls.className = "signal-zoom-controls";
+
+    const resetButton = document.createElement("button");
+    resetButton.textContent = "Reset Zoom";
+    resetButton.className = "reset-zoom-button";
+    resetButton.addEventListener("click", resetH2TimeseriesZoom);
+
+    controls.appendChild(resetButton);
+    container.appendChild(controls);
+
+    const chartContainer = document.createElement("div");
+    chartContainer.className = "h2-timeseries-chart-area";
+    container.appendChild(chartContainer);
+
+    const width = chartContainer.clientWidth || container.clientWidth || 520;
+    const height = Math.max(
+        240,
+        (container.clientHeight || 320) - 38
+    );
 
     const margin = {
         top: 34,
@@ -96,7 +136,7 @@ export function renderH2TimeseriesPairChart({
     };
 
     const svg = d3
-        .select(container)
+        .select(chartContainer)
         .append("svg")
         .attr("width", width)
         .attr("height", height);
@@ -115,27 +155,36 @@ export function renderH2TimeseriesPairChart({
         (time) => time - pairData.times[0]
     );
 
-    const eegValues = normalizeValues(pairData.eeg_values);
-    const peripheralValues = normalizeValues(
-        pairData.peripheral_values
+    const channelAValues = normalizeValues(pairData.channel_a_values);
+    const channelBValues = normalizeValues(pairData.channel_b_values);
+
+    const channelASamplesFull = relativeTimes.map((time, index) => ({
+        time,
+        value: channelAValues[index],
+    }));
+
+    const channelBSamplesFull = relativeTimes.map((time, index) => ({
+        time,
+        value: channelBValues[index],
+    }));
+
+    const fullXDomain = d3.extent(relativeTimes);
+    const xDomain = currentXDomain ?? fullXDomain;
+
+    const visibleChannelASamples = channelASamplesFull.filter(
+        (sample) => sample.time >= xDomain[0] && sample.time <= xDomain[1]
     );
 
-    const eegSamplesFull = relativeTimes.map((time, index) => ({
-        time,
-        value: eegValues[index],
-    }));
+    const visibleChannelBSamples = channelBSamplesFull.filter(
+        (sample) => sample.time >= xDomain[0] && sample.time <= xDomain[1]
+    );
 
-    const peripheralSamplesFull = relativeTimes.map((time, index) => ({
-        time,
-        value: peripheralValues[index],
-    }));
-
-    const eegSamples = downsampleSamples(eegSamplesFull);
-    const peripheralSamples = downsampleSamples(peripheralSamplesFull);
+    const channelASamples = downsampleSamples(visibleChannelASamples);
+    const channelBSamples = downsampleSamples(visibleChannelBSamples);
 
     const xScale = d3
         .scaleLinear()
-        .domain(d3.extent(relativeTimes))
+        .domain(xDomain)
         .range([0, plotWidth]);
 
     const yScale = d3
@@ -150,7 +199,7 @@ export function renderH2TimeseriesPairChart({
         .attr("width", plotWidth)
         .attr("height", plotHeight)
         .attr("fill", "#fef3c7")
-        .attr("opacity", 0.4);
+        .attr("opacity", 0.35);
 
     plotGroup
         .append("g")
@@ -171,18 +220,18 @@ export function renderH2TimeseriesPairChart({
 
     plotGroup
         .append("path")
-        .datum(eegSamples)
+        .datum(channelASamples)
         .attr("fill", "none")
-        .attr("stroke", CHANNEL_COLORS[pairData.eeg_channel] ?? "#2563eb")
+        .attr("stroke", CHANNEL_COLORS[pairData.channel_a] ?? "#2563eb")
         .attr("stroke-width", 1.6)
         .attr("opacity", 0.9)
         .attr("d", lineGenerator);
 
     plotGroup
         .append("path")
-        .datum(peripheralSamples)
+        .datum(channelBSamples)
         .attr("fill", "none")
-        .attr("stroke", CHANNEL_COLORS[pairData.peripheral_channel] ?? "#0f766e")
+        .attr("stroke", CHANNEL_COLORS[pairData.channel_b] ?? "#0f766e")
         .attr("stroke-width", 1.6)
         .attr("opacity", 0.9)
         .attr("d", lineGenerator);
@@ -200,7 +249,7 @@ export function renderH2TimeseriesPairChart({
         .attr("font-size", 12)
         .attr("font-weight", "bold")
         .text(
-            `${pairData.eeg_channel} ↔ ${pairData.peripheral_channel} | Pearson: ${correlationText}`
+            `${pairData.channel_a} ↔ ${pairData.channel_b} | Pearson: ${correlationText}`
         );
 
     svg
@@ -221,12 +270,12 @@ export function renderH2TimeseriesPairChart({
 
     const legendItems = [
         {
-            label: `${pairData.eeg_channel} | EEG z-score`,
-            color: CHANNEL_COLORS[pairData.eeg_channel] ?? "#2563eb",
+            label: `${pairData.channel_a} | z-score`,
+            color: CHANNEL_COLORS[pairData.channel_a] ?? "#2563eb",
         },
         {
-            label: `${pairData.peripheral_channel} | Peripheral z-score`,
-            color: CHANNEL_COLORS[pairData.peripheral_channel] ?? "#0f766e",
+            label: `${pairData.channel_b} | z-score`,
+            color: CHANNEL_COLORS[pairData.channel_b] ?? "#0f766e",
         },
     ];
 
@@ -257,11 +306,11 @@ export function renderH2TimeseriesPairChart({
                 .attr("fill", item.color)
                 .text(item.label);
         });
-    addLocalRelationshipBrush({
+
+    addBrushZoom({
         plotGroup,
         xScale,
         plotWidth,
         plotHeight,
-        onBrushEnd,
     });
 }

@@ -136,19 +136,6 @@
                 <h2>H2 Overview</h2>
 
                 <div class="control-group">
-                    <label for="h2-participant-select">Participant</label>
-                    <select id="h2-participant-select">
-                        <script>
-                            for (let i = 1; i <= 32; i++) {
-                                document.write(
-                                    `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
-                                );
-                            }
-                        </script>
-                    </select>
-                </div>
-
-                <div class="control-group">
                     <label for="h2-experiment-select">Experiment</label>
                     <select id="h2-experiment-select">
                         <script>
@@ -161,9 +148,63 @@
                     </select>
                 </div>
 
+                <div class="control-group">
+                    <label>Group Y</label>
+
+                    <div class="h2-radio-group">
+                        <label>
+                            <input type="radio" name="h2-row-group" value="EEG" checked>
+                            EEG (32)
+                        </label>
+
+                        <label>
+                            <input type="radio" name="h2-row-group" value="EXG">
+                            EXG (8)
+                        </label>
+
+                        <label>
+                            <input type="radio" name="h2-row-group" value="PERIPHERAL">
+                            Peripheral (4)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label>Reference Group X</label>
+
+                    <div class="h2-radio-group">
+                        <label>
+                            <input type="radio" name="h2-reference-group" value="PERIPHERAL" checked>
+                            Peripheral (4)
+                        </label>
+
+                        <label>
+                            <input type="radio" name="h2-reference-group" value="EEG">
+                            EEG (32)
+                        </label>
+
+                        <label>
+                            <input type="radio" name="h2-reference-group" value="EXG">
+                            EXG (8)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="h2-reference-channel-select">Reference Channel X</label>
+                    <select id="h2-reference-channel-select"></select>
+                </div>
+
                 <button id="h2-update-button">
                     Update H2
                 </button>
+
+                <div class="h2-selected-relation-card">
+                    <h3>Experiment Info</h3>
+                    <p id="h2-experiment-info">
+                        Select an experiment and update H2.
+                    </p>
+                </div>
 
                 <div class="h2-selected-relation-card">
                     <h3>Selected Relation</h3>
@@ -175,30 +216,49 @@
 
             <main class="h2-main-content">
                 <section class="h2-panel h2-matrix-panel">
-                    <h3>Correlation Matrix EEG × Peripheral</h3>
-                    <p class="h2-panel-description">
-                        Pearson relationships during the stimulus phase.
-                    </p>
                     <div id="h2-correlation-matrix"></div>
                 </section>
 
                 <section class="h2-panel h2-timeseries-panel">
                     <h3>Cross-modal Temporal Explorer</h3>
                     <p class="h2-panel-description">
-                        Select a matrix cell to inspect synchronized EEG and peripheral signals.
+                        Seleccione una celda de la matriz para inspeccionar las señales EEG y periféricas sincronizadas.
                     </p>
                     <div id="h2-timeseries-pair">
                         Select a relation to load the temporal explorer.
                     </div>
                 </section>
 
-                <section class="h2-panel h2-local-panel">
-                    <h3>Local Relationship</h3>
-                    <p class="h2-panel-description">
-                        A temporal brush will later recalculate local correlation.
-                    </p>
-                    <div id="h2-local-relationship">
-                        No temporal window selected yet.
+                <!-- heheh -->
+                 <section class="h2-panel h2-local-panel">
+                    <div class="h2-tabs-header">
+                        <button id="h2-profiles-tab-button" class="h2-tab-button active">
+                            Participant Profiles
+                        </button>
+
+                        <button id="h2-spatial-tab-button" class="h2-tab-button">
+                            EEG Spatial Explorer
+                        </button>
+                    </div>
+
+                    <div id="h2-profiles-tab-content" class="h2-tab-content active">
+                        <p class="h2-panel-description">
+                            Seleccione las etiquetas de los participantes del eje X de la matriz para comparar los atributos categóricos y numéricos.
+                        </p>
+
+                        <div id="h2-participant-profiles">
+                            Seleccione uno o mas participantes de la matriz
+                        </div>
+                    </div>
+
+                    <div id="h2-spatial-tab-content" class="h2-tab-content hidden">
+                        <p class="h2-panel-description">
+                            Vista espacial de las correlaciones de los canales EEG en la disposición 10-20.
+                        </p>
+
+                        <div id="h2-eeg-spatial-explorer">
+                            Select a matrix cell to inspect its EEG spatial pattern.
+                        </div>
                     </div>
                 </section>
             </main>

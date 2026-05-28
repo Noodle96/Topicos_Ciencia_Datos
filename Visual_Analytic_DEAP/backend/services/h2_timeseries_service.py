@@ -11,9 +11,7 @@ from backend.services.h2_relationship_service import (
 from backend.utils.paths import DATASET_DIR
 
 
-PROCESSED_TRIALS_DIR: Path = (
-    DATASET_DIR / "processed" / "trials"
-)
+PROCESSED_TRIALS_DIR: Path = DATASET_DIR / "processed" / "trials"
 
 
 def load_trial_npz(
@@ -47,19 +45,12 @@ def load_trial_npz(
         allow_pickle=True,
     )
 
-    signals: np.ndarray = np.asarray(
-        npz_data["signals"]
-    )
-
-    times: np.ndarray = np.asarray(
-        npz_data["times"]
-    )
-
+    signals: np.ndarray = np.asarray(npz_data["signals"])
+    times: np.ndarray = np.asarray(npz_data["times"])
     channels: list[str] = [
         str(channel)
         for channel in npz_data["channels"].tolist()
     ]
-
     sfreq: float = float(npz_data["sfreq"])
 
     return signals, times, channels, sfreq
@@ -118,24 +109,41 @@ def extract_during_indices(
 
 def get_pair_correlation(
     relationship_data: dict[str, Any],
-    eeg_channel: str,
-    peripheral_channel: str,
+    channel_a: str,
+    channel_b: str,
 ) -> float | None:
     """
-    Busca la correlación correspondiente a un par
-    EEG ↔ periférica.
+    Busca la correlación entre dos canales.
+
+    Revisa ambas direcciones porque el preprocessing puede guardar
+    el par como source→target o como target→source según los grupos.
     """
-    relationships: list[dict[str, Any]] = (
-        relationship_data.get("relationships", [])
+    relationships: list[dict[str, Any]] = relationship_data.get(
+        "relationships",
+        [],
     )
 
     for item in relationships:
-        if (
-            item["eeg_channel"] == eeg_channel
-            and item["peripheral_channel"]
-            == peripheral_channel
-        ):
-            return item["correlation"]
+        source_channel: str = str(item.get("source_channel"))
+        target_channel: str = str(item.get("target_channel"))
+
+        is_direct_match: bool = (
+            source_channel == channel_a
+            and target_channel == channel_b
+        )
+
+        is_reverse_match: bool = (
+            source_channel == channel_b
+            and target_channel == channel_a
+        )
+
+        if is_direct_match or is_reverse_match:
+            correlation: Any = item.get("correlation")
+
+            if correlation is None:
+                return None
+
+            return float(correlation)
 
     return None
 
@@ -143,83 +151,76 @@ def get_pair_correlation(
 def build_timeseries_pair(
     participant_id: int,
     trial: int,
-    eeg_channel: str,
-    peripheral_channel: str,
+    channel_a: str,
+    channel_b: str,
 ) -> dict[str, Any]:
     """
-    Construye un par sincronizado EEG ↔ periférica
-    durante la fase During.
+    Construye un par sincronizado canal A ↔ canal B durante During.
 
-    Esta salida alimentará el Cross-modal
-    Temporal Explorer en H2.
+    Esta versión es general y permite combinaciones como:
+    - EEG ↔ PERIPHERAL
+    - EEG ↔ EEG
+    - EEG ↔ EXG
+    - EXG ↔ PERIPHERAL
+    - PERIPHERAL ↔ PERIPHERAL
     """
-    relationship_data: dict[str, Any] = (
-        load_trial_relationships(
-            participant_id=participant_id,
-            trial=trial,
-        )
+    relationship_data: dict[str, Any] = load_trial_relationships(
+        participant_id=participant_id,
+        trial=trial,
     )
 
-    signals, times, channels, sfreq = (
-        load_trial_npz(
-            participant_id=participant_id,
-            trial=trial,
-        )
+    signals, times, channels, sfreq = load_trial_npz(
+        participant_id=participant_id,
+        trial=trial,
     )
 
-    during_start_index, during_end_index = (
-        extract_during_indices(
-            relationship_data=relationship_data,
-            times=times,
-        )
+    during_start_index, during_end_index = extract_during_indices(
+        relationship_data=relationship_data,
+        times=times,
     )
 
-    eeg_index: int = get_channel_index(
+    channel_a_index: int = get_channel_index(
         channels=channels,
-        channel_name=eeg_channel,
+        channel_name=channel_a,
     )
 
-    peripheral_index: int = get_channel_index(
+    channel_b_index: int = get_channel_index(
         channels=channels,
-        channel_name=peripheral_channel,
+        channel_name=channel_b,
     )
 
     during_times: np.ndarray = times[
         during_start_index:during_end_index
     ]
 
-    eeg_values: np.ndarray = signals[
-        eeg_index,
+    channel_a_values: np.ndarray = signals[
+        channel_a_index,
         during_start_index:during_end_index,
     ]
 
-    peripheral_values: np.ndarray = signals[
-        peripheral_index,
+    channel_b_values: np.ndarray = signals[
+        channel_b_index,
         during_start_index:during_end_index,
     ]
 
-    correlation: float | None = (
-        get_pair_correlation(
-            relationship_data=relationship_data,
-            eeg_channel=eeg_channel,
-            peripheral_channel=peripheral_channel,
-        )
+    correlation: float | None = get_pair_correlation(
+        relationship_data=relationship_data,
+        channel_a=channel_a,
+        channel_b=channel_b,
     )
 
     result: dict[str, Any] = {
         "participant_id": participant_id,
         "trial": trial,
-        "experiment_id": relationship_data.get(
-            "experiment_id"
-        ),
+        "experiment_id": relationship_data.get("experiment_id"),
         "phase": "during",
         "sfreq": sfreq,
-        "eeg_channel": eeg_channel,
-        "peripheral_channel": peripheral_channel,
+        "channel_a": channel_a,
+        "channel_b": channel_b,
         "correlation": correlation,
         "times": during_times.tolist(),
-        "eeg_values": eeg_values.tolist(),
-        "peripheral_values": peripheral_values.tolist(),
+        "channel_a_values": channel_a_values.tolist(),
+        "channel_b_values": channel_b_values.tolist(),
     }
 
     return result

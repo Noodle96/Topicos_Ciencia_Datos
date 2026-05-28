@@ -1,4 +1,9 @@
-import { fetchH2Relationships, fetchH2TimeseriesPair, fetchH2LocalRelationship, } from "./api.js";
+import {
+    fetchH2Relationships,
+    fetchH2TimeseriesPair,
+    fetchEmotionSpace,
+    fetchH2ParticipantProfiles,
+} from "./api.js";
 
 import {
     renderH2CorrelationMatrix,
@@ -8,11 +13,39 @@ import {
     renderH2TimeseriesPairChart,
 } from "./charts/h2_timeseries_pair_chart.js";
 
+import {
+    renderH2ParticipantProfiles,
+} from "./charts/h2_participant_profile_chart.js";
 
-function getH2SelectedParticipant() {
-    return Number(
-        document.getElementById("h2-participant-select").value
+import {
+    renderH2EEGSpatialChart,
+} from "./charts/h2_eeg_spatial_chart.js";
+
+const CHANNEL_GROUPS = {
+    EEG: [
+        "Fp1", "AF3", "F7", "F3", "FC1", "FC5", "T7", "C3",
+        "CP1", "CP5", "P7", "P3", "Pz", "PO3", "O1", "Oz",
+        "O2", "PO4", "P4", "P8", "CP6", "CP2", "C4", "T8",
+        "FC6", "FC2", "F4", "F8", "AF4", "Fp2", "Fz", "Cz",
+    ],
+    EXG: [
+        "EXG1", "EXG2", "EXG3", "EXG4",
+        "EXG5", "EXG6", "EXG7", "EXG8",
+    ],
+    PERIPHERAL: [
+        "GSR1", "Resp", "Plet", "Temp",
+    ],
+};
+
+let selectedParticipants = [];
+let currentMatrixData = null;
+
+function getSelectedRadioValue(name) {
+    const selectedInput = document.querySelector(
+        `input[name="${name}"]:checked`
     );
+
+    return selectedInput.value;
 }
 
 
@@ -22,30 +55,114 @@ function getH2SelectedExperiment() {
     );
 }
 
-function renderH2LocalRelationship(localData) {
-    const container = document.getElementById(
-        "h2-local-relationship"
+
+function getH2RowGroup() {
+    return getSelectedRadioValue("h2-row-group");
+}
+
+
+function getH2ReferenceGroup() {
+    return getSelectedRadioValue("h2-reference-group");
+}
+
+
+function getH2ReferenceChannel() {
+    return document.getElementById(
+        "h2-reference-channel-select"
+    ).value;
+}
+
+
+function updateReferenceChannelOptions() {
+    const referenceGroup = getH2ReferenceGroup();
+    const select = document.getElementById(
+        "h2-reference-channel-select"
     );
 
-    const globalCorrelation =
-        localData.global_correlation === null
-            ? "N/A"
-            : localData.global_correlation.toFixed(4);
+    select.innerHTML = "";
 
-    const localCorrelation =
-        localData.local_correlation === null
-            ? "N/A"
-            : localData.local_correlation.toFixed(4);
+    CHANNEL_GROUPS[referenceGroup].forEach((channel) => {
+        const option = document.createElement("option");
+        option.value = channel;
+        option.textContent = channel;
 
-    container.innerHTML = `
-        <p><strong>EEG:</strong> ${localData.eeg_channel}</p>
-        <p><strong>Peripheral:</strong> ${localData.peripheral_channel}</p>
-        <p><strong>Window:</strong> ${localData.start_sec.toFixed(2)}s – ${localData.end_sec.toFixed(2)}s</p>
-        <p><strong>Samples:</strong> ${localData.sample_count}</p>
-        <p><strong>Global Pearson:</strong> ${globalCorrelation}</p>
-        <p><strong>Local Pearson:</strong> ${localCorrelation}</p>
-    `;
+        select.appendChild(option);
+    });
 }
+
+
+async function renderH2ExperimentInfo(experiment) {
+    const container = document.getElementById(
+        "h2-experiment-info"
+    );
+
+    try {
+        const data = await fetchEmotionSpace({
+            xVariable: "Valence",
+            yVariable: "Arousal",
+            participant: "all",
+            experiment,
+        });
+
+        const firstPoint = data.points?.[0];
+
+        if (!firstPoint) {
+            container.innerHTML = "No metadata available.";
+            return;
+        }
+
+        container.innerHTML = `
+            <strong>Experiment:</strong> ${experiment}<br>
+            <strong>Tag:</strong> ${firstPoint.Lastfm_tag ?? "N/A"}<br>
+            <strong>Artist:</strong> ${firstPoint.Artist ?? "N/A"}<br>
+            <strong>Title:</strong> ${firstPoint.Title ?? "N/A"}
+        `;
+    } catch (error) {
+        container.innerHTML = "Could not load experiment metadata.";
+    }
+}
+
+async function updateParticipantProfiles() {
+    if (selectedParticipants.length === 0) {
+        document.getElementById("h2-participant-profiles").innerHTML = `
+            Select one or more participants from the matrix.
+        `;
+        return;
+    }
+
+    const profileData = await fetchH2ParticipantProfiles(
+        selectedParticipants
+    );
+
+    renderH2ParticipantProfiles({
+        containerId: "h2-participant-profiles",
+        profileData,
+    });
+}
+
+
+async function handleParticipantToggle(participantLabel) {
+    if (selectedParticipants.includes(participantLabel)) {
+        selectedParticipants = selectedParticipants.filter(
+            (participant) => participant !== participantLabel
+        );
+    } else {
+        selectedParticipants.push(participantLabel);
+    }
+
+    if (currentMatrixData) {
+        renderH2CorrelationMatrix({
+            containerSelector: "#h2-correlation-matrix",
+            data: currentMatrixData,
+            selectedParticipants,
+            onCellClick: handleH2CellClick,
+            onParticipantToggle: handleParticipantToggle,
+        });
+    }
+
+    await updateParticipantProfiles();
+}
+
 
 async function handleH2CellClick(cell) {
     const relationContainer = document.getElementById(
@@ -58,70 +175,135 @@ async function handleH2CellClick(cell) {
             : cell.correlation.toFixed(4);
 
     relationContainer.innerHTML = `
-        <strong>EEG:</strong> ${cell.eeg_channel}<br>
-        <strong>Peripheral:</strong> ${cell.peripheral_channel}<br>
+        <strong>Participant:</strong> ${cell.participant_label}<br>
+        <strong>Group Y:</strong> ${cell.row_group}<br>
+        <strong>Channel Y:</strong> ${cell.row_channel}<br>
+        <strong>Reference Group X:</strong> ${cell.reference_group}<br>
+        <strong>Reference Channel X:</strong> ${cell.reference_channel}<br>
         <strong>Pearson:</strong> ${correlationText}
     `;
 
-    const participant = getH2SelectedParticipant();
     const experiment = getH2SelectedExperiment();
 
     const pairData = await fetchH2TimeseriesPair({
-        participant,
+        participant: cell.participant_id,
         experiment,
-        eeg: cell.eeg_channel,
-        peripheral: cell.peripheral_channel,
+        channelA: cell.row_channel,
+        channelB: cell.reference_channel,
     });
 
-        renderH2TimeseriesPairChart({
-            containerId: "h2-timeseries-pair",
-            pairData,
-            onBrushEnd: async ({ startSec, endSec }) => {
-                const localData = await fetchH2LocalRelationship({
-                    participant,
-                    experiment,
-                    eeg: cell.eeg_channel,
-                    peripheral: cell.peripheral_channel,
-                    startSec,
-                    endSec,
-                });
-
-                renderH2LocalRelationship(localData);
-            },
-        });
-
-    document.getElementById("h2-local-relationship").innerHTML = `
-        Select a temporal window to calculate local correlation.
-    `;
+    renderH2TimeseriesPairChart({
+        containerId: "h2-timeseries-pair",
+        pairData,
+    });
+    renderH2EEGSpatialChart({
+        containerId: "h2-eeg-spatial-explorer",
+        matrixData: currentMatrixData,
+        selectedCell: cell,
+    });
 }
 
 
 export async function updateH2Relationships() {
-    const participant = getH2SelectedParticipant();
     const experiment = getH2SelectedExperiment();
+    const rowGroup = getH2RowGroup();
+    const referenceGroup = getH2ReferenceGroup();
+    const referenceChannel = getH2ReferenceChannel();
 
-    const data = await fetchH2Relationships(
-        participant,
-        experiment
-    );
+    await renderH2ExperimentInfo(experiment);
+
+    const data = await fetchH2Relationships({
+        experiment,
+        rowGroup,
+        referenceGroup,
+        referenceChannel,
+    });
+    currentMatrixData = data;
+    selectedParticipants = [];
 
     renderH2CorrelationMatrix({
         containerSelector: "#h2-correlation-matrix",
         data,
+        selectedParticipants,
         onCellClick: handleH2CellClick,
+        onParticipantToggle: handleParticipantToggle,
     });
+
+    document.getElementById("h2-selected-relation-text").innerHTML = `
+        Select a cell from the matrix.
+    `;
+
+    document.getElementById("h2-timeseries-pair").innerHTML = `
+        Select a relation to load the temporal explorer.
+    `;
+
+    document.getElementById("h2-participant-profiles").innerHTML = `
+        Select one or more participants from the matrix.
+    `;
+    document.getElementById("h2-eeg-spatial-explorer").innerHTML = `
+        Select a matrix cell to inspect its EEG spatial pattern.
+    `;
 }
 
+// here
+function initializeH2BottomTabs() {
+    const profilesButton = document.getElementById(
+        "h2-profiles-tab-button"
+    );
+
+    const spatialButton = document.getElementById(
+        "h2-spatial-tab-button"
+    );
+
+    const profilesContent = document.getElementById(
+        "h2-profiles-tab-content"
+    );
+
+    const spatialContent = document.getElementById(
+        "h2-spatial-tab-content"
+    );
+
+    profilesButton.addEventListener("click", () => {
+        profilesButton.classList.add("active");
+        spatialButton.classList.remove("active");
+
+        profilesContent.classList.add("active");
+        profilesContent.classList.remove("hidden");
+
+        spatialContent.classList.add("hidden");
+        spatialContent.classList.remove("active");
+    });
+
+    spatialButton.addEventListener("click", () => {
+        spatialButton.classList.add("active");
+        profilesButton.classList.remove("active");
+
+        spatialContent.classList.add("active");
+        spatialContent.classList.remove("hidden");
+
+        profilesContent.classList.add("hidden");
+        profilesContent.classList.remove("active");
+    });
+}
 
 export function initializeH2View() {
     const updateButton = document.getElementById(
         "h2-update-button"
     );
 
+    const referenceGroupInputs = document.querySelectorAll(
+        `input[name="h2-reference-group"]`
+    );
+
+    referenceGroupInputs.forEach((input) => {
+        input.addEventListener("change", updateReferenceChannelOptions);
+    });
+
     updateButton.addEventListener(
         "click",
         updateH2Relationships
     );
-
+    initializeH2BottomTabs();
+    updateReferenceChannelOptions();
     updateH2Relationships();
 }
