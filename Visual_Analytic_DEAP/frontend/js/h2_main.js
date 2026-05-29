@@ -21,6 +21,7 @@ import {
     renderH2EEGSpatialChart,
 } from "./charts/h2_eeg_spatial_chart.js";
 
+
 const CHANNEL_GROUPS = {
     EEG: [
         "Fp1", "AF3", "F7", "F3", "FC1", "FC5", "T7", "C3",
@@ -39,6 +40,64 @@ const CHANNEL_GROUPS = {
 
 let selectedParticipants = [];
 let currentMatrixData = null;
+
+
+// function renderTarea1ChannelSelector() {
+//     const container = document.getElementById(
+//         "tarea1-channel-selector-container"
+//     );
+
+//     container.innerHTML = "";
+
+//     tarea1ChannelGroups.forEach((group) => {
+//         const groupWrapper = document.createElement("div");
+//         groupWrapper.className = "tarea1-channel-group";
+
+//         const groupTitle = document.createElement("span");
+//         groupTitle.className = "tarea1-channel-group-title";
+//         groupTitle.textContent = group.name;
+
+//         groupWrapper.appendChild(groupTitle);
+
+//         group.channels.forEach((channel) => {
+//             const label = document.createElement("label");
+//             label.className = "tarea1-channel-checkbox-item";
+
+//             const checkbox = document.createElement("input");
+//             checkbox.type = "checkbox";
+//             checkbox.checked = activeTarea1Channels.includes(channel);
+
+//             checkbox.addEventListener("change", async () => {
+//                 if (checkbox.checked) {
+//                     if (!activeTarea1Channels.includes(channel)) {
+//                         activeTarea1Channels.push(channel);
+//                     }
+//                 } else {
+//                     activeTarea1Channels = activeTarea1Channels.filter(
+//                         (activeChannel) => activeChannel !== channel
+//                     );
+//                 }
+
+//                 if (selectedPoint) {
+//                     await loadAndRenderTarea1Signals(selectedPoint);
+//                 }
+
+//                 renderTarea1ChannelSelector();
+//             });
+
+//             const text = document.createElement("span");
+//             text.textContent = channel;
+//             text.style.color = CHANNEL_COLORS[channel] ?? "#111827";
+//             text.style.fontWeight = "700";
+
+//             label.appendChild(checkbox);
+//             label.appendChild(text);
+//             groupWrapper.appendChild(label);
+//         });
+
+//         container.appendChild(groupWrapper);
+//     });
+// }
 
 function getSelectedRadioValue(name) {
     const selectedInput = document.querySelector(

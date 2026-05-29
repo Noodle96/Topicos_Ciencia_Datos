@@ -22,6 +22,10 @@
             <button id="h2-tab-button" class="hypothesis-tab">
                 H2 Multimodal Relationships
             </button>
+
+            <button id="tarea1-tab-button" class="hypothesis-tab">
+                Tarea 1 Latent Space
+            </button>
         </nav>
     </header>
 
@@ -230,7 +234,7 @@
                 </section>
 
                 <!-- heheh -->
-                 <section class="h2-panel h2-local-panel">
+                <section class="h2-panel h2-local-panel">
                     <div class="h2-tabs-header">
                         <button id="h2-profiles-tab-button" class="h2-tab-button active">
                             Participant Profiles
@@ -263,6 +267,134 @@
                 </section>
             </main>
 
+        </div>
+    </section>
+
+    <!-- TAREA1 -->
+    <section id="tarea1-view" class="view-container hidden-view">
+        <div class="tarea1-layout">
+            <aside class="sidebar tarea1-sidebar">
+                <div class="tarea1-sidebar-top">
+                    <h2>Tarea 1 Overview</h2>
+
+                    <div class="control-group">
+                        <label for="tarea1-projection-select">Projection Method</label>
+                        <select id="tarea1-projection-select">
+                            <option value="pca">PCA</option>
+                            <option value="umap">UMAP</option>
+                            <option value="tsne">t-SNE</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="tarea1-filter-mode-select">Filter Mode</label>
+                        <select id="tarea1-filter-mode-select">
+                            <option value="all">All</option>
+                            <option value="participant">Participant</option>
+                            <option value="experiment">Experiment ID</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="tarea1-participant-select">Participant</label>
+                        <select id="tarea1-participant-select">
+                            <script>
+                                for (let i = 1; i <= 32; i++) {
+                                    document.write(
+                                        `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
+                                    );
+                                }
+                            </script>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="tarea1-experiment-select">Experiment ID</label>
+                        <select id="tarea1-experiment-select">
+                            <script>
+                                for (let i = 1; i <= 40; i++) {
+                                    document.write(
+                                        `<option value="${i}">Experiment ${i}</option>`
+                                    );
+                                }
+                            </script>
+                        </select>
+                    </div>
+
+                    <button id="tarea1-update-button">
+                        Update Tarea 1
+                    </button>
+<!-- 
+                    <div id="tarea1-selected-trial-info" class="tarea1-selected-trial-card">
+                        Select a point to inspect a trial.
+                    </div> -->
+                </div>
+
+                <div class="tarea1-selected-trial-card-wrapper">
+                    <div id="tarea1-selected-trial-info" class="tarea1-selected-trial-card">
+                        Select a point to inspect a trial.
+                    </div>
+                </div>
+
+                <div class="tarea1-signal-inspector">
+                    <h3>Signal Inspector</h3>
+                    <div id="tarea1-signal-inspector-content">
+                        Hover a signal to inspect statistics.
+                    </div>
+                </div>
+            </aside>
+
+            <main class="tarea1-main-content">
+                <section class="tarea1-top-row">
+                    <div class="tarea1-panel tarea1-latent-panel">
+                        <h3>Latent Space Projection</h3>
+                        <div id="tarea1-latent-space-chart"></div>
+                    </div>
+
+                    <div class="tarea1-panel tarea1-profile-panel">
+                        <h3>Participant Profile</h3>
+                        <div id="tarea1-participant-profile">
+                            Select a point to inspect participant profile.
+                        </div>
+                    </div>
+                </section>
+
+                <section class="tarea1-panel tarea1-signal-panel">
+                    <div class="tarea1-signal-panel-header">
+                        <h3>Temporal Signal Panel</h3>
+
+                        <div class="tarea1-signal-panel-actions">
+                            <label class="tarea1-normalize-label">
+                                <input type="checkbox" id="tarea1-normalize-toggle">
+                                Normalize channels
+                            </label>
+
+                            <button id="tarea1-reset-zoom-button" class="reset-zoom-button">
+                                Reset Zoom
+                            </button>
+                        </div>
+                    </div>
+                    <!-- <h3>Temporal Signal Panel</h3> -->
+                    <!-- <div id="tarea1-selected-trial-info">
+                        Select a point to load trial signals.
+                    </div> -->
+                    <!-- new -->
+                    <!-- <div class="tarea1-signal-controls">
+                        <label>
+                            <input type="checkbox" id="tarea1-normalize-toggle">
+                            Normalize channels
+                        </label>
+                    </div> -->
+
+                    <div id="tarea1-channel-selector-container" class="tarea1-channel-selector">
+                    </div>
+
+
+                    <div id="tarea1-temporal-signal-container">
+                        Temporal signal view will be loaded here.
+                    </div>
+                </section>
+            </main>
         </div>
     </section>
 

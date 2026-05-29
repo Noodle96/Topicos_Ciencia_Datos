@@ -149,3 +149,33 @@ export async function fetchH2ParticipantProfiles(participants) {
 
     return await response.json();
 }
+
+export async function fetchTarea1Projection({ method }) {
+    const response = await fetch(
+        `${API_BASE_URL}/tarea1/projection?method=${method}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Tarea 1 projection");
+    }
+
+    return await response.json();
+}
+
+export async function fetchTarea1TrialSignals({
+    participant,
+    trial,
+    channels,
+}) {
+    const channelsQuery = channels.join(",");
+
+    const response = await fetch(
+        `${API_BASE_URL}/tarea1/trial-signals?participant=${participant}&trial=${trial}&channels=${channelsQuery}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Tarea 1 trial signals");
+    }
+
+    return await response.json();
+}

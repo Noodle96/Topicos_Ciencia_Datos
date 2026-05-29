@@ -3,6 +3,7 @@ import { fetchEmotionSpace, fetchTrialSignals } from "./api.js";
 
 import { initializeViewNavigation } from "./view_navigation.js";
 import { initializeH2View } from "./h2_main.js";
+import { initializeTarea1View } from "./tarea1_main.js";
 
 import {
     renderEmotionSpaceChart,
@@ -240,6 +241,7 @@ function initApp() {
     
     initializeViewNavigation();
     initializeH2View();
+    initializeTarea1View();
 
     updateEmotionSpace();
     renderChannelSelector();

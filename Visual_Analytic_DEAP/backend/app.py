@@ -15,6 +15,8 @@ from backend.routes.h2_timeseries_routes import (h2_timeseries_bp,)
 from backend.routes.h2_local_relationship_routes import (h2_local_relationship_bp,)
 from backend.routes.h2_participant_profile_routes import (h2_participant_profile_bp,)
 
+from backend.routes.tarea1_routes import tarea1_bp
+
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
 FRONTEND_DIR: Path = BASE_DIR / "frontend"
 
@@ -35,6 +37,9 @@ def create_app() -> Flask:
     app.register_blueprint(h2_timeseries_bp,url_prefix="/api/h2",)
     app.register_blueprint(h2_local_relationship_bp,url_prefix="/api/h2",)
     app.register_blueprint(h2_participant_profile_bp,url_prefix="/api/h2",)
+    
+    # para tarea 1
+    app.register_blueprint( tarea1_bp, url_prefix="/api/tarea1",)
 
     @app.route("/api/health", methods=["GET"])
     def health_check() -> Any:
