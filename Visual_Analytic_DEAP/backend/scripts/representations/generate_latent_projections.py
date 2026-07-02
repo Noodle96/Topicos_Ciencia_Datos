@@ -286,3 +286,4 @@ if __name__ == "__main__":
 #
 # PCA y UMAP:
 # python -m backend.scripts.representations.generate_latent_projections --methods pca,umap --clean
+# eso es todo

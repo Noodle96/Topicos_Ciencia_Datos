@@ -26,6 +26,10 @@
             <button id="tarea1-tab-button" class="hypothesis-tab">
                 Tarea 1 Latent Space
             </button>
+
+            <button id="system-tab-button" class="hypothesis-tab">
+                System Overview
+            </button>
         </nav>
     </header>
 
@@ -395,6 +399,52 @@
                     </div>
                 </section>
             </main>
+        </div>
+    </section>
+
+    <!-- SYSTEM OVERVIEW -->
+    <section id="system-view" class="view-container hidden-view system-view">
+        <div id="system-back-hotspot" class="system-back-hotspot">
+            <button id="system-back-button" class="system-back-button" type="button"
+                aria-label="Volver a H1 Temporal Exploration">
+                &larr; H1
+            </button>
+        </div>
+
+        <div class="system-content">
+            <div class="system-intro">
+                <h1>Visual Analytics Framework &mdash; DEAP</h1>
+                <p class="system-subtitle">
+                    Placeholder: descripción breve del framework (motivación, flujo de trabajo,
+                    tareas H1/H2/Tarea1). Reemplazar con el contenido definitivo del sistema.
+                </p>
+            </div>
+
+            <div class="system-cards">
+                <button class="system-card" id="system-card-h1" type="button">
+                    <span class="system-card-tag">H1</span>
+                    <span class="system-card-title">Temporal Exploration</span>
+                    <span class="system-card-description">
+                        Señales EEG/fisiológicas segmentadas en fases Before / During / After.
+                    </span>
+                </button>
+
+                <button class="system-card" id="system-card-h2" type="button">
+                    <span class="system-card-tag">H2</span>
+                    <span class="system-card-title">Multimodal Relationships</span>
+                    <span class="system-card-description">
+                        Relaciones EEG &harr; periféricas, comparación entre participantes y mapa espacial 10-20.
+                    </span>
+                </button>
+
+                <button class="system-card" id="system-card-tarea1" type="button">
+                    <span class="system-card-tag">Tarea 1</span>
+                    <span class="system-card-title">Latent Space</span>
+                    <span class="system-card-description">
+                        Representación de features y proyección 2D (PCA / UMAP / t-SNE).
+                    </span>
+                </button>
+            </div>
         </div>
     </section>
 
