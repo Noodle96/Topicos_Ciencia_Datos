@@ -5,3 +5,4 @@ __pycache__/
 husformer_test.dt
 husformer_train.dt
 husformer_valid.dt
+*.pt
