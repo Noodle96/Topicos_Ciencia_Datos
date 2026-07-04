@@ -18,8 +18,12 @@ REPRESENTATION_INPUTS_DIR = PROCESSED_DIR / "representation_inputs"
 REPRESENTATION_METADATA_FILE = REPRESENTATION_INPUTS_DIR / "representation_metadata.csv"
 HUSFORMER_MANIFEST_FILE = REPRESENTATION_INPUTS_DIR / "husformer_manifest.csv"
 
-# Husformer/ es un repositorio hermano de backend/ y dataset/, bajo la raíz del proyecto.
-HUSFORMER_DIR = DATASET_DIR.parent / "Husformer"
+# husformer_deap_va/ es NUESTRA copia de trabajo del repo Husformer (repositorio
+# hermano de backend/ y dataset/, bajo la raíz del proyecto). El clon original
+# Husformer/ se deja intacto como referencia pristina; todas las modificaciones
+# (src/5 -> src/, main-5.py -> main.py, fixes a los bugs conocidos, etc.) se
+# hacen únicamente dentro de husformer_deap_va/.
+HUSFORMER_DIR = DATASET_DIR.parent / "husformer_deap_va"
 HUSFORMER_DATA_DIR = HUSFORMER_DIR / "data"
 HUSFORMER_PKL_FILE = HUSFORMER_DATA_DIR / "Husformer.pkl"
 
