@@ -8,6 +8,7 @@ import numpy as np
 import time
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import os
+import csv
 import pickle
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
@@ -132,9 +133,49 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     mae_valid1 = []
     mae_test1 = []
     best_valid = 1e8
+
+    # FIX (2026-07-04, husformer_deap_va): antes de este fix, TODAS las métricas
+    # por época (train_loss, mae_train, valid_loss, mae_valid, test_loss,
+    # mae_test, memoria, etc.) vivían solo como listas de Python en RAM y como
+    # texto impreso por consola -> se perdían apenas terminaba el proceso, y no
+    # había forma de graficarlas después sin volver a entrenar desde cero.
+    #
+    # Ahora se escriben, época por época, a un CSV en disco
+    # (output/<name>_metrics.csv). Dos decisiones de diseño explícitas, pedidas
+    # por Russell:
+    #   1) "Guardar todo lo necesario para graficar más adelante": se guarda
+    #      una fila con TODO lo que ya se calculaba por época (no solo lo que
+    #      se imprimía), incluyendo el train_loss (antes se descartaba con
+    #      "_, mae_train = train(...)") y el learning_rate vigente (útil para
+    #      ver en la gráfica exactamente quë época bajó el LR por el
+    #      scheduler).
+    #   2) "Que cada corrida sobreescriba, no se acumule con corridas viejas":
+    #      el archivo se abre en modo 'w' (sobreescribir) UNA sola vez, antes
+    #      de la época 1 de esta corrida, y se escribe el encabezado. A partir
+    #      de ahí cada época se agrega con 'a' (append) -- pero dentro de la
+    #      MISMA corrida, así que no se mezcla con datos de una corrida
+    #      anterior. Abrir/cerrar el archivo en cada época (en vez de dejarlo
+    #      abierto durante las 40 épocas) es intencional: así, si el proceso se
+    #      corta a la mitad (Ctrl+C, corte de luz, OOM en una época tardía),
+    #      las épocas ya completadas quedan guardadas en el CSV de todos
+    #      modos, no se pierden por no haber hecho un flush/close final.
+    metrics_csv_path = f'output/{hyp_params.name}_metrics.csv'
+    if not os.path.exists('output/'):
+        os.makedirs('output/')
+    metrics_csv_header = [
+        'epoch', 'timestamp', 'duration_sec',
+        'train_loss', 'mae_train',
+        'valid_loss', 'mae_valid',
+        'test_loss', 'mae_test',
+        'memory_used_mb', 'n_parameters', 'learning_rate', 'model_saved',
+    ]
+    with open(metrics_csv_path, 'w', newline='') as metrics_csv_file:
+        csv.writer(metrics_csv_file).writerow(metrics_csv_header)
+    print(f"[metrics] Guardando metricas por epoca en {metrics_csv_path} (se sobreescribe en cada corrida nueva)")
+
     for epoch in range(1, hyp_params.num_epochs+1):
         start = time.time()
-        _,mae_train = train(model, optimizer, criterion)
+        train_loss,mae_train = train(model, optimizer, criterion)
         val_loss, _, _,mae_valid = evaluate(model,criterion, test=False)
         test_loss, _, _ ,mae_test= evaluate(model,criterion, test=True)
         mae_train1.append(mae_train)
@@ -149,10 +190,30 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
         print("-"*50)
         n_parameters = sum(p.numel() for p in model.parameters())
         print('n_parameters:',n_parameters)
+        model_saved_this_epoch = False
         if val_loss < best_valid:
             print(f"Saved model at output/{hyp_params.name}.pt!")
             save_model(hyp_params, model, name=hyp_params.name)
             best_valid = val_loss
+            model_saved_this_epoch = True
+
+        current_lr = optimizer.param_groups[0]['lr']
+        with open(metrics_csv_path, 'a', newline='') as metrics_csv_file:
+            csv.writer(metrics_csv_file).writerow([
+                epoch,
+                time.strftime('%Y-%m-%d %H:%M:%S'),
+                f'{duration:.4f}',
+                f'{train_loss:.6f}',
+                f'{mae_train:.6f}',
+                f'{val_loss:.6f}',
+                f'{mae_valid:.6f}',
+                f'{test_loss:.6f}',
+                f'{mae_test:.6f}',
+                f'{memory_used:.4f}',
+                n_parameters,
+                current_lr,
+                model_saved_this_epoch,
+            ])
 
     model = load_model(hyp_params, name=hyp_params.name)
     _, results, truths,_ = evaluate(model, criterion, test=True)
