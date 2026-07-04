@@ -49,7 +49,26 @@ def mae1(results, truths, exclude_zero=False):
     mae = np.mean(np.absolute(test_preds - test_truth))
     return mae
 
-def eval_hus(results, truths, exclude_zero=True):
+def eval_hus(results, truths, exclude_zero=True, verbose=True):
+    """
+    FIX (2026-07-04, husformer_deap_va): antes, esta función solo imprimía
+    MAE/Correlation Coefficient/mult_acc/f1_score por consola y no devolvía
+    nada -- se llamaba una única vez, al final de TODO el entrenamiento
+    (sobre el set de test, con el mejor modelo ya recargado). Eso significaba
+    que estas 3 métricas (además de MAE, que ya se calculaba por época vía
+    mae1()) no quedaban disponibles por época para graficar después.
+
+    Ahora la función además RETORNA (mae, corr, mult_a5, f1), para poder
+    llamarla también dentro del loop de épocas (src/train.py) sobre
+    validación y test en cada época, y volcar esos valores al CSV de
+    métricas -- sin duplicar cómputo, porque 'results'/'truths' ya se
+    calculaban en evaluate() y antes se descartaban con '_'.
+
+    'verbose' controla si además imprime por consola (se deja en True para
+    la llamada final de siempre, y se pasa False en las llamadas por época
+    para no llenar la consola con 40 bloques repetidos -- esos valores igual
+    quedan en el CSV).
+    """
 
     test_preds = logits_to_label(results).view(-1).cpu().detach().numpy()
     test_truth = truths.view(-1).cpu().detach().numpy()
@@ -63,9 +82,13 @@ def eval_hus(results, truths, exclude_zero=True):
     mult_a5 = multiclass_acc(test_preds_a5, test_truth_a5)
 
     _, _, f1, _ = precision_recall_fscore_support(test_preds[non_zeros], test_truth[non_zeros], average='weighted')
-    print("-" * 50)
-    print("MAE: ", mae)
-    print("Correlation Coefficient: ", corr)
-    print("mult_acc: ", mult_a5)
-    print('f1_score:', f1)
-    print("-" * 50)
+
+    if verbose:
+        print("-" * 50)
+        print("MAE: ", mae)
+        print("Correlation Coefficient: ", corr)
+        print("mult_acc: ", mult_a5)
+        print('f1_score:', f1)
+        print("-" * 50)
+
+    return mae, corr, mult_a5, f1

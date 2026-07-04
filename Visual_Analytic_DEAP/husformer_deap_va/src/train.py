@@ -165,8 +165,8 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     metrics_csv_header = [
         'epoch', 'timestamp', 'duration_sec',
         'train_loss', 'mae_train',
-        'valid_loss', 'mae_valid',
-        'test_loss', 'mae_test',
+        'valid_loss', 'mae_valid', 'valid_corr', 'valid_mult_acc', 'valid_f1',
+        'test_loss', 'mae_test', 'test_corr', 'test_mult_acc', 'test_f1',
         'memory_used_mb', 'n_parameters', 'learning_rate', 'model_saved',
     ]
     with open(metrics_csv_path, 'w', newline='') as metrics_csv_file:
@@ -176,11 +176,22 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
     for epoch in range(1, hyp_params.num_epochs+1):
         start = time.time()
         train_loss,mae_train = train(model, optimizer, criterion)
-        val_loss, _, _,mae_valid = evaluate(model,criterion, test=False)
-        test_loss, _, _ ,mae_test= evaluate(model,criterion, test=True)
+        val_loss, val_results, val_truths, mae_valid = evaluate(model,criterion, test=False)
+        test_loss, test_results, test_truths, mae_test = evaluate(model,criterion, test=True)
         mae_train1.append(mae_train)
         mae_valid1.append(mae_valid)
         mae_test1.append(mae_test)
+
+        # FIX (2026-07-04, husformer_deap_va): antes 'results'/'truths' de
+        # evaluate() se descartaban con '_' -- ya se estaban calculando cada
+        # época de todos modos (para mae_valid/mae_test), así que reusarlos
+        # aquí para obtener corr/mult_acc/f1 por época (además del MAE) no
+        # agrega ningún costo extra de cómputo. verbose=False para no
+        # imprimir 2 bloques extra por época en consola (el print final,
+        # sobre el mejor modelo en test, se mantiene igual que antes).
+        _, valid_corr, valid_mult_acc, valid_f1 = eval_hus(val_results, val_truths, exclude_zero=True, verbose=False)
+        _, test_corr, test_mult_acc, test_f1 = eval_hus(test_results, test_truths, exclude_zero=True, verbose=False)
+
         end = time.time()
         duration = end-start
         scheduler.step(val_loss)    # Decay learning rate by validation loss
@@ -207,8 +218,14 @@ def train_model(settings, hyp_params, train_loader, valid_loader, test_loader):
                 f'{mae_train:.6f}',
                 f'{val_loss:.6f}',
                 f'{mae_valid:.6f}',
+                f'{valid_corr:.6f}',
+                f'{valid_mult_acc:.6f}',
+                f'{valid_f1:.6f}',
                 f'{test_loss:.6f}',
                 f'{mae_test:.6f}',
+                f'{test_corr:.6f}',
+                f'{test_mult_acc:.6f}',
+                f'{test_f1:.6f}',
                 f'{memory_used:.4f}',
                 n_parameters,
                 current_lr,
