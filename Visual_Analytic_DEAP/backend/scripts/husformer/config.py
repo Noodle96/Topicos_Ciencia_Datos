@@ -25,7 +25,16 @@ HUSFORMER_MANIFEST_FILE = REPRESENTATION_INPUTS_DIR / "husformer_manifest.csv"
 # hacen únicamente dentro de husformer_deap_va/.
 HUSFORMER_DIR = DATASET_DIR.parent / "husformer_deap_va"
 HUSFORMER_DATA_DIR = HUSFORMER_DIR / "data"
-HUSFORMER_PKL_FILE = HUSFORMER_DATA_DIR / "Husformer.pkl"
+
+# NOTA (bug detectado el 2026-07-04, corriendo main.py por primera vez):
+# Multimodal_Datasets (src/dataset.py, en husformer_deap_va/) arma la ruta del
+# pickle como os.path.join(args.data_path, dataset + '.pkl'), donde 'dataset'
+# es SIEMPRE str.lower(args.dataset.strip()) (ver main.py) -> 'husformer.pkl'
+# en minúsculas. Linux es case-sensitive, así que un archivo 'Husformer.pkl'
+# (con mayúscula) NO es encontrado por ese código y lanza FileNotFoundError.
+# Por eso el nombre de archivo aquí se generá en minúsculas, para que coincida
+# exactamente con lo que Husformer espera sin tener que tocar su código.
+HUSFORMER_PKL_FILE = HUSFORMER_DATA_DIR / "husformer.pkl"
 
 
 # ============================================================
