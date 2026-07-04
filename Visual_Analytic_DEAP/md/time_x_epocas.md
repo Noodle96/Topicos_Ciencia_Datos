@@ -1,0 +1,1 @@
+Tiempo real medido: tu Época 1 tardó 1368.99 seg (~22.8 min) con batch_size 8. A ese ritmo, 40 épocas = ~15.2 horas. Esto es antes de saber si batch_size 32 sería más rápido en total (probablemente sí, menos overhead por batch, aunque cada batch procese más datos).
