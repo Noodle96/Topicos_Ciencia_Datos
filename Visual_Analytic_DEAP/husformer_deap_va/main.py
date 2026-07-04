@@ -100,10 +100,25 @@ print("Start loading the data....")
 train_data = get_data(args, dataset, 'train')
 valid_data = get_data(args, dataset, 'valid')
 test_data = get_data(args, dataset, 'test')
-   
-train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True)
-valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=True)
-test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True)
+
+# FIX (2026-07-04, husformer_deap_va, bug #8): torch.set_default_tensor_type(
+# 'torch.cuda.FloatTensor') (arriba, deprecado desde PyTorch 2.1 pero es lo
+# que usa el Husformer original) hace que el dispositivo "por defecto" para
+# crear tensores nuevos sea CUDA. DataLoader(..., shuffle=True) crea un
+# RandomSampler con un torch.Generator() propio que, si no se le indica lo
+# contrario, es SIEMPRE de CPU -> al llamar a torch.randperm(n, generator=...)
+# para barajar los índices, PyTorch exige que el generador esté en el mismo
+# dispositivo que el default (cuda) y truena con:
+#   RuntimeError: Expected a 'cuda' device type for generator but found 'cpu'
+# Esto es un problema de compatibilidad de versiones (el repo original de
+# Husformer es de 2022, con una versión de PyTorch más vieja que no tenía
+# esta validación tan estricta), no un error de lógica del modelo. El fix
+# estándar es pasarle explícitamente un generador en el dispositivo correcto.
+generator = torch.Generator(device='cuda') if use_cuda else None
+
+train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, generator=generator)
+valid_loader = DataLoader(valid_data, batch_size=args.batch_size, shuffle=True, generator=generator)
+test_loader = DataLoader(test_data, batch_size=args.batch_size, shuffle=True, generator=generator)
 
 print('Finish loading the data....')
 
