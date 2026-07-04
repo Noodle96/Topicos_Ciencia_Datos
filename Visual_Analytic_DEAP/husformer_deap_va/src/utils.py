@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import os
 from src.dataset import Multimodal_Datasets
 
@@ -31,6 +32,26 @@ def load_model(args, name=''):
     name = save_load_name(args, name)
     model = torch.load(f'output/{args.name}.pt')
     return model
+
+
+def remake_label(target):
+    """
+    FIX (2026-07-04, husformer_deap_va): esta función se usaba en focalloss.forward()
+    pero no existía en ningún archivo del repo original (NameError garantizado en
+    cuanto se llamara a la loss).
+
+    Reconstruye el target de valencia (esquema -1/1/2 usado en labeling.py y en el
+    make_data/Pre-DEAP.py original) como índices de clase 0/1/2, que es lo que
+    espera torch.log_softmax(...).gather(dim=1, index=target) más abajo en
+    focalloss.forward(): el índice de clase debe ser >= 0, así que el único mapeo
+    consistente con alpha=[0.1, 0.1, 0.8] (3 pesos, uno por clase) es:
+        valencia baja  (-1) -> clase 0
+        valencia media ( 1) -> clase 1
+        valencia alta  ( 2) -> clase 2
+    Si en el futuro se cambia el esquema de etiquetas (labeling.py), esta función
+    debe actualizarse junto con él.
+    """
+    return torch.where(target == -1, torch.zeros_like(target), target)
 
 
 class focalloss(nn.Module):
