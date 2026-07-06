@@ -74,18 +74,27 @@ class TransformerEncoder(nn.Module):
             x_k = F.dropout(x_k, p=self.dropout, training=self.training)
             x_v = F.dropout(x_v, p=self.dropout, training=self.training)
         
-        # encoder layers
+        # FIX (2026-07-06, husformer_deap_va, bug #6): antes, este loop
+        # descartaba lo que devolvía cada TransformerEncoderLayer aparte de
+        # 'x' -- ahora TransformerEncoderLayer.forward() también devuelve los
+        # pesos de atención de esa capa (ver más abajo), así que se
+        # acumulan aquí en 'attn_weights_per_layer' (una lista, una entrada
+        # por capa) y se retornan junto con 'x'. Esto es lo que le permite a
+        # HUSFORMERModel.forward() (src/models.py) exponer la atención
+        # cross-modal cuando se le pide con return_attn=True.
         intermediates = [x]
+        attn_weights_per_layer = []
         for layer in self.layers:
             if x_in_k is not None and x_in_v is not None:
-                x = layer(x, x_k, x_v)
+                x, attn_weights = layer(x, x_k, x_v)
             else:
-                x = layer(x)
+                x, attn_weights = layer(x)
             intermediates.append(x)
+            attn_weights_per_layer.append(attn_weights)
         if self.normalize:
             x = self.layer_norm(x)
 
-        return x
+        return x, attn_weights_per_layer
 
     def max_positions(self):
         """Maximum input length supported by the encoder."""
@@ -142,12 +151,18 @@ class TransformerEncoderLayer(nn.Module):
         residual = x
         x = self.maybe_layer_norm(0, x, before=True)
         mask = buffered_future_mask(x, x_k) if self.attn_mask else None
+        # FIX (2026-07-06, husformer_deap_va, bug #6): self.self_attn(...)
+        # (MultiheadAttention.forward(), modules/multihead_attention.py) YA
+        # calculaba y devolvía los pesos de atención (promediados sobre las
+        # cabezas) como segundo valor -- nunca hubo que tocar ese archivo.
+        # El bug estaba aquí: se descartaban con "x, _ = self.self_attn(...)".
+        # Ahora se capturan en 'attn_weights' y se retornan junto con 'x'.
         if x_k is None and x_v is None:
-            x, _ = self.self_attn(query=x, key=x, value=x, attn_mask=mask)
+            x, attn_weights = self.self_attn(query=x, key=x, value=x, attn_mask=mask)
         else:
             x_k = self.maybe_layer_norm(0, x_k, before=True)
-            x_v = self.maybe_layer_norm(0, x_v, before=True) 
-            x, _ = self.self_attn(query=x, key=x_k, value=x_v, attn_mask=mask)
+            x_v = self.maybe_layer_norm(0, x_v, before=True)
+            x, attn_weights = self.self_attn(query=x, key=x_k, value=x_v, attn_mask=mask)
         x = F.dropout(x, p=self.res_dropout, training=self.training)
         x = residual + x
         x = self.maybe_layer_norm(0, x, after=True)
@@ -159,7 +174,7 @@ class TransformerEncoderLayer(nn.Module):
         x = F.dropout(x, p=self.res_dropout, training=self.training)
         x = residual + x
         x = self.maybe_layer_norm(1, x, after=True)
-        return x
+        return x, attn_weights
 
     def maybe_layer_norm(self, i, x, before=False, after=False):
         assert before ^ after
@@ -197,6 +212,10 @@ def LayerNorm(embedding_dim):
 
 
 if __name__ == '__main__':
+    # FIX (2026-07-06, husformer_deap_va, bug #6): forward() ahora retorna
+    # (x, attn_weights_per_layer) en vez de solo x -- este test manual de
+    # smoke-test se actualiza para desempacar la tupla.
     encoder = TransformerEncoder(300, 4, 2)
     x = torch.tensor(torch.rand(20, 2, 300))
-    print(encoder(x).shape)
+    out, attn = encoder(x)
+    print(out.shape)
