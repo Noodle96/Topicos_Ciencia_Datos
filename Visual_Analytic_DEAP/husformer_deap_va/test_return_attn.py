@@ -1,28 +1,32 @@
 """
-Smoke test para el fix de atencion cross-modal (bug #6, 2026-07-06).
+Smoke test + benchmark para el fix de atencion cross-modal (bug #6, 2026-07-06).
 
 Este script NO entrena nada -- carga el checkpoint que Russell ya genero
 (output/hus.pt, entrenado con d_m=40 + el fix de return_attn en models.py/
-transformer.py) y corre UN solo batch pequeno con return_attn=True, para
-confirmar que esa rama nueva de HUSFORMERModel.forward() (el diccionario de
-atencion) funciona sin errores de forma antes de escribir el script real de
-extraccion de representaciones (candidato:
-backend/scripts/husformer/extract_representations.py).
+transformer.py) y hace dos cosas:
 
-Por que hace falta este script aparte: la corrida de entrenamiento normal
-(main.py -> train.py -> test.py) NUNCA llama a return_attn=True -- esos 3
-archivos no cambiaron. Por lo tanto, aunque la corrida de 1 epoca ya
-confirmo que el resto del modelo (d_m=40, combined_dim) funciona bien
-(n_parameters=596243 exacto, sin errores de shape), la rama return_attn=True
-en si NO se ha ejecutado ni una sola vez con datos reales todavia -- ni en
-el sandbox de Claude (sin PyTorch instalado ahi) ni en la maquina de
-Russell (main.py no la usa). Este script es la primera ejecucion real de
-esa rama, y corre en segundos (un solo batch chico, sin entrenamiento).
+1. Corre UN solo batch pequeno con return_attn=True, para confirmar que esa
+   rama nueva de HUSFORMERModel.forward() (el diccionario de atencion)
+   funciona sin errores de forma. Esto ya se confirmo el 2026-07-06 (shapes
+   correctas, sin traceback) -- se deja aqui sin cambios.
+
+2. NUEVO (2026-07-06, segunda vuelta): mide el tiempo real de una pasada
+   hacia adelante (forward, sin entrenar) para 1 SOLA ventana, con y sin
+   return_attn=True. Esto reemplaza una estimacion ("deberia tardar menos de
+   100ms") por un numero medido en la maquina real de Russell -- necesario
+   para decidir si calcular la atencion cruda y detallada "al vuelo" (cuando
+   el usuario abre una ventana puntual en el sistema) es viable en terminos
+   de latencia, en vez de precalcularla y guardarla para todo el dataset
+   (que pesaria >1TB, ver conversacion). Se hace un warmup de 3 corridas
+   (descartadas del promedio, porque la primera llamada a CUDA suele incluir
+   inicializacion perezosa que no se repite despues) y luego 20 corridas
+   medidas, reportando promedio/min/max en milisegundos.
 
 Uso: parado en husformer_deap_va/, con el mismo entorno virtual activado:
     python test_return_attn.py
 """
 import argparse
+import time
 
 import torch
 from torch.utils.data import DataLoader
@@ -33,6 +37,8 @@ DATA_PATH = "data"
 DATASET = "husformer"
 CHECKPOINT_PATH = "output/hus.pt"
 SMOKE_BATCH_SIZE = 4  # chico a proposito -- esto no es una prueba de rendimiento
+BENCHMARK_WARMUP_RUNS = 3
+BENCHMARK_MEASURED_RUNS = 20
 
 use_cuda = torch.cuda.is_available()
 torch.set_default_tensor_type("torch.cuda.FloatTensor" if use_cuda else "torch.FloatTensor")
@@ -73,7 +79,56 @@ for key, layers in attn_weights.items():
 
 print(
     "\nSi todo lo de arriba corrio sin traceback, el fix del bug #6 "
-    "(atencion cross-modal) queda validado con datos reales, y ya se puede "
-    "empezar a escribir el script de extraccion de representaciones sobre "
-    "esta misma base."
+    "(atencion cross-modal) queda validado con datos reales."
+)
+
+
+def _time_forward_ms(m1_1, m2_1, m3_1, m4_1, m5_1, return_attn):
+    """Mide en milisegundos una sola pasada hacia adelante (sin gradiente).
+
+    FIX (2026-07-06, husformer_deap_va): torch.cuda.synchronize() es
+    necesario ANTES de leer el reloj (start y end) porque las operaciones en
+    GPU son asincronas -- sin sincronizar, time.time() mediria solo cuanto
+    tarda Python en *encolar* la operacion, no cuanto tarda la GPU en
+    terminarla de verdad, dando un numero falsamente bajo.
+    """
+    if use_cuda:
+        torch.cuda.synchronize()
+    start = time.time()
+    with torch.no_grad():
+        model(m1_1, m2_1, m3_1, m4_1, m5_1, return_attn=return_attn)
+    if use_cuda:
+        torch.cuda.synchronize()
+    end = time.time()
+    return (end - start) * 1000.0
+
+
+# Una sola ventana (batch=1), simulando "el usuario abre 1 ventana puntual
+# en el sistema" -- el escenario real de calcular la atencion al vuelo.
+m1_1, m2_1, m3_1, m4_1, m5_1 = m1[0:1], m2[0:1], m3[0:1], m4[0:1], m5[0:1]
+
+print(
+    f"\n--- Benchmark: tiempo de 1 pasada hacia adelante, batch=1 "
+    f"({BENCHMARK_WARMUP_RUNS} warmup descartadas + {BENCHMARK_MEASURED_RUNS} medidas) ---"
+)
+
+for label, return_attn in [("return_attn=False", False), ("return_attn=True", True)]:
+    for _ in range(BENCHMARK_WARMUP_RUNS):
+        _time_forward_ms(m1_1, m2_1, m3_1, m4_1, m5_1, return_attn)
+
+    times_ms = [
+        _time_forward_ms(m1_1, m2_1, m3_1, m4_1, m5_1, return_attn)
+        for _ in range(BENCHMARK_MEASURED_RUNS)
+    ]
+    avg_ms = sum(times_ms) / len(times_ms)
+    print(
+        f"  {label:18s}: promedio {avg_ms:7.2f} ms   "
+        f"(min {min(times_ms):7.2f} ms, max {max(times_ms):7.2f} ms)"
+    )
+
+print(
+    "\nEste 'promedio' con return_attn=True es la latencia real que tendria "
+    "calcular la atencion cruda y detallada AL VUELO para 1 sola ventana "
+    "(sin precalcularla ni guardarla) -- lo que decide si es viable hacerlo "
+    "bajo demanda en el sistema en vez de precomputar y guardar >1TB."
 )
