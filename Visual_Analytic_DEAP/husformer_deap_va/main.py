@@ -140,3 +140,6 @@ if __name__ == '__main__':
         test = test.eval(hyp_params, test_loader)
     else:
         test_loss = train.initiate(hyp_params, train_loader, valid_loader, test_loader)
+
+
+#  python main.py --batch_size 24 --num_epochs 2    
