@@ -36,6 +36,27 @@ HUSFORMER_DATA_DIR = HUSFORMER_DIR / "data"
 # exactamente con lo que Husformer espera sin tener que tocar su código.
 HUSFORMER_PKL_FILE = HUSFORMER_DATA_DIR / "husformer.pkl"
 
+# Checkpoint entrenado (guardado por src/utils.py:save_model() en
+# husformer_deap_va/, ver main.py -> train.py). extract_representations.py lo
+# carga directamente con torch.load (igual que test_return_attn.py), sin pasar
+# por save_load_name()/load_model() porque esas funciones arman la ruta como
+# 'output/{args.name}.pt' relativa al cwd del proceso -- una ruta absoluta es
+# más robusta ya que este script se corre desde la raíz del proyecto
+# (python -m backend.scripts.husformer.extract_representations), no desde
+# dentro de husformer_deap_va/.
+HUSFORMER_OUTPUT_DIR = HUSFORMER_DIR / "output"
+HUSFORMER_CHECKPOINT_FILE = HUSFORMER_OUTPUT_DIR / "hus.pt"
+
+# Salida de extract_representations.py: last_hs + resumen de atención agregado
+# por modalidad, para TODO el dataset. Ver la sección "📦 Estrategia de
+# almacenamiento de atención cross-modal" en estado_proyecto.md para la
+# decisión de diseño completa -- la atención cruda y completa (capa por capa,
+# posición por posición) NO se guarda aquí, se calcula al vuelo en el backend.
+# Sigue la misma convención de nombres que dataset/processed/representations/
+# manual_deap_features/ (features hechos a mano + PCA/UMAP/t-SNE), pero en su
+# propia subcarpeta 'husformer' para no mezclar ambos tipos de representación.
+REPRESENTATIONS_DIR = PROCESSED_DIR / "representations" / "husformer"
+
 
 # ============================================================
 # VENTANEO (ver windowing.py)
