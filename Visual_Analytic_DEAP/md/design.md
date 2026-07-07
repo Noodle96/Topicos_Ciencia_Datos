@@ -1,0 +1,8 @@
+Con eso, el esqueleto queda cerrado en 3 vistas principales, cada una con 3 sub-paneles (siguiendo el patrón Description+Justification de EmoCo):
+Vista A — Espacio de Representaciones Fusionadas (T1, T2)
+A1: proyección (PCA/UMAP/t-SNE) de last_hs agregado por trial — identificar (T1). A2: overlay de agrupamiento algorítmico (KMeans/HDBSCAN) sobre la proyección — comparar estructuralmente (T2); esta es la pieza inspirada en EvoAir, justificada porque responde directamente a T2, no porque EvoAir la tenga. A3: panel de comparación/selección con resaltado vinculado (absorbe lo que era Vista D).
+Vista B — Atención Temporal del Trial (T3, T4, T5)
+B1: heatmap de atención a lo largo de las ventanas del trial — explorar (T3). B2: serie agregada por modalidad — identificar (T4). B3: panel de detalle al pasar el cursor/seleccionar instante — comparar (T5).
+Vista C — Detalle de Atención Cross-Modal por Ventana (T6, T7, T8)
+C1: matriz cross-modal 5×5 como heatmap para la ventana seleccionada — identificar (T6). C2: comparación entre ventanas — comparar (T7). C3: panel vinculado con la señal fisiológica cruda de esa ventana — comparar atención vs. señal (T8).
+Interacciones (transversal, estilo 5.6 de EmoCo): Clicking (seleccionar un punto en A1/A2 carga su trial en B), Brushing (seleccionar un rango de ventanas en B1/B2 filtra qué ventana se explora en C), Linking (el flujo completo es un drill-down A→B→C: participante/trial → dinámica del trial → detalle de ventana), Filtrado global (por emoción/valencia-arousal, persistente en las 3 vistas), Details-on-demand (tooltips con valores exactos en A1, B1, C1).
