@@ -2,8 +2,15 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+    overflow: hidden;
+}
+
 body {
     margin: 0;
+    height: 100%;
+    overflow: hidden;
     font-family: Arial, sans-serif;
     background: #f4f6fb;
     color: #111827;
@@ -868,21 +875,44 @@ body {
 
 /* Grid externo: 3 filas, una por Vista (A, B, C). Pantalla completa, sin
    scroll -- decisión de Russell (2026-07-07) de usar toda la pantalla y no
-   dejar títulos de panel que ocupen espacio. */
+   dejar títulos de panel que ocupen espacio.
+
+   FLEXIBILIDAD (2026-07-07): las proporciones de cada fila/columna están en
+   variables CSS (--row-*, --col-*), NO hardcodeadas en grid-template-*. Para
+   darle más/menos espacio a una Vista o a un sub-panel específico en el
+   futuro, se cambia UNA variable, nunca la estructura del grid -- las demás
+   filas/columnas se reacomodan solas porque son unidades `fr` (proporcionales
+   al espacio restante). Ejemplos:
+     Vista B necesita más alto que A y C:
+       .system-cmv-grid { --row-b: 1.6fr; --row-a: 0.7fr; --row-c: 0.7fr; }
+     Dentro de Vista A, A1 necesita más ancho que A2/A3:
+       .cmv-vista[data-vista="A"] { --col-1: 1.6fr; --col-2: 0.7fr; --col-3: 0.7fr; }
+   Ningún otro selector/regla necesita tocarse para lograr esto. */
 .system-cmv-grid {
+  --row-a: 1fr;
+  --row-b: 1fr;
+  --row-c: 1fr;
+
   height: 100vh;
   width: 100%;
   display: grid;
-  grid-template-rows: repeat(3, 1fr);
+  grid-template-rows: var(--row-a) var(--row-b) var(--row-c);
   gap: 6px;
   background: #cbd5e1;
   padding: 6px;
 }
 
-/* Grid interno de cada Vista: 3 sub-paneles en fila (ej. A1/A2/A3). */
+/* Grid interno de cada Vista: 3 sub-paneles en fila (ej. A1/A2/A3). Mismas
+   variables por columna (--col-1/2/3), scoped a `.cmv-vista` -- cada Vista
+   puede tener sus propias proporciones sin afectar a las otras dos (ver
+   ejemplo de A1 más arriba, aplicado vía [data-vista="A"]). */
 .cmv-vista {
+  --col-1: 1fr;
+  --col-2: 1fr;
+  --col-3: 1fr;
+
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: var(--col-1) var(--col-2) var(--col-3);
   gap: 2px;
   min-height: 0;
   min-width: 0;
