@@ -61,19 +61,9 @@ export function initializeViewNavigation() {
         activateView(h1View, h1Button);
     });
 
-    const systemCardH1 = document.getElementById("system-card-h1");
-    const systemCardH2 = document.getElementById("system-card-h2");
-    const systemCardTarea1 = document.getElementById("system-card-tarea1");
-
-    systemCardH1.addEventListener("click", () => {
-        activateView(h1View, h1Button);
-    });
-
-    systemCardH2.addEventListener("click", () => {
-        activateView(h2View, h2Button);
-    });
-
-    systemCardTarea1.addEventListener("click", () => {
-        activateView(tarea1View, tarea1Button);
-    });
+    // NOTA (2026-07-07): las cards de acceso a H1/H2/Tarea1 dentro de
+    // System Overview se eliminaron -- System Overview ahora ES el CMV de
+    // Husformer (Vistas A/B/C), no un menú de acceso a las otras vistas.
+    // Si en el futuro se necesita volver a navegar desde aquí a H1/H2/Tarea1
+    // sin pasar por systemBackButton, agregar los listeners aquí.
 }
