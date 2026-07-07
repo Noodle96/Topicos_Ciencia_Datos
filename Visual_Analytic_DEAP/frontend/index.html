@@ -411,40 +411,67 @@
             </button>
         </div>
 
-        <div class="system-content">
-            <div class="system-intro">
-                <h1>Visual Analytics Framework &mdash; DEAP</h1>
-                <p class="system-subtitle">
-                    Placeholder: descripción breve del framework (motivación, flujo de trabajo,
-                    tareas H1/H2/Tarea1). Reemplazar con el contenido definitivo del sistema.
-                </p>
-            </div>
+        <!--
+            Esqueleto del CMV de Husformer (Vistas A/B/C, 3 sub-paneles cada
+            una -- ver 05_diseno_visual.tex). Decisión de diseño confirmada
+            por Russell (2026-07-07): pantalla completa, sin títulos de panel
+            visibles (solo un chip corto en la esquina, ej. "A1") para no
+            ocupar espacio -- ver "cmv-panel-chip" en layout.css. Cada
+            .cmv-panel-body es el contenedor donde un chart de
+            frontend/js/charts/ se va a montar más adelante; por ahora
+            quedan vacíos (esqueleto, sin datos todavía).
+        -->
+        <div class="system-cmv-grid">
+            <section class="cmv-vista" data-vista="A" aria-label="Vista A: Espacio de Representaciones Fusionadas">
+                <section class="cmv-panel" id="panel-a1" data-panel="A1">
+                    <span class="cmv-panel-chip">A1</span>
+                    <div class="cmv-panel-body" id="a1-chart"></div>
+                </section>
 
-            <div class="system-cards">
-                <button class="system-card" id="system-card-h1" type="button">
-                    <span class="system-card-tag">H1</span>
-                    <span class="system-card-title">Temporal Exploration</span>
-                    <span class="system-card-description">
-                        Señales EEG/fisiológicas segmentadas en fases Before / During / After.
-                    </span>
-                </button>
+                <section class="cmv-panel" id="panel-a2" data-panel="A2">
+                    <span class="cmv-panel-chip">A2</span>
+                    <div class="cmv-panel-body" id="a2-chart"></div>
+                </section>
 
-                <button class="system-card" id="system-card-h2" type="button">
-                    <span class="system-card-tag">H2</span>
-                    <span class="system-card-title">Multimodal Relationships</span>
-                    <span class="system-card-description">
-                        Relaciones EEG &harr; periféricas, comparación entre participantes y mapa espacial 10-20.
-                    </span>
-                </button>
+                <section class="cmv-panel" id="panel-a3" data-panel="A3">
+                    <span class="cmv-panel-chip">A3</span>
+                    <div class="cmv-panel-body" id="a3-chart"></div>
+                </section>
+            </section>
 
-                <button class="system-card" id="system-card-tarea1" type="button">
-                    <span class="system-card-tag">Tarea 1</span>
-                    <span class="system-card-title">Latent Space</span>
-                    <span class="system-card-description">
-                        Representación de features y proyección 2D (PCA / UMAP / t-SNE).
-                    </span>
-                </button>
-            </div>
+            <section class="cmv-vista" data-vista="B" aria-label="Vista B: Atención Temporal del Trial">
+                <section class="cmv-panel" id="panel-b1" data-panel="B1">
+                    <span class="cmv-panel-chip">B1</span>
+                    <div class="cmv-panel-body" id="b1-chart"></div>
+                </section>
+
+                <section class="cmv-panel" id="panel-b2" data-panel="B2">
+                    <span class="cmv-panel-chip">B2</span>
+                    <div class="cmv-panel-body" id="b2-chart"></div>
+                </section>
+
+                <section class="cmv-panel" id="panel-b3" data-panel="B3">
+                    <span class="cmv-panel-chip">B3</span>
+                    <div class="cmv-panel-body" id="b3-chart"></div>
+                </section>
+            </section>
+
+            <section class="cmv-vista" data-vista="C" aria-label="Vista C: Detalle de Atención Cross-Modal por Ventana">
+                <section class="cmv-panel" id="panel-c1" data-panel="C1">
+                    <span class="cmv-panel-chip">C1</span>
+                    <div class="cmv-panel-body" id="c1-chart"></div>
+                </section>
+
+                <section class="cmv-panel" id="panel-c2" data-panel="C2">
+                    <span class="cmv-panel-chip">C2</span>
+                    <div class="cmv-panel-body" id="c2-chart"></div>
+                </section>
+
+                <section class="cmv-panel" id="panel-c3" data-panel="C3">
+                    <span class="cmv-panel-chip">C3</span>
+                    <div class="cmv-panel-body" id="c3-chart"></div>
+                </section>
+            </section>
         </div>
     </section>
 
