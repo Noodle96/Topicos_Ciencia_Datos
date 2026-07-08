@@ -17,6 +17,9 @@ from backend.routes.h2_participant_profile_routes import (h2_participant_profile
 
 from backend.routes.tarea1_routes import tarea1_bp
 
+# TO HUSFORMER (Vista A/B/C)
+from backend.routes.husformer_trial_routes import husformer_trial_bp
+
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
 FRONTEND_DIR: Path = BASE_DIR / "frontend"
 
@@ -40,6 +43,11 @@ def create_app() -> Flask:
     
     # para tarea 1
     app.register_blueprint( tarea1_bp, url_prefix="/api/tarea1",)
+
+    # para Husformer (Vista A/B/C) -- por ahora solo Vista A (trial-projection).
+    # Vista B/C se agregan como blueprints nuevos bajo el mismo url_prefix
+    # cuando se implementen (mismo patrón que los 4 blueprints de H2 arriba).
+    app.register_blueprint(husformer_trial_bp, url_prefix="/api/husformer",)
 
     @app.route("/api/health", methods=["GET"])
     def health_check() -> Any:
