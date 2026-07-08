@@ -1,24 +1,49 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-// DEAP: valencia en escala continua 1-9 (ver koelstra2012deap). Rojo = baja
-// valencia (negativa), verde = alta valencia (positiva) -- codificación
-// directa de G1 (contrastar la posición de un trial en el espacio de
-// representación con su autorreporte subjetivo de valencia/activación/
-// dominancia). Se usa valencia (no participante) como color por defecto en
-// A1 porque es el eje que motiva G1, a diferencia de Tarea1 donde el color
-// por participante servía a un propósito de comparación distinto.
-const VALENCE_COLOR_SCALE = d3
-    .scaleSequential(d3.interpolateRdYlGn)
-    .domain([1, 9]);
+// Escala de color de Valencia -- AZUL-NARANJA divergente, NO rojo-verde.
+// Corrección (2026-07-07): la versión original usaba RdYlGn, que es
+// prácticamente ilegible para daltonismo rojo-verde (~8% de hombres), la
+// forma más común de daltonismo -- un problema de accesibilidad conocido en
+// visualización de datos, no una preferencia estética. Azul y naranja son
+// casi complementarios y se distinguen bien bajo cualquier tipo de visión
+// del color, por eso es la sustitución estándar recomendada para pares
+// rojo-verde. Los 3 colores están hardcodeados (no un interpolador nombrado
+// de d3) para que coincidan exactamente con el degradado CSS de la leyenda
+// (.husformer-a1-legend-bar en layout.css) -- si se cambia uno, hay que
+// cambiar el otro a mano.
+const VALENCE_LOW_COLOR = "#2166ac";   // valencia baja (~1) -- azul
+const VALENCE_MID_COLOR = "#f7f7f7";   // valencia media (~5) -- gris casi blanco
+const VALENCE_HIGH_COLOR = "#e08214";  // valencia alta (~9) -- naranja
 
-// Opacidad/trazo por defecto -- subidos (2026-07-07, a pedido de Russell:
-// "colores un poco más fuertes") respecto a la primera versión (0.75, sin
-// stroke en puntos no seleccionados).
+const VALENCE_COLOR_SCALE = d3
+    .scaleDiverging()
+    .domain([1, 5, 9])
+    .interpolator(
+        d3.interpolateRgbBasis([
+            VALENCE_LOW_COLOR,
+            VALENCE_MID_COLOR,
+            VALENCE_HIGH_COLOR,
+        ])
+    );
+
+// Opacidad/trazo por defecto (2026-07-07, "colores un poco más fuertes").
 const DEFAULT_POINT_OPACITY = 0.92;
 const DEFAULT_POINT_STROKE = "rgba(17, 24, 39, 0.35)";
 const DEFAULT_POINT_STROKE_WIDTH = 0.6;
+const SELECTED_POINT_STROKE_WIDTH = 1.4;
 
 let zoomIdCounter = 0;
+
+/**
+ * Construye la clave única de un trial (participante+trial) -- se usa para
+ * indexar el Set/Map de selección múltiple. Duplicada intencionalmente en
+ * husformer_main.js (es una sola línea; no se justifica un módulo de
+ * utilidades compartido todavía en este frontend, que no tiene ese patrón
+ * en ningún otro lado).
+ */
+function getTrialKey(point) {
+    return `${point.Participant_id}_${point.Trial}`;
+}
 
 /**
  * Renderiza el sub-panel A1 (proyección 2D de last_hs agregado por trial).
@@ -27,32 +52,35 @@ let zoomIdCounter = 0;
  * (Russell, 2026-07-07): los paneles del CMV de Husformer usan solo un chip
  * corto ("A1") fuera del chart, no texto adicional que ocupe espacio. Los
  * ticks numéricos de los ejes se mantienen (orientación mínima), pero sin
- * etiquetas de eje ni título de proyección.
+ * etiquetas de eje ni título de proyección. La leyenda de color SÍ es una
+ * excepción justificada a "sin texto": sin ella, la escala de color no se
+ * puede interpretar -- ver `.husformer-a1-legend` en index.html/layout.css
+ * (HTML/CSS, fuera de este archivo, no del SVG).
  *
- * Zoom (2026-07-07, a pedido de Russell): rueda del mouse hacia arriba
- * acerca, hacia abajo aleja de vuelta hasta el tamaño original
- * (scaleExtent mínimo = 1, no se puede alejar más que el ajuste inicial).
- * El arrastre (pan) queda habilitado junto con el zoom porque sin poder
- * desplazarse, hacer zoom en un panel chico no sirve de mucho -- Russell no
- * lo pidió explícitamente pero es el complemento natural, se lo avisé en el
- * chat.
+ * Zoom: rueda del mouse hacia arriba acerca, hacia abajo aleja de vuelta
+ * hasta el tamaño original (scaleExtent mínimo = 1). Pan por arrastre
+ * incluido como complemento natural. Los ejes se RE-ESCALAN en cada evento
+ * de zoom con `transform.rescaleX/rescaleY` -- quedan matemáticamente
+ * sincronizados con lo que se ve (corrección pedida por Russell el
+ * 2026-07-07, ver historial en estado_proyecto.md).
  *
- * CORRECCIÓN (2026-07-07, Russell notó que los ejes se quedaban fijos
- * mientras los puntos se movían con el zoom -- correcto, eso rompía la
- * correspondencia entre lo que se ve y lo que dice el eje). Ahora los ejes
- * se RE-ESCALAN en cada evento de zoom con `transform.rescaleX/rescaleY`
- * (patrón estándar de D3): los puntos se mueven aplicando `event.transform`
- * directamente al grupo (barato, no recalcula cx/cy), y el eje se redibuja
- * con una escala derivada de ese mismo transform -- por construcción,
- * `rescaleX(xScale)(x)` da exactamente el mismo píxel que el transform le
- * aplicó al punto, así que ambos quedan matemáticamente sincronizados.
+ * Selección múltiple (2026-07-07): `selectedTrials` es un Map<string,
+ * point> (clave = getTrialKey), no un único trial -- decisión tomada
+ * pensando en A3 (comparación de VARIOS trials a la vez, según la
+ * Sección 5). Un click en un punto alterna su membresía en el Map (lo
+ * agrega si no estaba, lo quita si ya estaba) -- la lógica de qué hacer con
+ * el click vive en husformer_main.js (este componente solo reporta el
+ * evento vía onPointClick), este chart solo LEE el Map para decidir cómo
+ * dibujar. Un click en el fondo (fuera de cualquier punto) limpia toda la
+ * selección, vía onBackgroundClick.
  */
 export function renderHusformerA1Chart({
     containerId,
     points,
     projectionMethod,
-    selectedTrial,
+    selectedTrials,
     onPointClick,
+    onBackgroundClick,
 }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -63,6 +91,8 @@ export function renderHusformerA1Chart({
         container.innerHTML = "<p>No points available.</p>";
         return;
     }
+
+    const selection = selectedTrials ?? new Map();
 
     const width = container.clientWidth || 360;
     const height = container.clientHeight || 260;
@@ -99,6 +129,22 @@ export function renderHusformerA1Chart({
     const plotGroup = svg
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    // Rectángulo de fondo -- capa fija (no se mueve con el pan/zoom, a
+    // diferencia de los puntos) que captura clicks en área vacía para
+    // limpiar la selección. fill="transparent" (no "none") para que SÍ
+    // reciba eventos de puntero pero sin pintar nada visible.
+    plotGroup
+        .append("rect")
+        .attr("class", "husformer-a1-background")
+        .attr("width", plotWidth)
+        .attr("height", plotHeight)
+        .attr("fill", "transparent")
+        .on("click", () => {
+            if (onBackgroundClick) {
+                onBackgroundClick();
+            }
+        });
 
     const xExtent = d3.extent(points, (d) => Number(d.x));
     const yExtent = d3.extent(points, (d) => Number(d.y));
@@ -142,14 +188,7 @@ export function renderHusformerA1Chart({
         .style("opacity", 0);
 
     function isPointSelected(point) {
-        if (!selectedTrial) {
-            return false;
-        }
-
-        return (
-            Number(point.Participant_id) === Number(selectedTrial.Participant_id)
-            && Number(point.Trial) === Number(selectedTrial.Trial)
-        );
+        return selection.has(getTrialKey(point));
     }
 
     const pointSelection = pointsGroup
@@ -168,7 +207,9 @@ export function renderHusformerA1Chart({
         ))
         .attr("opacity", (d) => (isPointSelected(d) ? 1 : DEFAULT_POINT_OPACITY))
         .attr("stroke", (d) => (isPointSelected(d) ? "#111827" : DEFAULT_POINT_STROKE))
-        .attr("stroke-width", (d) => (isPointSelected(d) ? 1.4 : DEFAULT_POINT_STROKE_WIDTH))
+        .attr("stroke-width", (d) => (
+            isPointSelected(d) ? SELECTED_POINT_STROKE_WIDTH : DEFAULT_POINT_STROKE_WIDTH
+        ))
         .attr("cursor", "pointer")
         .on("mouseover", function (event, d) {
             d3.select(this).attr("r", 6).attr("opacity", 1);
@@ -196,7 +237,14 @@ export function renderHusformerA1Chart({
 
             tooltip.style("opacity", 0);
         })
-        .on("click", function (_, d) {
+        .on("click", function (event, d) {
+            // husformer-a1-background es un elemento HERMANO (no ancestro)
+            // de los círculos, así que su listener de "click" no se
+            // dispara por esto de todas formas -- stopPropagation() se deja
+            // igual como medida defensiva, por si en el futuro algún
+            // ancestro (svg, body) llega a escuchar clicks delegados.
+            event.stopPropagation();
+
             if (onPointClick) {
                 onPointClick(d);
             }
@@ -230,7 +278,8 @@ export function renderHusformerA1Chart({
 
             pointSelection
                 .attr("stroke-width", (d) => (
-                    (isPointSelected(d) ? 1.4 : DEFAULT_POINT_STROKE_WIDTH) * inverseScale
+                    (isPointSelected(d) ? SELECTED_POINT_STROKE_WIDTH : DEFAULT_POINT_STROKE_WIDTH)
+                    * inverseScale
                 ));
         });
 

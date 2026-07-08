@@ -996,6 +996,48 @@ body {
   color: #ffffff;
 }
 
+/* Leyenda de color de Valencia -- esquina inferior izquierda (no choca con
+   el chip "A1", arriba-izquierda, ni con el selector de proyección,
+   arriba-derecha). Colores del degradado DEBEN coincidir a mano con
+   VALENCE_LOW/MID/HIGH_COLOR en husformer_a1_chart.js -- no hay forma de
+   compartir constantes entre CSS y JS sin un paso de build, así que si se
+   cambia un lado hay que cambiar el otro. */
+.husformer-a1-legend {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 3px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.husformer-a1-legend-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.husformer-a1-legend-bar {
+  width: 56px;
+  height: 6px;
+  border-radius: 3px;
+  /* Debe coincidir con VALENCE_LOW/MID/HIGH_COLOR en husformer_a1_chart.js */
+  background: linear-gradient(to right, #2166ac, #f7f7f7, #e08214);
+}
+
+.husformer-a1-legend-ticks {
+  display: flex;
+  justify-content: space-between;
+  width: 56px;
+  font-size: 8px;
+  color: #6b7280;
+}
+
 /* Tooltip propio de A1 -- NO reutiliza .emotion-tooltip a propósito, para
    no afectar los tooltips de H1/Tarea1 que sí usan esa clase compartida.
    Fondo oscuro con degradado (no negro plano) + texto blanco, a pedido de

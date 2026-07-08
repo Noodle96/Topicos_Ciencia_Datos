@@ -436,6 +436,20 @@
                         <button class="husformer-a1-projection-option" data-method="tsne" type="button">t-SNE</button>
                     </div>
 
+                    <!-- Leyenda de color (Valencia, escala azul-naranja) --
+                         excepción justificada a "sin texto": sin esto la
+                         escala de color no se puede interpretar. Colores
+                         hardcodeados para coincidir con VALENCE_*_COLOR en
+                         husformer_a1_chart.js (2026-07-07). -->
+                    <div class="husformer-a1-legend" id="husformer-a1-legend">
+                        <span class="husformer-a1-legend-label">Valencia</span>
+                        <div class="husformer-a1-legend-bar"></div>
+                        <div class="husformer-a1-legend-ticks">
+                            <span>1</span>
+                            <span>9</span>
+                        </div>
+                    </div>
+
                     <div class="cmv-panel-body" id="a1-chart"></div>
                 </section>
 

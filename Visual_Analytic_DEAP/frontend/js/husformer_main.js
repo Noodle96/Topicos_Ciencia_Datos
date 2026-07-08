@@ -6,10 +6,26 @@ import {
     renderHusformerA1Chart,
 } from "./charts/husformer_a1_chart.js";
 
-// Trial actualmente seleccionado en A1 -- se resalta en el propio A1 y,
-// cuando Vista B exista, va a ser lo que dispare la carga de su dinámica
-// temporal (interacción "Clicking: A -> B", ver 05_diseno_visual.tex).
-let selectedTrial = null;
+/**
+ * Construye la clave única de un trial (participante+trial). Duplicada a
+ * propósito en husformer_a1_chart.js (una línea; este frontend no tiene
+ * ningún módulo de utilidades compartidas todavía, no se justifica crear
+ * uno solo por esto).
+ */
+function getTrialKey(point) {
+    return `${point.Participant_id}_${point.Trial}`;
+}
+
+// Trials actualmente seleccionados en A1 -- Map<key, point> en vez de un
+// único trial (2026-07-07, decisión tomada pensando en A3: la Sección 5
+// diseña A3 explícitamente para SELECCIÓN MÚLTIPLE -- comparar varios
+// trials a la vez -- así que el modelo de estado se adelanta a eso ahora
+// para no tener que reescribirlo cuando se construya A3. Un click en un
+// punto alterna su membresía (agrega/quita); un click en el fondo limpia
+// todo. Cuando exista Vista B, probablemente consuma solo "el último
+// agregado" o requiera su propia noción de trial activo -- no resuelto
+// todavía, revisar cuando se llegue a B.
+let selectedTrials = new Map();
 
 // Método de proyección por defecto para A1. Decisión resuelta (2026-07-07):
 // selector lineal estilo EvoAir dentro del propio panel A1 (ver
@@ -52,9 +68,24 @@ function renderA1() {
         containerId: "a1-chart",
         points: latestPoints,
         projectionMethod: latestProjectionMethod,
-        selectedTrial,
+        selectedTrials,
         onPointClick: (point) => {
-            selectedTrial = point;
+            const key = getTrialKey(point);
+
+            if (selectedTrials.has(key)) {
+                selectedTrials.delete(key);
+            } else {
+                selectedTrials.set(key, point);
+            }
+
+            renderA1();
+        },
+        onBackgroundClick: () => {
+            if (selectedTrials.size === 0) {
+                return;
+            }
+
+            selectedTrials.clear();
             renderA1();
         },
     });
@@ -94,7 +125,10 @@ function setupProjectionControl() {
             // Al cambiar de proyección se pierde el sentido de mantener el
             // zoom/selección anterior (las coordenadas x/y son otras) --
             // loadAndRenderA1 recrea el chart desde cero, lo cual ya
-            // resetea el zoom automáticamente.
+            // resetea el zoom automáticamente. La selección SÍ se
+            // mantiene a propósito (selectedTrials no se limpia aquí):
+            // sigue siendo el mismo trial/conjunto de trials, solo cambia
+            // dónde caen en el plano 2D.
             loadAndRenderA1(method);
         });
     });
