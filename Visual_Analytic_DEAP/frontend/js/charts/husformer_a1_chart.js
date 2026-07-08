@@ -11,9 +11,15 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 // de d3) para que coincidan exactamente con el degradado CSS de la leyenda
 // (.husformer-a1-legend-bar en layout.css) -- si se cambia uno, hay que
 // cambiar el otro a mano.
-const VALENCE_LOW_COLOR = "#2166ac";   // valencia baja (~1) -- azul
-const VALENCE_MID_COLOR = "#f7f7f7";   // valencia media (~5) -- gris casi blanco
-const VALENCE_HIGH_COLOR = "#e08214";  // valencia alta (~9) -- naranja
+// Colores subidos de intensidad (2026-07-07, a pedido de Russell) respecto
+// a la primera versión (#2166ac/#f7f7f7/#e08214, tonos ColorBrewer más
+// apagados) -- mismo par azul-naranja colorblind-safe, versión más vívida/
+// saturada. DEBEN coincidir a mano con el degradado CSS de la leyenda
+// (.husformer-a1-legend-bar en layout.css) -- si se cambia uno, cambiar el
+// otro.
+const VALENCE_LOW_COLOR = "#1d4ed8";   // valencia baja (~1) -- azul vívido
+const VALENCE_MID_COLOR = "#f3f4f6";   // valencia media (~5) -- gris casi blanco
+const VALENCE_HIGH_COLOR = "#ea580c";  // valencia alta (~9) -- naranja vívido
 
 const VALENCE_COLOR_SCALE = d3
     .scaleDiverging()
@@ -26,11 +32,19 @@ const VALENCE_COLOR_SCALE = d3
         ])
     );
 
-// Opacidad/trazo por defecto (2026-07-07, "colores un poco más fuertes").
-const DEFAULT_POINT_OPACITY = 0.92;
+// Opacidad/trazo por defecto -- subida de nuevo (2026-07-07, segunda vuelta
+// de "más intensidad": 0.75 -> 0.92 -> 0.97 ahora). DIMMED_POINT_OPACITY es
+// NUEVO: nivel de atenuación para puntos que no matchean un filtro activo
+// de participante/trial (ver isPointDimmed más abajo) -- previamente no
+// existía un tercer nivel de opacidad, solo seleccionado/normal.
+const DEFAULT_POINT_OPACITY = 0.97;
+const DIMMED_POINT_OPACITY = 0.15;
 const DEFAULT_POINT_STROKE = "rgba(17, 24, 39, 0.35)";
 const DEFAULT_POINT_STROKE_WIDTH = 0.6;
 const SELECTED_POINT_STROKE_WIDTH = 1.4;
+const DEFAULT_POINT_RADIUS = 2.6;
+const DIMMED_POINT_RADIUS = 1.7;
+const SELECTED_POINT_RADIUS = 5.5;
 
 let zoomIdCounter = 0;
 
@@ -73,6 +87,21 @@ function getTrialKey(point) {
  * evento vía onPointClick), este chart solo LEE el Map para decidir cómo
  * dibujar. Un click en el fondo (fuera de cualquier punto) limpia toda la
  * selección, vía onBackgroundClick.
+ *
+ * Filtros de resaltado (2026-07-07): `participantFilter`/`trialFilter` son
+ * valores sueltos (no arrays -- son selects de un solo valor, "" = sin
+ * filtro = Todos, que es el reset). Se combinan con AND: si ambos están
+ * activos, solo el punto que matchea los dos queda sin atenuar. Un punto
+ * "atenuado" baja de opacidad/radio (DIMMED_POINT_OPACITY/RADIUS) en vez de
+ * ocultarse -- se mantiene visible a propósito, para no perder el contexto
+ * de "dónde está esto respecto a todo lo demás", que es justo el tipo de
+ * pregunta que estos filtros buscan responder (T1/G1).
+ *
+ * PRECEDENCIA VISUAL (de mayor a menor prioridad): seleccionado (click) >
+ * atenuado (no matchea el filtro) > normal. Un punto seleccionado se ve
+ * seleccionado SIEMPRE, incluso si un filtro activo lo dejaría atenuado --
+ * la selección es una acción más deliberada e individual del usuario que un
+ * filtro global, así que gana.
  */
 export function renderHusformerA1Chart({
     containerId,
@@ -81,6 +110,10 @@ export function renderHusformerA1Chart({
     selectedTrials,
     onPointClick,
     onBackgroundClick,
+    initialZoomTransform,
+    onZoomChange,
+    participantFilter,
+    trialFilter,
 }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -191,6 +224,32 @@ export function renderHusformerA1Chart({
         return selection.has(getTrialKey(point));
     }
 
+    function isPointDimmed(point) {
+        if (!participantFilter && !trialFilter) {
+            return false;
+        }
+
+        const matchesParticipant = !participantFilter
+            || Number(point.Participant_id) === Number(participantFilter);
+
+        const matchesTrial = !trialFilter
+            || Number(point.Trial) === Number(trialFilter);
+
+        return !(matchesParticipant && matchesTrial);
+    }
+
+    function radiusFor(point) {
+        if (isPointSelected(point)) return SELECTED_POINT_RADIUS;
+        if (isPointDimmed(point)) return DIMMED_POINT_RADIUS;
+        return DEFAULT_POINT_RADIUS;
+    }
+
+    function opacityFor(point) {
+        if (isPointSelected(point)) return 1;
+        if (isPointDimmed(point)) return DIMMED_POINT_OPACITY;
+        return DEFAULT_POINT_OPACITY;
+    }
+
     const pointSelection = pointsGroup
         .selectAll(".husformer-a1-point")
         .data(points)
@@ -199,20 +258,20 @@ export function renderHusformerA1Chart({
         .attr("class", "husformer-a1-point")
         .attr("cx", (d) => xScale(Number(d.x)))
         .attr("cy", (d) => yScale(Number(d.y)))
-        .attr("r", (d) => (isPointSelected(d) ? 5.5 : 2.6))
+        .attr("r", (d) => radiusFor(d))
         .attr("fill", (d) => (
             d.Valence === null
                 ? "#9ca3af"
                 : VALENCE_COLOR_SCALE(Number(d.Valence))
         ))
-        .attr("opacity", (d) => (isPointSelected(d) ? 1 : DEFAULT_POINT_OPACITY))
+        .attr("opacity", (d) => opacityFor(d))
         .attr("stroke", (d) => (isPointSelected(d) ? "#111827" : DEFAULT_POINT_STROKE))
         .attr("stroke-width", (d) => (
             isPointSelected(d) ? SELECTED_POINT_STROKE_WIDTH : DEFAULT_POINT_STROKE_WIDTH
         ))
         .attr("cursor", "pointer")
         .on("mouseover", function (event, d) {
-            d3.select(this).attr("r", 6).attr("opacity", 1);
+            d3.select(this).attr("r", Math.max(radiusFor(d), 6)).attr("opacity", 1);
 
             tooltip
                 .style("opacity", 1)
@@ -232,8 +291,8 @@ export function renderHusformerA1Chart({
         })
         .on("mouseout", function (event, d) {
             d3.select(this)
-                .attr("r", isPointSelected(d) ? 5.5 : 2.6)
-                .attr("opacity", isPointSelected(d) ? 1 : DEFAULT_POINT_OPACITY);
+                .attr("r", radiusFor(d))
+                .attr("opacity", opacityFor(d));
 
             tooltip.style("opacity", 0);
         })
@@ -281,7 +340,35 @@ export function renderHusformerA1Chart({
                     (isPointSelected(d) ? SELECTED_POINT_STROKE_WIDTH : DEFAULT_POINT_STROKE_WIDTH)
                     * inverseScale
                 ));
+
+            // Le avisa a husformer_main.js cuál es el transform actual, para
+            // que lo guarde y lo pueda devolver como initialZoomTransform la
+            // próxima vez que este chart se vuelva a renderizar desde cero
+            // (ver corrección de bug más abajo).
+            if (onZoomChange) {
+                onZoomChange(transform);
+            }
         });
 
     svg.call(zoomBehavior);
+
+    // BUG corregido (2026-07-07, reportado por Russell): esta función
+    // reconstruye el SVG completo en cada render -- incluyendo un
+    // d3.zoom() nuevo que arranca en su transform por defecto (sin zoom).
+    // Como CUALQUIER interacción (seleccionar un punto, limpiar la
+    // selección, redimensionar la ventana) dispara un re-render completo
+    // vía renderA1() en husformer_main.js, el zoom se perdía cada vez que
+    // pasaba cualquiera de esas cosas -- no solo al seleccionar un punto,
+    // aunque fue ahí donde Russell lo notó primero.
+    //
+    // FIX: si el caller (husformer_main.js) ya tiene guardado un transform
+    // de una interacción anterior, se lo pasamos acá como
+    // `initialZoomTransform` y lo re-aplicamos de inmediato con
+    // `zoomBehavior.transform`, que dispara el mismo handler "zoom" de
+    // arriba sincrónicamente -- reutiliza exactamente la misma lógica de
+    // reposicionamiento, no hay caminos de código separados que puedan
+    // desincronizarse entre sí.
+    if (initialZoomTransform) {
+        svg.call(zoomBehavior.transform, initialZoomTransform);
+    }
 }

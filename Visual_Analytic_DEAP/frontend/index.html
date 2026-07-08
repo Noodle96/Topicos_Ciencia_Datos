@@ -426,6 +426,41 @@
                 <section class="cmv-panel" id="panel-a1" data-panel="A1">
                     <span class="cmv-panel-chip">A1</span>
 
+                    <!-- Filtros de resaltado (Participante/Trial) -- esquina
+                         superior izquierda, debajo del chip "A1", los dos
+                         alineados horizontalmente (Participante a la
+                         izquierda, Trial a la derecha) -- reubicados acá a
+                         pedido de Russell (2026-07-07, iban en la esquina
+                         inferior derecha originalmente). "Todos" = sin
+                         filtro = estado actual (reset). -->
+                    <div class="husformer-a1-filters" id="husformer-a1-filters">
+                        <div class="husformer-a1-filter-row">
+                            <span class="husformer-a1-filter-label">Participante:</span>
+                            <select id="husformer-a1-participant-filter" class="husformer-a1-filter-select">
+                                <option value="">Todos</option>
+                                <script>
+                                    for (let i = 1; i <= 32; i++) {
+                                        document.write(
+                                            `<option value="${i}">S${String(i).padStart(2, "0")}</option>`
+                                        );
+                                    }
+                                </script>
+                            </select>
+                        </div>
+
+                        <div class="husformer-a1-filter-row">
+                            <span class="husformer-a1-filter-label">Trial:</span>
+                            <select id="husformer-a1-trial-filter" class="husformer-a1-filter-select">
+                                <option value="">Todos</option>
+                                <script>
+                                    for (let i = 1; i <= 40; i++) {
+                                        document.write(`<option value="${i}">${i}</option>`);
+                                    }
+                                </script>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Selector de método de proyección, estilo EvoAir
                          (etiqueta corta + opciones en línea, sin <select>
                          nativo) -- decisión de Russell (2026-07-07). -->

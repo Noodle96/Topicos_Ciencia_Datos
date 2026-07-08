@@ -996,6 +996,48 @@ body {
   color: #ffffff;
 }
 
+/* Filtros de resaltado (Participante/Trial) -- esquina superior izquierda,
+   debajo del chip "A1" (top:6px + ~15px de alto del chip -> top:24px acá).
+   Reubicado desde la esquina inferior derecha a pedido de Russell
+   (2026-07-07). flex-direction:row (no column) para que Participante y
+   Trial queden alineados HORIZONTALMENTE -- uno a la izquierda, el otro a
+   la derecha -- en vez de apilados. */
+.husformer-a1-filters {
+  position: absolute;
+  top: 24px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+
+.husformer-a1-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.husformer-a1-filter-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.husformer-a1-filter-select {
+  font-size: 9px;
+  padding: 1px 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+  max-width: 56px;
+}
+
 /* Leyenda de color de Valencia -- esquina inferior izquierda (no choca con
    el chip "A1", arriba-izquierda, ni con el selector de proyección,
    arriba-derecha). Colores del degradado DEBEN coincidir a mano con
@@ -1026,8 +1068,9 @@ body {
   width: 56px;
   height: 6px;
   border-radius: 3px;
-  /* Debe coincidir con VALENCE_LOW/MID/HIGH_COLOR en husformer_a1_chart.js */
-  background: linear-gradient(to right, #2166ac, #f7f7f7, #e08214);
+  /* Debe coincidir con VALENCE_LOW/MID/HIGH_COLOR en husformer_a1_chart.js
+     (actualizado 2026-07-07, colores más intensos que la v1). */
+  background: linear-gradient(to right, #1d4ed8, #f3f4f6, #ea580c);
 }
 
 .husformer-a1-legend-ticks {

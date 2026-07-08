@@ -27,6 +27,27 @@ function getTrialKey(point) {
 // todavía, revisar cuando se llegue a B.
 let selectedTrials = new Map();
 
+// Transform de zoom/pan actual (objeto d3.ZoomTransform, o null = todavía
+// sin zoom). BUG corregido (2026-07-07, reportado por Russell): cada
+// interacción (seleccionar un punto, limpiar selección, redimensionar)
+// dispara renderA1(), que reconstruye el SVG entero -- incluyendo un
+// d3.zoom() nuevo que arranca sin zoom si no se le indica lo contrario. Se
+// guarda acá y se le pasa de vuelta al chart como `initialZoomTransform`
+// en cada render para que lo mantenga. Se limpia explícitamente solo
+// cuando cambia el método de proyección (si cambian las coordenadas x/y,
+// mantener el mismo zoom en píxeles ya no tiene sentido).
+let currentZoomTransform = null;
+
+// Filtros de resaltado (2026-07-07, a pedido de Russell). "" = sin filtro
+// (Todos = reset). Se combinan con AND en el chart (isPointDimmed): si
+// ambos están activos, solo el punto que matchea los dos queda sin
+// atenuar. Son ORTOGONALES a selectedTrials -- un filtro atenúa/resalta
+// por atributo (participante/trial), la selección marca puntos puntuales
+// clickeados; pueden estar activos los dos a la vez (la selección gana
+// visualmente, ver husformer_a1_chart.js).
+let participantFilter = "";
+let trialFilter = "";
+
 // Método de proyección por defecto para A1. Decisión resuelta (2026-07-07):
 // selector lineal estilo EvoAir dentro del propio panel A1 (ver
 // #husformer-a1-projection-control en index.html), no un <select> nativo.
@@ -88,6 +109,12 @@ function renderA1() {
             selectedTrials.clear();
             renderA1();
         },
+        initialZoomTransform: currentZoomTransform,
+        onZoomChange: (transform) => {
+            currentZoomTransform = transform;
+        },
+        participantFilter,
+        trialFilter,
     });
 }
 
@@ -122,15 +149,34 @@ function setupProjectionControl() {
                 );
             });
 
-            // Al cambiar de proyección se pierde el sentido de mantener el
-            // zoom/selección anterior (las coordenadas x/y son otras) --
-            // loadAndRenderA1 recrea el chart desde cero, lo cual ya
-            // resetea el zoom automáticamente. La selección SÍ se
-            // mantiene a propósito (selectedTrials no se limpia aquí):
-            // sigue siendo el mismo trial/conjunto de trials, solo cambia
-            // dónde caen en el plano 2D.
+            // Al cambiar de proyección, el zoom en píxeles ya no tiene
+            // sentido (las coordenadas x/y son otras) -- se resetea a
+            // propósito acá, es la ÚNICA situación donde currentZoomTransform
+            // se limpia explícitamente. La selección SÍ se mantiene a
+            // propósito (selectedTrials no se toca): sigue siendo el mismo
+            // trial/conjunto de trials, solo cambia dónde caen en el plano 2D.
+            currentZoomTransform = null;
             loadAndRenderA1(method);
         });
+    });
+}
+
+function setupFilterControls() {
+    const participantSelect = document.getElementById(
+        "husformer-a1-participant-filter"
+    );
+    const trialSelect = document.getElementById(
+        "husformer-a1-trial-filter"
+    );
+
+    participantSelect.addEventListener("change", () => {
+        participantFilter = participantSelect.value;
+        renderA1();
+    });
+
+    trialSelect.addEventListener("change", () => {
+        trialFilter = trialSelect.value;
+        renderA1();
     });
 }
 
@@ -161,6 +207,7 @@ function observeA1Container() {
 
 export function initializeHusformerView() {
     setupProjectionControl();
+    setupFilterControls();
     observeA1Container();
     loadAndRenderA1();
 }
