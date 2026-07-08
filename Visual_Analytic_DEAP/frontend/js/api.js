@@ -162,6 +162,23 @@ export async function fetchTarea1Projection({ method }) {
     return await response.json();
 }
 
+// TO HUSFORMER (Vista A/B/C)
+/**
+ * Obtiene los puntos 2D de la Vista A, sub-panel A1: last_hs de Husformer
+ * agregado por trial (mean-pooling) y proyectado con pca/umap/tsne.
+ */
+export async function fetchHusformerTrialProjection({ method }) {
+    const response = await fetch(
+        `${API_BASE_URL}/husformer/trial-projection?method=${method}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Husformer trial projection");
+    }
+
+    return await response.json();
+}
+
 export async function fetchTarea1TrialSignals({
     participant,
     trial,

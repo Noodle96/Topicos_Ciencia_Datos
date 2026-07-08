@@ -425,6 +425,17 @@
             <section class="cmv-vista" data-vista="A" aria-label="Vista A: Espacio de Representaciones Fusionadas">
                 <section class="cmv-panel" id="panel-a1" data-panel="A1">
                     <span class="cmv-panel-chip">A1</span>
+
+                    <!-- Selector de método de proyección, estilo EvoAir
+                         (etiqueta corta + opciones en línea, sin <select>
+                         nativo) -- decisión de Russell (2026-07-07). -->
+                    <div class="husformer-a1-projection-control" id="husformer-a1-projection-control">
+                        <span class="husformer-a1-projection-label">Proyección:</span>
+                        <button class="husformer-a1-projection-option active" data-method="pca" type="button">PCA</button>
+                        <button class="husformer-a1-projection-option" data-method="umap" type="button">UMAP</button>
+                        <button class="husformer-a1-projection-option" data-method="tsne" type="button">t-SNE</button>
+                    </div>
+
                     <div class="cmv-panel-body" id="a1-chart"></div>
                 </section>
 
