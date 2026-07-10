@@ -21,7 +21,11 @@ const VALENCE_LOW_COLOR = "#1d4ed8";   // valencia baja (~1) -- azul vívido
 const VALENCE_MID_COLOR = "#f3f4f6";   // valencia media (~5) -- gris casi blanco
 const VALENCE_HIGH_COLOR = "#ea580c";  // valencia alta (~9) -- naranja vívido
 
-const VALENCE_COLOR_SCALE = d3
+// Exportada (2026-07-07) para que A3 (panel de comparación) pinte el mismo
+// chip de color por trial seleccionado, usando exactamente la misma escala
+// -- en vez de duplicar los 3 colores en otro archivo y arriesgar que se
+// desincronicen (mismo problema que ya identificamos con la leyenda CSS).
+export const VALENCE_COLOR_SCALE = d3
     .scaleDiverging()
     .domain([1, 5, 9])
     .interpolator(
@@ -32,18 +36,28 @@ const VALENCE_COLOR_SCALE = d3
         ])
     );
 
-// Opacidad/trazo por defecto -- subida de nuevo (2026-07-07, segunda vuelta
-// de "más intensidad": 0.75 -> 0.92 -> 0.97 ahora). DIMMED_POINT_OPACITY es
-// NUEVO: nivel de atenuación para puntos que no matchean un filtro activo
-// de participante/trial (ver isPointDimmed más abajo) -- previamente no
-// existía un tercer nivel de opacidad, solo seleccionado/normal.
+// Opacidad/trazo por defecto -- subida dos veces (0.75 -> 0.92 -> 0.97).
 const DEFAULT_POINT_OPACITY = 0.97;
-const DIMMED_POINT_OPACITY = 0.15;
+const DEFAULT_POINT_RADIUS = 2.6;
+
+// Puntos que NO matchean un filtro activo de participante/trial.
+// Contraste subido (2026-07-07, a pedido de Russell): antes 0.15/1.7,
+// ahora más apagados todavía, para que la diferencia contra los que sí
+// pasan el filtro sea más marcada.
+const DIMMED_POINT_OPACITY = 0.08;
+const DIMMED_POINT_RADIUS = 1.4;
+
+// NUEVO (2026-07-07): puntos que SÍ matchean un filtro activo -- antes se
+// veían igual que el estado "sin filtro" (DEFAULT_POINT_*), lo cual no
+// generaba contraste. Ahora son un cuarto nivel de intensidad propio, por
+// encima de DEFAULT, para que "pasar el filtro" se sienta más resaltado,
+// no solo "normal". Ver isPointHighlighted más abajo.
+const HIGHLIGHTED_POINT_OPACITY = 1;
+const HIGHLIGHTED_POINT_RADIUS = 3.4;
+
 const DEFAULT_POINT_STROKE = "rgba(17, 24, 39, 0.35)";
 const DEFAULT_POINT_STROKE_WIDTH = 0.6;
 const SELECTED_POINT_STROKE_WIDTH = 1.4;
-const DEFAULT_POINT_RADIUS = 2.6;
-const DIMMED_POINT_RADIUS = 1.7;
 const SELECTED_POINT_RADIUS = 5.5;
 
 let zoomIdCounter = 0;
@@ -224,8 +238,12 @@ export function renderHusformerA1Chart({
         return selection.has(getTrialKey(point));
     }
 
+    function isFilterActive() {
+        return Boolean(participantFilter) || Boolean(trialFilter);
+    }
+
     function isPointDimmed(point) {
-        if (!participantFilter && !trialFilter) {
+        if (!isFilterActive()) {
             return false;
         }
 
@@ -238,15 +256,24 @@ export function renderHusformerA1Chart({
         return !(matchesParticipant && matchesTrial);
     }
 
+    // Punto que SÍ pasa un filtro activo -- ver constantes HIGHLIGHTED_*
+    // más arriba. Si no hay filtro activo, ningún punto está "resaltado por
+    // filtro" (todos quedan en el nivel DEFAULT, el estado de siempre).
+    function isPointHighlighted(point) {
+        return isFilterActive() && !isPointDimmed(point);
+    }
+
     function radiusFor(point) {
         if (isPointSelected(point)) return SELECTED_POINT_RADIUS;
         if (isPointDimmed(point)) return DIMMED_POINT_RADIUS;
+        if (isPointHighlighted(point)) return HIGHLIGHTED_POINT_RADIUS;
         return DEFAULT_POINT_RADIUS;
     }
 
     function opacityFor(point) {
         if (isPointSelected(point)) return 1;
         if (isPointDimmed(point)) return DIMMED_POINT_OPACITY;
+        if (isPointHighlighted(point)) return HIGHLIGHTED_POINT_OPACITY;
         return DEFAULT_POINT_OPACITY;
     }
 

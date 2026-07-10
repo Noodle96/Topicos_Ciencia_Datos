@@ -1101,3 +1101,72 @@ body {
 .husformer-a1-tooltip strong {
   color: #93c5fd;
 }
+
+/* =========================
+   A3 -- panel de comparación (2026-07-07)
+   ========================= */
+
+.husformer-a3-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Scroll INTERNO acá si hay muchos trials seleccionados -- nunca se deja
+   que se propague al documento (regla ya establecida: cero scrollbar de
+   página en este sistema). */
+.husformer-a3-table-wrapper {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.husformer-a3-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.husformer-a3-table th,
+.husformer-a3-table td {
+  padding: 3px 5px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.husformer-a3-table th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  font-weight: 700;
+  color: #6b7280;
+  z-index: 1;
+}
+
+.husformer-a3-color-chip {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(17, 24, 39, 0.2);
+}
+
+.husformer-a3-remove-btn {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.husformer-a3-remove-btn:hover {
+  color: #dc2626;
+}

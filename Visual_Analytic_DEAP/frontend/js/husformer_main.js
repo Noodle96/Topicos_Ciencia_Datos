@@ -6,6 +6,10 @@ import {
     renderHusformerA1Chart,
 } from "./charts/husformer_a1_chart.js";
 
+import {
+    renderHusformerA3Panel,
+} from "./charts/husformer_a3_panel.js";
+
 /**
  * Construye la clave única de un trial (participante+trial). Duplicada a
  * propósito en husformer_a1_chart.js (una línea; este frontend no tiene
@@ -80,6 +84,23 @@ let resizeObserver = null;
 let lastObservedWidth = 0;
 let lastObservedHeight = 0;
 
+// A3 (panel de comparación) lee el mismo Map selectedTrials -- no pide
+// nada al backend, así que renderA3() es barato de llamar cada vez que la
+// selección cambia. No necesita ResizeObserver (es una <table> HTML, se
+// reacomoda sola vía CSS, a diferencia del SVG de A1).
+function renderA3() {
+    renderHusformerA3Panel({
+        containerId: "a3-chart",
+        selectedTrials,
+        onRemoveTrial: (point) => {
+            const key = getTrialKey(point);
+            selectedTrials.delete(key);
+            renderA1();
+            renderA3();
+        },
+    });
+}
+
 function renderA1() {
     if (!latestPoints) {
         return;
@@ -100,6 +121,7 @@ function renderA1() {
             }
 
             renderA1();
+            renderA3();
         },
         onBackgroundClick: () => {
             if (selectedTrials.size === 0) {
@@ -108,6 +130,7 @@ function renderA1() {
 
             selectedTrials.clear();
             renderA1();
+            renderA3();
         },
         initialZoomTransform: currentZoomTransform,
         onZoomChange: (transform) => {
@@ -210,4 +233,10 @@ export function initializeHusformerView() {
     setupFilterControls();
     observeA1Container();
     loadAndRenderA1();
+
+    // A3 no depende de latestPoints (solo de selectedTrials, que arranca
+    // vacío) -- se puede renderizar de una vez, sin esperar al fetch
+    // asíncrono de A1, para mostrar el estado vacío correcto desde el
+    // primer instante.
+    renderA3();
 }
