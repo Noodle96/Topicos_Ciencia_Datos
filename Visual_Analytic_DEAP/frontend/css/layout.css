@@ -1103,7 +1103,14 @@ body {
 }
 
 /* =========================
-   A3 -- panel de comparación (2026-07-07)
+   A3 -- panel de comparación de perfil de participante, estilo LineUp
+   (Gratzl et al. 2013, IEEE TVCG 19(12):2277-2286) -- reformulado 2026-07-08.
+   Cada fila = 1 participante (deduplicado de los trials seleccionados en
+   A1). Cada columna = 1 atributo de cuestionario. Categóricos: barra de
+   color (mismo color = misma categoría, DENTRO de esa columna solamente).
+   Numéricos: barra horizontal, largo proporcional al valor normalizado
+   contra el rango de la selección actual (numeric_ranges, calculado por
+   backend/services/h2_participant_profile_service.py).
    ========================= */
 
 .husformer-a3-empty {
@@ -1117,44 +1124,128 @@ body {
   color: #9ca3af;
 }
 
-/* Scroll INTERNO acá si hay muchos trials seleccionados -- nunca se deja
-   que se propague al documento (regla ya establecida: cero scrollbar de
-   página en este sistema). */
+/* Scroll INTERNO en ambos ejes (hacia abajo si hay muchos participantes,
+   hacia abajo si hay muchos participantes) -- nunca se deja que se
+   propague al documento (regla ya establecida: cero scrollbar de página en
+   este sistema). */
 .husformer-a3-table-wrapper {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.husformer-a3-table {
+/* width:100% + table-layout:fixed -- a pedido de Russell (2026-07-08), las
+   15 columnas de atributo ya no se apiñan angostas dejando espacio vacío a
+   la derecha del panel: se reparten el ancho completo disponible. Con
+   table-layout:fixed, la ÚNICA columna con ancho explícito
+   (.husformer-a3-sticky-col) queda fija, y las demás (sin ancho declarado)
+   se reparten el resto del ancho EN PARTES IGUALES automáticamente -- no
+   hace falta calcular a mano cuánto le toca a cada una. */
+.husformer-a3-lineup-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 9px;
 }
 
-.husformer-a3-table th,
-.husformer-a3-table td {
-  padding: 3px 5px;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-
-.husformer-a3-table th {
+/* Columna de participante fija (sticky) a la izquierda -- se queda visible
+   aunque el usuario haga scroll, para no perder de vista A QUIÉN
+   corresponde cada fila. Ancho explícito para que table-layout:fixed la
+   trate como fija y reparta el resto entre las columnas de atributo. */
+.husformer-a3-sticky-col {
   position: sticky;
-  top: 0;
+  left: 0;
+  width: 78px;
+  background: #ffffff;
+  z-index: 2;
+  padding: 3px 6px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #d1d5db;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+thead .husformer-a3-sticky-col {
+  z-index: 3;
   background: #f9fafb;
+}
+
+/* Sin ancho fijo a propósito -- table-layout:fixed las reparte en partes
+   iguales el espacio que sobra después de restar .husformer-a3-sticky-col. */
+.husformer-a3-attr-col {
+  padding: 3px 2px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: bottom;
+  overflow: hidden;
+}
+
+thead .husformer-a3-attr-col {
+  height: 64px;
+  vertical-align: bottom;
+}
+
+/* Etiqueta de atributo en vertical -- 15 columnas no entran horizontales
+   sin que el panel se vuelva enorme; rotarlas es el mismo recurso que usa
+   LineUp para encabezados de columnas angostas. */
+.husformer-a3-attr-label {
+  display: inline-block;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 8px;
   font-weight: 700;
   color: #6b7280;
-  z-index: 1;
+  white-space: nowrap;
+  max-height: 62px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.husformer-a3-color-chip {
-  display: inline-block;
-  width: 10px;
+/* Columna donde TODOS los participantes seleccionados comparten el mismo
+   valor (common_patterns, calculado por el backend) -- resaltada para que
+   ese patrón compartido salte a la vista sin tener que leer cada celda. */
+.husformer-a3-common-col {
+  background: rgba(37, 99, 235, 0.07);
+}
+
+.husformer-a3-participant-label {
+  font-weight: 700;
+  color: #111827;
+  margin-right: 4px;
+}
+
+/* Ancho relativo (no px fijo) -- ahora que las columnas de atributo se
+   reparten el ancho completo del panel (ver .husformer-a3-lineup-table),
+   una barra de ancho fijo se vería perdida/angosta dentro de una celda
+   ahora más ancha. Con 80% + margin:auto, la barra ocupa la mayor parte de
+   cada celda sin importar cuánto mida esa celda. */
+.husformer-a3-cat-bar {
+  width: 80%;
   height: 10px;
-  border-radius: 50%;
-  border: 1px solid rgba(17, 24, 39, 0.2);
+  margin: 0 auto;
+  border-radius: 2px;
+}
+
+.husformer-a3-num-track {
+  width: 80%;
+  height: 8px;
+  margin: 0 auto;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.husformer-a3-num-fill {
+  height: 100%;
+  background: #2563eb;
+  border-radius: 2px;
+}
+
+.husformer-a3-na {
+  color: #d1d5db;
+  font-size: 9px;
 }
 
 .husformer-a3-remove-btn {

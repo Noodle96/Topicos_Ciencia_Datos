@@ -1,5 +1,6 @@
 import {
     fetchHusformerTrialProjection,
+    fetchH2ParticipantProfiles,
 } from "./api.js";
 
 import {
@@ -84,20 +85,78 @@ let resizeObserver = null;
 let lastObservedWidth = 0;
 let lastObservedHeight = 0;
 
-// A3 (panel de comparación) lee el mismo Map selectedTrials -- no pide
-// nada al backend, así que renderA3() es barato de llamar cada vez que la
-// selección cambia. No necesita ResizeObserver (es una <table> HTML, se
-// reacomoda sola vía CSS, a diferencia del SVG de A1).
-function renderA3() {
+// A3 -- REFORMULADO (2026-07-08): ya no compara VAD (eso ya está en A1
+// vía color+tooltip, mostrarlo de nuevo era redundante). Ahora compara el
+// perfil de CUESTIONARIO del participante, reutilizando el mismo endpoint
+// que ya usa H2 (fetchH2ParticipantProfiles) -- cero backend nuevo.
+//
+// A1 selecciona TRIALS, el perfil es por PARTICIPANTE -- si hay varios
+// trials seleccionados del mismo participante, se deduplican a una sola
+// fila en A3 (con un contador de cuántos trials de ese participante están
+// seleccionados). getSelectedParticipantTrialCounts() hace esa
+// deduplicación+conteo en un solo paso.
+function getSelectedParticipantTrialCounts() {
+    const counts = new Map();
+
+    selectedTrials.forEach((point) => {
+        const label = point.Participant_label;
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+    });
+
+    return counts;
+}
+
+// requestId evita una condición de carrera real: si el usuario clickea
+// varios puntos rápido, cada click dispara un fetch a
+// fetchH2ParticipantProfiles -- sin esto, una respuesta vieja que llega
+// tarde podría pisar el render de una selección más reciente con datos
+// desactualizados.
+let a3RequestId = 0;
+
+async function renderA3() {
+    const trialCounts = getSelectedParticipantTrialCounts();
+    const participantLabels = Array.from(trialCounts.keys());
+
+    a3RequestId += 1;
+    const requestId = a3RequestId;
+
+    function removeParticipant(participantLabel) {
+        // Quita TODOS los trials de ese participante de la selección (no
+        // solo uno) -- A3 es por participante, así que "quitar" acá
+        // significa deseleccionarlo por completo en A1 también.
+        Array.from(selectedTrials.entries()).forEach(([key, point]) => {
+            if (point.Participant_label === participantLabel) {
+                selectedTrials.delete(key);
+            }
+        });
+
+        renderA1();
+        renderA3();
+    }
+
+    if (participantLabels.length === 0) {
+        renderHusformerA3Panel({
+            containerId: "a3-chart",
+            profileData: null,
+            participantTrialCounts: trialCounts,
+            onRemoveParticipant: removeParticipant,
+        });
+        return;
+    }
+
+    const profileData = await fetchH2ParticipantProfiles(participantLabels);
+
+    if (requestId !== a3RequestId) {
+        // Llegó una respuesta vieja después de que la selección ya cambió
+        // de nuevo -- se descarta en vez de pisar el estado actual.
+        return;
+    }
+
     renderHusformerA3Panel({
         containerId: "a3-chart",
-        selectedTrials,
-        onRemoveTrial: (point) => {
-            const key = getTrialKey(point);
-            selectedTrials.delete(key);
-            renderA1();
-            renderA3();
-        },
+        profileData,
+        participantTrialCounts: trialCounts,
+        onRemoveParticipant: removeParticipant,
     });
 }
 
