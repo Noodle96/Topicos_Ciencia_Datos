@@ -570,6 +570,19 @@
             <section class="cmv-vista" data-vista="B" aria-label="Vista B: Atención Temporal del Trial">
                 <section class="cmv-panel" id="panel-b1" data-panel="B1">
                     <span class="cmv-panel-chip">B1</span>
+
+                    <!-- Indicador de contexto -- B1 es un drill-down de UN
+                         solo trial a la vez (el último clickeado en Vista
+                         A), a diferencia de A1/A2 que muestran los 40
+                         trials simultáneamente -- sin este indicador no
+                         habría forma de saber QUÉ trial se está viendo. -->
+                    <div class="husformer-b1-trial-label" id="husformer-b1-trial-label"></div>
+
+                    <!-- Leyenda de la escala de color -- dinámica (min/max
+                         del trial actual, no fija), ver justificación en
+                         husformer_b1_chart.js. -->
+                    <div class="husformer-b1-legend" id="husformer-b1-legend"></div>
+
                     <div class="cmv-panel-body" id="b1-chart"></div>
                 </section>
 

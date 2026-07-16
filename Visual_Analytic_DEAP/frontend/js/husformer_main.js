@@ -1,6 +1,7 @@
 import {
     fetchHusformerTrialProjection,
     fetchHusformerTrialClusters,
+    fetchHusformerTrialAttention,
     fetchH2ParticipantProfiles,
 } from "./api.js";
 
@@ -17,6 +18,10 @@ import {
 import {
     renderHusformerA3Panel,
 } from "./charts/husformer_a3_panel.js";
+
+import {
+    renderHusformerB1Chart,
+} from "./charts/husformer_b1_chart.js";
 
 /**
  * Construye la clave única de un trial (participante+trial). Duplicada a
@@ -165,6 +170,138 @@ async function renderA3() {
     });
 }
 
+// ============================================================
+// Vista B -- B1 (heatmap modalidad x tiempo). B1 es un DRILL-DOWN de un
+// solo trial a la vez, no una vista coordinada por selección múltiple como
+// A1/A2/A3 -- por eso tiene su propio estado, separado de selectedTrials.
+//
+// Decisión confirmada con Russell (2026-07-15): el trial que se muestra en
+// B1 es el ÚLTIMO CLICKEADO en A1/A2, sin importar si ese click lo agregó o
+// lo quitó de selectedTrials (la selección múltiple de A1/A2/A3 sirve para
+// comparar VARIOS trials en A3; B1 en cambio investiga UNO en profundidad).
+// Por eso `lastClickedTrial` es independiente de selectedTrials: un click
+// en el fondo (handleBackgroundClick, que limpia selectedTrials) NO lo
+// resetea -- B1 sigue mostrando el último trial clickeado como contexto,
+// incluso si ya no está seleccionado en A1/A2.
+// ============================================================
+let lastClickedTrial = null;
+
+// Última respuesta de /trial-attention -- { participant_id, trial, split,
+// num_windows, modality_labels, windows: [...] }.
+let latestB1Data = null;
+
+// Misma protección de condición de carrera que a2RequestId/a3RequestId (ver
+// notas arriba): clickear varios trials rápido no debe dejar B1 mostrando
+// una respuesta vieja que llegó tarde.
+let b1RequestId = 0;
+
+let resizeObserverB1 = null;
+let lastObservedWidthB1 = 0;
+let lastObservedHeightB1 = 0;
+
+function renderB1() {
+    renderHusformerB1Chart({
+        containerId: "b1-chart",
+        activeTrial: lastClickedTrial,
+        attentionData: latestB1Data,
+    });
+
+    renderB1Context();
+}
+
+/**
+ * Actualiza el label de trial activo y la leyenda de color de B1 -- ambos
+ * dependen del trial/dato actual, igual que la leyenda de A2 (construida en
+ * este mismo archivo, no en el módulo de chart) en vez de la leyenda
+ * estática de A1.
+ */
+function renderB1Context() {
+    const label = document.getElementById("husformer-b1-trial-label");
+    const legend = document.getElementById("husformer-b1-legend");
+
+    if (!lastClickedTrial) {
+        label.textContent = "";
+        legend.innerHTML = "";
+        return;
+    }
+
+    label.textContent = `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`;
+
+    if (!latestB1Data || !latestB1Data.windows || latestB1Data.windows.length === 0) {
+        legend.innerHTML = "";
+        return;
+    }
+
+    const modalityKeys = Object.keys(latestB1Data.modality_labels);
+    const allValues = latestB1Data.windows.flatMap((w) => modalityKeys.map((key) => w[key]));
+    const minValue = Math.min(...allValues);
+    const maxValue = Math.max(...allValues);
+
+    legend.innerHTML = `
+        <span class="husformer-b1-legend-label">Dominancia</span>
+        <div class="husformer-b1-legend-bar"></div>
+        <div class="husformer-b1-legend-ticks">
+            <span>${minValue.toFixed(2)}</span>
+            <span>${maxValue.toFixed(2)}</span>
+        </div>
+    `;
+}
+
+/**
+ * Pide al backend la serie temporal de dominancia de modalidad del trial
+ * dado (husformer_attention_service.py, calculado al vuelo -- mismo patrón
+ * que loadAndRenderClusters de A2) y renderiza B1.
+ */
+async function loadAndRenderB1(trialPoint) {
+    lastClickedTrial = trialPoint;
+
+    b1RequestId += 1;
+    const requestId = b1RequestId;
+
+    // Render inmediato en estado "Cargando..." -- el fetch puede tardar
+    // unos milisegundos, sin esto B1 se quedaría mostrando el trial
+    // ANTERIOR mientras carga el nuevo, lo cual es confuso.
+    latestB1Data = null;
+    renderB1();
+
+    const data = await fetchHusformerTrialAttention({
+        participantId: trialPoint.Participant_id,
+        trial: trialPoint.Trial,
+    });
+
+    if (requestId !== b1RequestId) {
+        return;
+    }
+
+    latestB1Data = data;
+    renderB1();
+}
+
+function observeB1Container() {
+    const container = document.getElementById("b1-chart");
+
+    if (!container || resizeObserverB1) {
+        return;
+    }
+
+    resizeObserverB1 = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthB1 && height === lastObservedHeightB1) {
+            return;
+        }
+
+        lastObservedWidthB1 = width;
+        lastObservedHeightB1 = height;
+
+        if (width > 0 && height > 0) {
+            renderB1();
+        }
+    });
+
+    resizeObserverB1.observe(container);
+}
+
 // Handlers de selección/fondo COMPARTIDOS entre A1 y A2 -- clickear un punto
 // (o el fondo) en cualquiera de los dos paneles re-renderiza los TRES
 // paneles de Vista A (compound brushing/linked highlighting entre vistas
@@ -181,6 +318,11 @@ function handlePointToggle(point) {
     renderA1();
     renderA2();
     renderA3();
+
+    // Drill-down a Vista B -- ver nota extensa arriba de lastClickedTrial.
+    // Se dispara SIEMPRE que se clickea un punto (agregar o quitar de la
+    // selección), independientemente del resultado en selectedTrials.
+    loadAndRenderB1(point);
 }
 
 function handleBackgroundClick() {
@@ -568,6 +710,7 @@ export function initializeHusformerView() {
     setupA2Controls();
     observeA1Container();
     observeA2Container();
+    observeB1Container();
 
     // A1/A2 dependen de fetches asíncronos independientes (proyección y
     // clustering respectivamente) -- se piden en paralelo; cada uno
@@ -579,4 +722,9 @@ export function initializeHusformerView() {
     // A3 no depende de ningún fetch (solo de selectedTrials, que arranca
     // vacío) -- se puede renderizar de una vez.
     renderA3();
+
+    // B1 arranca sin trial activo (nadie ha clickeado nada todavía) -- solo
+    // muestra el estado vacío ("Selecciona un trial en Vista A"), sin
+    // fetch, hasta el primer click en A1/A2 (ver loadAndRenderB1).
+    renderB1();
 }

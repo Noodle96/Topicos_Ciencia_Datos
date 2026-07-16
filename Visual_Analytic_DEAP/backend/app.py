@@ -45,10 +45,12 @@ def create_app() -> Flask:
     # para tarea 1
     app.register_blueprint( tarea1_bp, url_prefix="/api/tarea1",)
 
-    # para Husformer (Vista A/B/C) -- por ahora solo Vista A (trial-projection).
-    # Vista B/C se agregan como blueprints nuevos bajo el mismo url_prefix
-    # cuando se implementen (mismo patrón que los 4 blueprints de H2 arriba).
+    # para Husformer (Vista A/B/C) -- Vista A (trial-projection/trial-
+    # clusters) + Vista B (trial-attention). Vista C se agrega como
+    # blueprint nuevo bajo el mismo url_prefix cuando se implemente (mismo
+    # patrón que los 4 blueprints de H2 arriba).
     app.register_blueprint(husformer_trial_bp, url_prefix="/api/husformer",)
+    app.register_blueprint(husformer_attention_bp, url_prefix="/api/husformer",)
 
     @app.route("/api/health", methods=["GET"])
     def health_check() -> Any:
