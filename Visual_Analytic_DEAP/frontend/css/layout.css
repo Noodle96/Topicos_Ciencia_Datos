@@ -1103,6 +1103,179 @@ body {
 }
 
 /* =========================
+   A2 -- controles de clustering (KMeans/HDBSCAN) + leyenda + tooltip propio
+   ========================= */
+
+/* Bloque de controles de clustering -- esquina superior izquierda, debajo
+   del chip "A2" (mismo top:24px que los filtros de A1, mismo motivo:
+   despejar el chip). Columna vertical (método, presets, desplegable de
+   cluster) porque son 3 filas de controles distintas, a diferencia de los
+   2 filtros de A1 que sí caben lado a lado. */
+.husformer-a2-cluster-control {
+  position: absolute;
+  top: 24px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 4px 6px;
+  border-radius: 6px;
+  max-width: 190px;
+}
+
+.husformer-a2-control-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #111827;
+  margin-right: 2px;
+  white-space: nowrap;
+}
+
+.husformer-a2-method-row,
+.husformer-a2-preset-row,
+.husformer-a2-cluster-select-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+/* Botones de método (KMeans/HDBSCAN) -- mismo lenguaje visual que
+   .husformer-a1-projection-option (activo = azul sólido, inactivo = texto
+   gris), para que todos los selectores de botones del CMV se vean
+   consistentes entre sí. */
+.husformer-a2-method-option,
+.husformer-a2-preset-option {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.husformer-a2-method-option:hover,
+.husformer-a2-preset-option:hover {
+  background: #e5e7eb;
+}
+
+.husformer-a2-method-option.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* Los botones de preset SÍ llevan color propio cuando están activos (a
+   diferencia del selector de método/proyección, que siempre usa el mismo
+   azul) -- decisión de Russell (2026-07-15, inspirada en EvoAir): cada
+   preset tiene un color distintivo para reconocerlo rápido sin leer el
+   texto. El color en sí no codifica ningún dato (no es la escala de
+   cluster de husformer_a2_chart.js) -- es solo un identificador visual del
+   BOTÓN, por eso son colores fijos y arbitrarios, no la paleta categórica
+   que sí se usa para colorear los puntos del chart. */
+.husformer-a2-preset-option.active {
+  color: #ffffff;
+}
+
+#husformer-a2-preset-row-kmeans .husformer-a2-preset-option[data-param-value="3"].active {
+  background: #2563eb;
+}
+#husformer-a2-preset-row-kmeans .husformer-a2-preset-option[data-param-value="4"].active {
+  background: #16a34a;
+}
+#husformer-a2-preset-row-kmeans .husformer-a2-preset-option[data-param-value="6"].active {
+  background: #d97706;
+}
+#husformer-a2-preset-row-kmeans .husformer-a2-preset-option[data-param-value="12"].active {
+  background: #dc2626;
+}
+
+#husformer-a2-preset-row-hdbscan .husformer-a2-preset-option[data-param-value="5"].active {
+  background: #2563eb;
+}
+#husformer-a2-preset-row-hdbscan .husformer-a2-preset-option[data-param-value="10"].active {
+  background: #16a34a;
+}
+#husformer-a2-preset-row-hdbscan .husformer-a2-preset-option[data-param-value="20"].active {
+  background: #d97706;
+}
+#husformer-a2-preset-row-hdbscan .husformer-a2-preset-option[data-param-value="50"].active {
+  background: #dc2626;
+}
+
+/* Solo una fila de presets visible a la vez -- alternada por JS
+   (husformer_main.js) según el método de clustering activo. */
+.husformer-a2-preset-row-hidden {
+  display: none;
+}
+
+.husformer-a2-cluster-select {
+  font-size: 9px;
+  padding: 1px 2px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #111827;
+  max-width: 100px;
+}
+
+/* Leyenda de color por cluster -- esquina inferior izquierda, mismo lugar
+   que la leyenda de Valencia en A1. Contenido generado dinámicamente en JS
+   (número de clusters variable), a diferencia de la leyenda fija de A1. */
+.husformer-a2-legend {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 200px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 3px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.husformer-a2-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 8px;
+  color: #111827;
+}
+
+.husformer-a2-legend-swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Tooltip propio de A2 -- mismo estilo que el de A1 (fondo oscuro con
+   degradado), pero clase separada para no interferir con él. */
+.husformer-a2-tooltip {
+  position: absolute;
+  background: linear-gradient(135deg, #1f2937, #0f172a);
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.5;
+  z-index: 1000;
+}
+
+.husformer-a2-tooltip strong {
+  color: #93c5fd;
+}
+
+/* =========================
    A3 -- panel de comparación de perfil de participante, estilo LineUp
    (Gratzl et al. 2013, IEEE TVCG 19(12):2277-2286) -- reformulado 2026-07-08.
    Cada fila = 1 participante (deduplicado de los trials seleccionados en

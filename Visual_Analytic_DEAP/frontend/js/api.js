@@ -179,6 +179,43 @@ export async function fetchHusformerTrialProjection({ method }) {
     return await response.json();
 }
 
+/**
+ * Obtiene la etiqueta de cluster por trial (Vista A, sub-panel A2),
+ * calculada al vuelo en el backend (KMeans o HDBSCAN) sobre el vector de
+ * 40-dim estandarizado de last_hs -- NO sobre las coordenadas 2D.
+ *
+ * method: "kmeans" (paramValue = k, uno de 3/4/6/12) o
+ * "hdbscan" (paramValue = min_cluster_size, uno de 5/10/20/50).
+ */
+export async function fetchHusformerTrialClusters({ method, paramValue }) {
+    const response = await fetch(
+        `${API_BASE_URL}/husformer/trial-clusters?method=${method}&param_value=${paramValue}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Husformer trial clusters");
+    }
+
+    return await response.json();
+}
+
+/**
+ * Obtiene la serie temporal de dominancia de modalidad para un trial
+ * (Vista B, B1/B2): un peso por modalidad (5) por cada ventana de 1s del
+ * trial, calculado al vuelo en el backend a partir de attn_final_summary.
+ */
+export async function fetchHusformerTrialAttention({ participantId, trial }) {
+    const response = await fetch(
+        `${API_BASE_URL}/husformer/trial-attention?participant_id=${participantId}&trial=${trial}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Husformer trial attention");
+    }
+
+    return await response.json();
+}
+
 export async function fetchTarea1TrialSignals({
     participant,
     trial,

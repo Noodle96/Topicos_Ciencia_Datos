@@ -490,6 +490,74 @@
 
                 <section class="cmv-panel" id="panel-a2" data-panel="A2">
                     <span class="cmv-panel-chip">A2</span>
+
+                    <!-- Controles de clustering -- esquina superior
+                         izquierda, debajo del chip "A2". Diseño acordado con
+                         Russell (2026-07-15), adaptado del panel de
+                         clustering de EvoAir (no copiado literal): selector
+                         de método (KMeans/HDBSCAN), fila de 4 botones preset
+                         (el conjunto visible depende del método, ver
+                         husformer_main.js -- KMeans usa k={3,4,6,12},
+                         HDBSCAN usa min_cluster_size={5,10,20,50}), y un
+                         desplegable para resaltar un cluster puntual
+                         ("Todos" = sin resaltado = reset). El desplegable de
+                         KMeans NO incluye "ruido" -1 -- a diferencia de
+                         EvoAir, aquí se corrigió porque KMeans no tiene esa
+                         noción (todo punto cae forzosamente en algún
+                         cluster); "ruido -1" solo aparece cuando el método
+                         activo es HDBSCAN. -->
+                    <div class="husformer-a2-cluster-control" id="husformer-a2-cluster-control">
+                        <div class="husformer-a2-method-row">
+                            <span class="husformer-a2-control-label">Método:</span>
+                            <button class="husformer-a2-method-option active" data-method="kmeans" type="button">KMeans</button>
+                            <button class="husformer-a2-method-option" data-method="hdbscan" type="button">HDBSCAN</button>
+                        </div>
+
+                        <div class="husformer-a2-preset-row" id="husformer-a2-preset-row-kmeans">
+                            <button class="husformer-a2-preset-option active" data-param-value="3" type="button">k=3</button>
+                            <button class="husformer-a2-preset-option" data-param-value="4" type="button">k=4</button>
+                            <button class="husformer-a2-preset-option" data-param-value="6" type="button">k=6</button>
+                            <button class="husformer-a2-preset-option" data-param-value="12" type="button">k=12</button>
+                        </div>
+
+                        <div class="husformer-a2-preset-row husformer-a2-preset-row-hidden" id="husformer-a2-preset-row-hdbscan">
+                            <button class="husformer-a2-preset-option" data-param-value="5" type="button">mcs=5</button>
+                            <button class="husformer-a2-preset-option" data-param-value="10" type="button">mcs=10</button>
+                            <button class="husformer-a2-preset-option" data-param-value="20" type="button">mcs=20</button>
+                            <button class="husformer-a2-preset-option" data-param-value="50" type="button">mcs=50</button>
+                        </div>
+
+                        <div class="husformer-a2-cluster-select-row">
+                            <span class="husformer-a2-control-label">Resaltar:</span>
+                            <select id="husformer-a2-cluster-select" class="husformer-a2-cluster-select">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Selector de proyección -- MISMO estado compartido con
+                         A1 (ver husformer_main.js): cambiarlo acá también
+                         mueve A1, y viceversa. Necesario porque A2 reutiliza
+                         el mismo layout de puntos que A1 -- ambos deben
+                         mostrar siempre el mismo espacio 2D para que
+                         comparar posiciones entre los dos paneles tenga
+                         sentido ("share encoding", Cap. 12 de Munzner).
+                         Reutiliza las clases visuales de A1 (mismo estilo),
+                         solo cambia el id para poder targetear los botones
+                         de este panel por separado en JS. -->
+                    <div class="husformer-a1-projection-control" id="husformer-a2-projection-control">
+                        <span class="husformer-a1-projection-label">Proyección:</span>
+                        <button class="husformer-a1-projection-option active" data-method="pca" type="button">PCA</button>
+                        <button class="husformer-a1-projection-option" data-method="umap" type="button">UMAP</button>
+                        <button class="husformer-a1-projection-option" data-method="tsne" type="button">t-SNE</button>
+                    </div>
+
+                    <!-- Leyenda de color por cluster -- generada
+                         dinámicamente en JS (a diferencia de la leyenda fija
+                         de Valencia en A1), porque el número de clusters
+                         cambia según el preset elegido. -->
+                    <div class="husformer-a2-legend" id="husformer-a2-legend"></div>
+
                     <div class="cmv-panel-body" id="a2-chart"></div>
                 </section>
 

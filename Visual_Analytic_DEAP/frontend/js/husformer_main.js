@@ -1,5 +1,6 @@
 import {
     fetchHusformerTrialProjection,
+    fetchHusformerTrialClusters,
     fetchH2ParticipantProfiles,
 } from "./api.js";
 
@@ -8,93 +9,106 @@ import {
 } from "./charts/husformer_a1_chart.js";
 
 import {
+    renderHusformerA2Chart,
+    getClusterColor,
+    NOISE_CLUSTER_COLOR,
+} from "./charts/husformer_a2_chart.js";
+
+import {
     renderHusformerA3Panel,
 } from "./charts/husformer_a3_panel.js";
 
 /**
  * Construye la clave única de un trial (participante+trial). Duplicada a
- * propósito en husformer_a1_chart.js (una línea; este frontend no tiene
- * ningún módulo de utilidades compartidas todavía, no se justifica crear
- * uno solo por esto).
+ * propósito en husformer_a1_chart.js/husformer_a2_chart.js (una línea; este
+ * frontend no tiene ningún módulo de utilidades compartidas todavía, no se
+ * justifica crear uno solo por esto).
  */
 function getTrialKey(point) {
     return `${point.Participant_id}_${point.Trial}`;
 }
 
-// Trials actualmente seleccionados en A1 -- Map<key, point> en vez de un
-// único trial (2026-07-07, decisión tomada pensando en A3: la Sección 5
-// diseña A3 explícitamente para SELECCIÓN MÚLTIPLE -- comparar varios
-// trials a la vez -- así que el modelo de estado se adelanta a eso ahora
-// para no tener que reescribirlo cuando se construya A3. Un click en un
-// punto alterna su membresía (agrega/quita); un click en el fondo limpia
-// todo. Cuando exista Vista B, probablemente consuma solo "el último
-// agregado" o requiera su propia noción de trial activo -- no resuelto
-// todavía, revisar cuando se llegue a B.
+// Trials actualmente seleccionados -- COMPARTIDO entre A1 y A2 (el mismo
+// Map, no una copia): clickear un punto en cualquiera de los dos paneles
+// alterna su selección y se refleja en el otro, además de en A3. Map<key,
+// point> en vez de un único trial (2026-07-07, pensado para A3 -- selección
+// múltiple). Un click en un punto alterna su membresía; un click en el
+// fondo (de cualquiera de los dos paneles) limpia todo.
 let selectedTrials = new Map();
 
-// Transform de zoom/pan actual (objeto d3.ZoomTransform, o null = todavía
-// sin zoom). BUG corregido (2026-07-07, reportado por Russell): cada
-// interacción (seleccionar un punto, limpiar selección, redimensionar)
-// dispara renderA1(), que reconstruye el SVG entero -- incluyendo un
-// d3.zoom() nuevo que arranca sin zoom si no se le indica lo contrario. Se
-// guarda acá y se le pasa de vuelta al chart como `initialZoomTransform`
-// en cada render para que lo mantenga. Se limpia explícitamente solo
-// cuando cambia el método de proyección (si cambian las coordenadas x/y,
-// mantener el mismo zoom en píxeles ya no tiene sentido).
+// Transform de zoom/pan de A1 y A2 -- SEPARADOS a propósito (cada panel
+// puede estar en un nivel de zoom distinto en un momento dado, no están
+// visualmente enlazados por zoom, solo comparten el mismo layout de puntos
+// en su estado "sin zoom"). Mismo mecanismo que ya existía para A1: se
+// guarda acá y se reaplica en cada render para no perderlo en cada
+// re-render completo del SVG.
 let currentZoomTransform = null;
+let currentA2ZoomTransform = null;
 
-// Filtros de resaltado (2026-07-07, a pedido de Russell). "" = sin filtro
-// (Todos = reset). Se combinan con AND en el chart (isPointDimmed): si
-// ambos están activos, solo el punto que matchea los dos queda sin
-// atenuar. Son ORTOGONALES a selectedTrials -- un filtro atenúa/resalta
-// por atributo (participante/trial), la selección marca puntos puntuales
-// clickeados; pueden estar activos los dos a la vez (la selección gana
-// visualmente, ver husformer_a1_chart.js).
+// Filtros de resaltado de A1 (2026-07-07). "" = sin filtro. AND entre sí,
+// ORTOGONALES a selectedTrials -- ver husformer_a1_chart.js.
 let participantFilter = "";
 let trialFilter = "";
 
-// Método de proyección por defecto para A1. Decisión resuelta (2026-07-07):
-// selector lineal estilo EvoAir dentro del propio panel A1 (ver
-// #husformer-a1-projection-control en index.html), no un <select> nativo.
+// Método de proyección -- COMPARTIDO entre A1 y A2 (2026-07-15): A2
+// reutiliza el mismo layout de puntos que A1 (mismas coordenadas x/y),
+// coloreado por cluster en vez de por Valencia, así que ambos paneles
+// SIEMPRE deben mostrar la misma proyección -- si no, comparar posiciones
+// entre A1 y A2 dejaría de tener sentido (ver nota en husformer_trial_
+// service.py y en index.html). Antes existía un DEFAULT_PROJECTION_METHOD
+// usado solo por A1; ahora es un único estado compartido, con dos grupos de
+// botones (uno por panel) que se mantienen sincronizados en la UI.
 const DEFAULT_PROJECTION_METHOD = "pca";
+let currentProjectionMethod = DEFAULT_PROJECTION_METHOD;
 
-// Cache de los puntos ya cargados -- permite re-renderizar (por resize/
-// cambio de visibilidad) sin volver a pedirlos al backend.
+// Cache de los puntos ya cargados (posición 2D + VAD, de A1) -- permite
+// re-renderizar ambos paneles sin volver a pedirlos al backend.
 let latestPoints = null;
-let latestProjectionMethod = DEFAULT_PROJECTION_METHOD;
 
-// BUG encontrado (2026-07-07, el mismo que ya existía en Tarea1): initApp()
-// llama a initializeHusformerView() al arrancar la app, cuando System
-// Overview todavía tiene "hidden-view" (display:none). Un elemento con
-// display:none mide clientWidth/clientHeight = 0, así que el primer render
-// usa el tamaño de respaldo chico (360x260, ver husformer_a1_chart.js). El
-// chart recién se vuelve a dibujar -- con el tamaño real y grande del panel
-// -- la próxima vez que algo dispara un re-render (ej. un click), lo que se
-// percibe como "se agranda de golpe" al hacer click. No es que el click
-// cause el bug: el click solo es la primera oportunidad en la que el
-// código vuelve a medir el contenedor, y para entonces la pestaña ya está
-// visible.
-//
-// FIX: un ResizeObserver sobre #a1-chart. Un elemento display:none que pasa
-// a visible SÍ dispara ResizeObserver (su tamaño cambia de 0x0 al tamaño
-// real), así que re-renderiza automáticamente en el momento correcto, sin
-// depender de que el usuario haga click primero, y sin acoplarse a
-// view_navigation.js. Bonus: también corrige el tamaño si la ventana se
-// redimensiona.
-let resizeObserver = null;
-let lastObservedWidth = 0;
-let lastObservedHeight = 0;
+// Presets fijos de clustering (mismos valores que en el backend --
+// husformer_trial_service.py VALID_KMEANS_K / VALID_HDBSCAN_MIN_CLUSTER_SIZE
+// -- y en index.html). "specification by selection" (Cap. 5 de Aigner,
+// Tominski 2011): el usuario elige de una colección curada, no un valor
+// libre.
+const DEFAULT_CLUSTER_METHOD = "kmeans";
+const KMEANS_DEFAULT_K = 3;
+const HDBSCAN_DEFAULT_MIN_CLUSTER_SIZE = 5;
 
-// A3 -- REFORMULADO (2026-07-08): ya no compara VAD (eso ya está en A1
-// vía color+tooltip, mostrarlo de nuevo era redundante). Ahora compara el
-// perfil de CUESTIONARIO del participante, reutilizando el mismo endpoint
-// que ya usa H2 (fetchH2ParticipantProfiles) -- cero backend nuevo.
-//
-// A1 selecciona TRIALS, el perfil es por PARTICIPANTE -- si hay varios
-// trials seleccionados del mismo participante, se deduplican a una sola
-// fila en A3 (con un contador de cuántos trials de ese participante están
-// seleccionados). getSelectedParticipantTrialCounts() hace esa
-// deduplicación+conteo en un solo paso.
+let currentClusterMethod = DEFAULT_CLUSTER_METHOD;
+let currentClusterParam = KMEANS_DEFAULT_K;
+
+// Cluster resaltado en el desplegable de A2 ("Resaltar:") -- null = "Todos"
+// (sin resaltado, todos los puntos en nivel DEFAULT). Se resetea a null
+// cada vez que cambia el método o el preset, porque los IDs de cluster de
+// una corrida no tienen ninguna relación necesaria con los de otra (p.ej.
+// "cluster 2" con k=6 no es "el mismo grupo" que "cluster 2" con k=12).
+let currentSelectedClusterId = null;
+
+// Última respuesta de /trial-clusters -- { method, param_name, param_value,
+// num_clusters, has_noise, points: [{Participant_id, Trial, cluster}] }.
+let latestClusterData = null;
+
+// requestId evita una condición de carrera real: si el usuario aprieta
+// varios presets de clustering rápido, cada uno dispara un fetch -- sin
+// esto, una respuesta vieja que llega tarde podría pisar el render de una
+// elección más reciente.
+let a2RequestId = 0;
+
+// BUG evitado (mismo que ya existía en A1, ver notas de 2026-07-07): un
+// ResizeObserver por panel para que el primer render mida el tamaño real
+// del contenedor (no el de respaldo chico) apenas System Overview deja de
+// estar oculto, sin depender de que el usuario haga click primero.
+let resizeObserverA1 = null;
+let lastObservedWidthA1 = 0;
+let lastObservedHeightA1 = 0;
+
+let resizeObserverA2 = null;
+let lastObservedWidthA2 = 0;
+let lastObservedHeightA2 = 0;
+
+// A3 -- perfil de cuestionario del participante (ver notas extensas en
+// versiones anteriores de este archivo / estado_proyecto.md). A1 y A2
+// seleccionan TRIALS, el perfil es por PARTICIPANTE -- se deduplica.
 function getSelectedParticipantTrialCounts() {
     const counts = new Map();
 
@@ -106,11 +120,6 @@ function getSelectedParticipantTrialCounts() {
     return counts;
 }
 
-// requestId evita una condición de carrera real: si el usuario clickea
-// varios puntos rápido, cada click dispara un fetch a
-// fetchH2ParticipantProfiles -- sin esto, una respuesta vieja que llega
-// tarde podría pisar el render de una selección más reciente con datos
-// desactualizados.
 let a3RequestId = 0;
 
 async function renderA3() {
@@ -121,9 +130,6 @@ async function renderA3() {
     const requestId = a3RequestId;
 
     function removeParticipant(participantLabel) {
-        // Quita TODOS los trials de ese participante de la selección (no
-        // solo uno) -- A3 es por participante, así que "quitar" acá
-        // significa deseleccionarlo por completo en A1 también.
         Array.from(selectedTrials.entries()).forEach(([key, point]) => {
             if (point.Participant_label === participantLabel) {
                 selectedTrials.delete(key);
@@ -131,6 +137,7 @@ async function renderA3() {
         });
 
         renderA1();
+        renderA2();
         renderA3();
     }
 
@@ -147,8 +154,6 @@ async function renderA3() {
     const profileData = await fetchH2ParticipantProfiles(participantLabels);
 
     if (requestId !== a3RequestId) {
-        // Llegó una respuesta vieja después de que la selección ya cambió
-        // de nuevo -- se descarta en vez de pisar el estado actual.
         return;
     }
 
@@ -160,6 +165,35 @@ async function renderA3() {
     });
 }
 
+// Handlers de selección/fondo COMPARTIDOS entre A1 y A2 -- clickear un punto
+// (o el fondo) en cualquiera de los dos paneles re-renderiza los TRES
+// paneles de Vista A (compound brushing/linked highlighting entre vistas
+// coordinadas, Cap. 12 de Munzner / Cap. 5 de Aigner).
+function handlePointToggle(point) {
+    const key = getTrialKey(point);
+
+    if (selectedTrials.has(key)) {
+        selectedTrials.delete(key);
+    } else {
+        selectedTrials.set(key, point);
+    }
+
+    renderA1();
+    renderA2();
+    renderA3();
+}
+
+function handleBackgroundClick() {
+    if (selectedTrials.size === 0) {
+        return;
+    }
+
+    selectedTrials.clear();
+    renderA1();
+    renderA2();
+    renderA3();
+}
+
 function renderA1() {
     if (!latestPoints) {
         return;
@@ -168,29 +202,10 @@ function renderA1() {
     renderHusformerA1Chart({
         containerId: "a1-chart",
         points: latestPoints,
-        projectionMethod: latestProjectionMethod,
+        projectionMethod: currentProjectionMethod,
         selectedTrials,
-        onPointClick: (point) => {
-            const key = getTrialKey(point);
-
-            if (selectedTrials.has(key)) {
-                selectedTrials.delete(key);
-            } else {
-                selectedTrials.set(key, point);
-            }
-
-            renderA1();
-            renderA3();
-        },
-        onBackgroundClick: () => {
-            if (selectedTrials.size === 0) {
-                return;
-            }
-
-            selectedTrials.clear();
-            renderA1();
-            renderA3();
-        },
+        onPointClick: handlePointToggle,
+        onBackgroundClick: handleBackgroundClick,
         initialZoomTransform: currentZoomTransform,
         onZoomChange: (transform) => {
             currentZoomTransform = transform;
@@ -200,47 +215,203 @@ function renderA1() {
     });
 }
 
-async function loadAndRenderA1(projectionMethod = DEFAULT_PROJECTION_METHOD) {
+/**
+ * Fusiona latestPoints (posición 2D + VAD, de A1) con latestClusterData
+ * (etiqueta de cluster, de /trial-clusters) por clave de trial, y renderiza
+ * A2. Si falta cualquiera de los dos insumos todavía (primer render, antes
+ * de que ambos fetches terminen), no hace nada -- se vuelve a llamar en
+ * cuanto el segundo insumo llega.
+ */
+function renderA2() {
+    if (!latestPoints || !latestClusterData) {
+        return;
+    }
+
+    const clusterByTrialKey = new Map(
+        latestClusterData.points.map((point) => [getTrialKey(point), point.cluster])
+    );
+
+    const mergedPoints = latestPoints
+        .filter((point) => clusterByTrialKey.has(getTrialKey(point)))
+        .map((point) => ({
+            ...point,
+            cluster: clusterByTrialKey.get(getTrialKey(point)),
+        }));
+
+    renderHusformerA2Chart({
+        containerId: "a2-chart",
+        points: mergedPoints,
+        selectedTrials,
+        selectedClusterId: currentSelectedClusterId,
+        onPointClick: handlePointToggle,
+        onBackgroundClick: handleBackgroundClick,
+        initialZoomTransform: currentA2ZoomTransform,
+        onZoomChange: (transform) => {
+            currentA2ZoomTransform = transform;
+        },
+    });
+
+    renderA2Legend();
+}
+
+/**
+ * Reconstruye el desplegable "Resaltar:" de A2 según num_clusters/has_noise
+ * de la última respuesta de clustering, y la leyenda de color debajo del
+ * chart (ambas dependen del preset activo, a diferencia de la leyenda fija
+ * de Valencia en A1).
+ */
+function populateClusterSelect() {
+    const select = document.getElementById("husformer-a2-cluster-select");
+    select.innerHTML = '<option value="">Todos</option>';
+
+    if (!latestClusterData) {
+        return;
+    }
+
+    for (let clusterId = 0; clusterId < latestClusterData.num_clusters; clusterId += 1) {
+        const option = document.createElement("option");
+        option.value = String(clusterId);
+        option.textContent = `Cluster ${clusterId}`;
+        select.appendChild(option);
+    }
+
+    if (latestClusterData.has_noise) {
+        const noiseOption = document.createElement("option");
+        noiseOption.value = "-1";
+        noiseOption.textContent = "Ruido (-1)";
+        select.appendChild(noiseOption);
+    }
+}
+
+function renderA2Legend() {
+    const legend = document.getElementById("husformer-a2-legend");
+    legend.innerHTML = "";
+
+    if (!latestClusterData) {
+        return;
+    }
+
+    for (let clusterId = 0; clusterId < latestClusterData.num_clusters; clusterId += 1) {
+        const item = document.createElement("div");
+        item.className = "husformer-a2-legend-item";
+
+        const swatch = document.createElement("span");
+        swatch.className = "husformer-a2-legend-swatch";
+        swatch.style.background = getClusterColor(clusterId);
+
+        const label = document.createElement("span");
+        label.textContent = String(clusterId);
+
+        item.appendChild(swatch);
+        item.appendChild(label);
+        legend.appendChild(item);
+    }
+
+    if (latestClusterData.has_noise) {
+        const item = document.createElement("div");
+        item.className = "husformer-a2-legend-item";
+
+        const swatch = document.createElement("span");
+        swatch.className = "husformer-a2-legend-swatch";
+        swatch.style.background = NOISE_CLUSTER_COLOR;
+
+        const label = document.createElement("span");
+        label.textContent = "ruido";
+
+        item.appendChild(swatch);
+        item.appendChild(label);
+        legend.appendChild(item);
+    }
+}
+
+async function loadAndRenderProjection(method = currentProjectionMethod) {
     const data = await fetchHusformerTrialProjection({
-        method: projectionMethod,
+        method,
     });
 
     latestPoints = data.points;
-    latestProjectionMethod = projectionMethod;
+    currentProjectionMethod = method;
 
     renderA1();
+    renderA2();
 }
 
-function setupProjectionControl() {
-    const buttons = document.querySelectorAll(
-        "#husformer-a1-projection-control .husformer-a1-projection-option"
-    );
+/**
+ * Pide el clustering al vuelo al backend (KMeans o HDBSCAN, ver
+ * husformer_trial_service.py) y renderiza A2 con el resultado. NO se
+ * precomputa ni se cachea en disco -- cada cambio de método/preset dispara
+ * un request nuevo (decisión confirmada con Russell, 2026-07-15: KMeans/
+ * HDBSCAN sobre 1280x40 floats es prácticamente instantáneo).
+ */
+async function loadAndRenderClusters(method = currentClusterMethod, paramValue = currentClusterParam) {
+    a2RequestId += 1;
+    const requestId = a2RequestId;
 
-    buttons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const method = button.dataset.method;
-
-            if (method === latestProjectionMethod) {
-                return;
-            }
-
-            buttons.forEach((otherButton) => {
-                otherButton.classList.toggle(
-                    "active",
-                    otherButton === button
-                );
-            });
-
-            // Al cambiar de proyección, el zoom en píxeles ya no tiene
-            // sentido (las coordenadas x/y son otras) -- se resetea a
-            // propósito acá, es la ÚNICA situación donde currentZoomTransform
-            // se limpia explícitamente. La selección SÍ se mantiene a
-            // propósito (selectedTrials no se toca): sigue siendo el mismo
-            // trial/conjunto de trials, solo cambia dónde caen en el plano 2D.
-            currentZoomTransform = null;
-            loadAndRenderA1(method);
-        });
+    const data = await fetchHusformerTrialClusters({
+        method,
+        paramValue,
     });
+
+    if (requestId !== a2RequestId) {
+        return;
+    }
+
+    latestClusterData = data;
+    currentClusterMethod = method;
+    currentClusterParam = paramValue;
+
+    populateClusterSelect();
+    renderA2();
+}
+
+/**
+ * Sincroniza los botones de proyección de AMBOS paneles (A1 y A2) con el
+ * estado compartido `currentProjectionMethod` -- llamada tanto al cambiar
+ * desde A1 como desde A2, para que el panel que NO originó el cambio
+ * también actualice qué botón se ve activo.
+ */
+function updateProjectionButtonsUI(method) {
+    document
+        .querySelectorAll(
+            "#husformer-a1-projection-control .husformer-a1-projection-option, "
+            + "#husformer-a2-projection-control .husformer-a1-projection-option"
+        )
+        .forEach((button) => {
+            button.classList.toggle("active", button.dataset.method === method);
+        });
+}
+
+function handleProjectionChange(method) {
+    if (method === currentProjectionMethod) {
+        return;
+    }
+
+    updateProjectionButtonsUI(method);
+
+    // Al cambiar de proyección, el zoom en píxeles de AMBOS paneles ya no
+    // tiene sentido (las coordenadas x/y son otras) -- se resetean acá. La
+    // selección SÍ se mantiene (mismos trials, solo cambia dónde caen en el
+    // plano 2D). El cluster resaltado en A2 tampoco se resetea: la etiqueta
+    // de cluster de cada trial es estable sin importar la proyección (se
+    // calcula sobre el vector de 40-dim, no sobre x/y -- ver
+    // husformer_trial_service.py).
+    currentZoomTransform = null;
+    currentA2ZoomTransform = null;
+
+    loadAndRenderProjection(method);
+}
+
+function setupProjectionControls() {
+    document
+        .querySelectorAll(
+            "#husformer-a1-projection-control .husformer-a1-projection-option, "
+            + "#husformer-a2-projection-control .husformer-a1-projection-option"
+        )
+        .forEach((button) => {
+            button.addEventListener("click", () => {
+                handleProjectionChange(button.dataset.method);
+            });
+        });
 }
 
 function setupFilterControls() {
@@ -262,40 +433,150 @@ function setupFilterControls() {
     });
 }
 
+/**
+ * Controles de A2: selector de método (KMeans/HDBSCAN), las dos filas de
+ * presets (solo una visible a la vez, según el método activo), y el
+ * desplegable de resaltado de cluster.
+ */
+function setupA2Controls() {
+    const methodButtons = document.querySelectorAll(
+        "#husformer-a2-cluster-control .husformer-a2-method-option"
+    );
+    const kmeansPresetRow = document.getElementById("husformer-a2-preset-row-kmeans");
+    const hdbscanPresetRow = document.getElementById("husformer-a2-preset-row-hdbscan");
+    const clusterSelect = document.getElementById("husformer-a2-cluster-select");
+
+    function activePresetRow() {
+        return currentClusterMethod === "kmeans" ? kmeansPresetRow : hdbscanPresetRow;
+    }
+
+    function setActivePresetButton(row, paramValue) {
+        row.querySelectorAll(".husformer-a2-preset-option").forEach((button) => {
+            button.classList.toggle(
+                "active",
+                Number(button.dataset.paramValue) === paramValue
+            );
+        });
+    }
+
+    methodButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const method = button.dataset.method;
+
+            if (method === currentClusterMethod) {
+                return;
+            }
+
+            methodButtons.forEach((otherButton) => {
+                otherButton.classList.toggle("active", otherButton === button);
+            });
+
+            kmeansPresetRow.classList.toggle("husformer-a2-preset-row-hidden", method !== "kmeans");
+            hdbscanPresetRow.classList.toggle("husformer-a2-preset-row-hidden", method !== "hdbscan");
+
+            const defaultParam = method === "kmeans"
+                ? KMEANS_DEFAULT_K
+                : HDBSCAN_DEFAULT_MIN_CLUSTER_SIZE;
+
+            setActivePresetButton(method === "kmeans" ? kmeansPresetRow : hdbscanPresetRow, defaultParam);
+
+            currentSelectedClusterId = null;
+            clusterSelect.value = "";
+
+            loadAndRenderClusters(method, defaultParam);
+        });
+    });
+
+    [kmeansPresetRow, hdbscanPresetRow].forEach((row) => {
+        row.querySelectorAll(".husformer-a2-preset-option").forEach((button) => {
+            button.addEventListener("click", () => {
+                const paramValue = Number(button.dataset.paramValue);
+
+                if (paramValue === currentClusterParam && row === activePresetRow()) {
+                    return;
+                }
+
+                setActivePresetButton(row, paramValue);
+
+                currentSelectedClusterId = null;
+                clusterSelect.value = "";
+
+                loadAndRenderClusters(currentClusterMethod, paramValue);
+            });
+        });
+    });
+
+    clusterSelect.addEventListener("change", () => {
+        currentSelectedClusterId = clusterSelect.value === "" ? null : Number(clusterSelect.value);
+        renderA2();
+    });
+}
+
 function observeA1Container() {
     const container = document.getElementById("a1-chart");
 
-    if (!container || resizeObserver) {
+    if (!container || resizeObserverA1) {
         return;
     }
 
-    resizeObserver = new ResizeObserver((entries) => {
+    resizeObserverA1 = new ResizeObserver((entries) => {
         const { width, height } = entries[0].contentRect;
 
-        if (width === lastObservedWidth && height === lastObservedHeight) {
+        if (width === lastObservedWidthA1 && height === lastObservedHeightA1) {
             return;
         }
 
-        lastObservedWidth = width;
-        lastObservedHeight = height;
+        lastObservedWidthA1 = width;
+        lastObservedHeightA1 = height;
 
         if (width > 0 && height > 0) {
             renderA1();
         }
     });
 
-    resizeObserver.observe(container);
+    resizeObserverA1.observe(container);
+}
+
+function observeA2Container() {
+    const container = document.getElementById("a2-chart");
+
+    if (!container || resizeObserverA2) {
+        return;
+    }
+
+    resizeObserverA2 = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthA2 && height === lastObservedHeightA2) {
+            return;
+        }
+
+        lastObservedWidthA2 = width;
+        lastObservedHeightA2 = height;
+
+        if (width > 0 && height > 0) {
+            renderA2();
+        }
+    });
+
+    resizeObserverA2.observe(container);
 }
 
 export function initializeHusformerView() {
-    setupProjectionControl();
+    setupProjectionControls();
     setupFilterControls();
+    setupA2Controls();
     observeA1Container();
-    loadAndRenderA1();
+    observeA2Container();
 
-    // A3 no depende de latestPoints (solo de selectedTrials, que arranca
-    // vacío) -- se puede renderizar de una vez, sin esperar al fetch
-    // asíncrono de A1, para mostrar el estado vacío correcto desde el
-    // primer instante.
+    // A1/A2 dependen de fetches asíncronos independientes (proyección y
+    // clustering respectivamente) -- se piden en paralelo; cada uno
+    // renderiza lo que puede en cuanto llega, y renderA2() se completa solo
+    // cuando AMBOS ya están disponibles (ver guard al inicio de renderA2).
+    loadAndRenderProjection();
+    loadAndRenderClusters();
+
+    // A3 no depende de ningún fetch (solo de selectedTrials, que arranca
+    // vacío) -- se puede renderizar de una vez.
     renderA3();
 }
