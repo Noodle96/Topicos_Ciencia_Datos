@@ -19,6 +19,7 @@ from backend.routes.tarea1_routes import tarea1_bp
 
 # TO HUSFORMER (Vista A/B/C)
 from backend.routes.husformer_trial_routes import husformer_trial_bp
+from backend.routes.husformer_attention_routes import husformer_attention_bp
 
 BASE_DIR: Path = Path(__file__).resolve().parent.parent
 FRONTEND_DIR: Path = BASE_DIR / "frontend"
@@ -83,7 +84,15 @@ app: Flask = create_app()
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    # threaded=True (2026-07-15): mitigación agregada al diagnosticar que
+    # /api/husformer/trial-clusters se quedaba colgado (probable deadlock de
+    # joblib/sklearn con el reloader de Flask, ver estado_proyecto.md) -- sin
+    # esto, el servidor de desarrollo es de UN SOLO HILO, así que un request
+    # colgado bloqueaba TODOS los demás endpoints (H1/H2/Tarea1 incluidos,
+    # aunque no tengan nada que ver con clustering). Con threaded=True, un
+    # request colgado ya no tumba el resto del servidor -- pero esto NO
+    # arregla la causa raíz del colgado en sí, solo contiene el daño.
+    app.run(debug=True, port=5000, threaded=True)
 
 
 # cd Visual_Analytic_DEAP
