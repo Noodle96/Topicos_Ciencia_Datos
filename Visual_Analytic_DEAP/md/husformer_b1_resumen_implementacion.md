@@ -6,7 +6,7 @@ Documento vivo, creado 2026-07-17, corregido el mismo día (ver nota de correcci
 
 ## 1. Qué es T3 y por qué importa
 
-**T3:** *"Explorar la evolución temporal de los pesos de atención cross-modal dentro de un trial."* Categoría: Search — Explore (⚠️ la tabla de Russell tenía esto mal escrito como "Query: Explore" — Explore es un subtipo de Search en Brehmer & Munzner 2013, no de Query — a corregir en el `.tex`). Goals: **G2**, G4.
+**T3:** *"Explorar la evolución temporal de los pesos de atención cross-modal dentro de un trial."* Categoría: Search — Explore (⚠️ 2026-07-17: la tabla del `.tex` decía "Query: Explore", se corrigió a "Query: Search" — sigue mal, el formato correcto es **"Search: Explore"**: Search es la categoría de nivel superior en Brehmer & Munzner 2013, paralela a Query, no un subtipo de ella; Explore es el subtipo de Search. Pendiente de corregir en el `.tex`). Goals: **G2**, G4.
 
 **T4** (relacionada, atendida por B2 — ver `husformer_b2_resumen_implementacion.md`): *"Identificar segmentos temporales donde una modalidad domina la representación fusionada."* Categoría: Query — Identify. Goals: G2, G4.
 
