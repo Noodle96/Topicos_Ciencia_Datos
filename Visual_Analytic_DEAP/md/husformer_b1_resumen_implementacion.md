@@ -1,20 +1,22 @@
-# Resumen de implementación — T4/T5 (Vista B / sub-panel B1)
+# Resumen de implementación — T3 (Vista B / sub-panel B1)
 
-Documento vivo, creado 2026-07-17. Objetivo: documentar en el momento (no al final) qué hace el sistema respecto a cada tarea, con las decisiones de diseño y su justificación, como insumo directo para la exposición y la redacción del paper. Este documento es probablemente el más importante de los cuatro para la exposición: registra un hallazgo metodológico real (sesgo estructural por máscara causal) detectado, diagnosticado y corregido durante la implementación — contenido genuino de metodología/limitaciones, no solo de UI.
+Documento vivo, creado 2026-07-17, corregido el mismo día (ver nota de corrección). Objetivo: documentar en el momento (no al final) qué hace el sistema respecto a cada tarea, con las decisiones de diseño y su justificación, como insumo directo para la exposición y la redacción del paper. Este documento es probablemente el más importante de los cuatro para la exposición: registra un hallazgo metodológico real (sesgo estructural por máscara causal) detectado, diagnosticado y corregido durante la implementación — contenido genuino de metodología/limitaciones, no solo de UI.
 
-## 1. Qué es T4/T5 y por qué importan
+**⚠️ Corrección (2026-07-17):** este documento decía originalmente "T4" como tarea principal de B1, con el texto exacto sin confirmar. Al cruzar contra el `.tex` real de Russell, la Sección 5 asigna explícitamente **B1→T3** y **B2→T4** (mapeo limpio, uno a uno) — corregido acá. B1 sí sigue relacionado con T4 indirectamente (el heatmap muestra el mismo dato que hace posible identificar dominancia), pero su tarea PRINCIPAL, confirmada por el texto de Justificación de Russell, es T3.
 
-**T4** (⚠️ texto exacto pendiente de verificar contra el `.tex` — referido consistentemente en este proyecto como "identificar qué modalidad domina la representación fusionada en un instante/ventana dado"). Categoría: Query — Identify. Goals: **G2**, G4.
+## 1. Qué es T3 y por qué importa
 
-**T5** (texto de la Sección 3 pegada por Russell): *"Relacionar picos o cambios abruptos en la atención con eventos visibles en la señal original."* Categoría: Query — Compare. Goals: **G2**, G4.
+**T3:** *"Explorar la evolución temporal de los pesos de atención cross-modal dentro de un trial."* Categoría: Search — Explore (⚠️ la tabla de Russell tenía esto mal escrito como "Query: Explore" — Explore es un subtipo de Search en Brehmer & Munzner 2013, no de Query — a corregir en el `.tex`). Goals: **G2**, G4.
 
-**G2:** *"Comprender la dinámica temporal de la atención cross-modal dentro de un trial."* — ambas tareas sirven directamente a G2.
+**T4** (relacionada, atendida por B2 — ver `husformer_b2_resumen_implementacion.md`): *"Identificar segmentos temporales donde una modalidad domina la representación fusionada."* Categoría: Query — Identify. Goals: G2, G4.
 
-Vista B ("Atención Temporal del Trial") atiende T3/T4/T5 con tres sub-paneles (B1/B2/B3). **B1 (este documento) es el punto de entrada de Vista B** — "overview first" (Shneiderman, ya citado en la Sección 5 de Russell) — y atiende principalmente T4.
+**G2:** *"Comprender la dinámica temporal de la atención cross-modal dentro de un trial."* — tanto T3 como T4 sirven directamente a G2.
 
-**Nota sobre B3 (contexto, no implementado aún):** durante el diseño se detectó una inconsistencia entre T5 (arriba) y la descripción original de B3 (un panel de hover/detalle instantáneo) — no coincidían. Se confirmó con Russell (2026-07-15) redefinir B3 como una vista coordinada de señal cruda + atención superpuestas a lo largo de TODO el trial, que sí matchea el texto literal de T5 y además coincide casi textualmente con OE3 de la Introducción. Pendiente de implementar.
+Vista B ("Atención Temporal del Trial") atiende T3, T4 y T5 con tres sub-paneles (B1/B2/B3). **B1 (este documento) es el punto de entrada de Vista B** — "overview first" (Shneiderman, ya citado en la Sección 5 de Russell): B1 atiende a T3 (explorar/escanear sin un objetivo puntual todavía), mientras B2 atiende a T4 (identificar con precisión qué modalidad domina y cuándo, una vez que el overview de B1 sugirió dónde mirar).
 
-## 2. Cómo el sistema atiende T4 hoy — Vista B, sub-panel B1
+**Nota sobre B3 (contexto, no implementado aún):** durante el diseño se detectó una inconsistencia entre T5 (relacionar picos de atención con la señal original) y la descripción original de B3 (un panel de hover/detalle instantáneo) — no coincidían. Se confirmó con Russell redefinir B3 como una vista coordinada de señal cruda + atención superpuestas a lo largo de TODO el trial, que sí matchea el texto literal de T5 y además coincide casi textualmente con OE3 de la Introducción. Pendiente de implementar.
+
+## 2. Cómo el sistema atiende T3 hoy — Vista B, sub-panel B1
 
 ### 2.1 Qué hace B1
 
@@ -69,17 +71,34 @@ Este es el desarrollo más importante del sub-panel, documentado en detalle porq
 
 **Tooltip consolidado (5 modalidades en un solo cuadro) en vez de 5 ventanitas separadas.** Discutido con dos opciones sobre la mesa; se eligió el tooltip único. Justificación: Munzner Cap. 6 (6.5.3, Change Blindness — "somos sorprendentemente ciegos a cambios fuera del foco de nuestra atención") argumenta en contra de repartir la información en 5 puntos distintos de la pantalla, que obligarían a varias saccades oculares; un solo tooltip anclado al cursor, listando las 5 modalidades de esa ventana con la hovereada resaltada, mantiene todo en un único foco visual. Implementado agrupando `cellData` por `windowIndex` (`d3.group`) y armando las 5 filas dentro del mismo `tooltip.html(...)`.
 
+### 2.6 Comparte panel con B2 desde el 2026-07-17
+
+B1 (heatmap) y B2 (líneas superpuestas) mostraban el mismo dato con dos idiomas visuales distintos, ocupando dos espacios separados del CMV — se fusionaron en un solo panel (`#panel-b1`) con un selector "Vista: Heatmap / Líneas". **B1 y B2 mantienen documentos separados a propósito** (decisión de Russell, 2026-07-17: cada idioma visual tiene sus propias justificaciones de diseño, mezclarlas en un solo documento las haría más difíciles de citar por separado en la exposición) — ver `husformer_b2_resumen_implementacion.md` para el detalle de líneas/hover/puntos por ventana. Acá solo el resumen de lo que afecta a B1 específicamente:
+
+**El selector es de botones excluyentes, no checkbox.** Heatmap y Líneas no son capas que se combinan, son dos formas ALTERNATIVAS de ver el mismo dato — un checkbox sugeriría lo primero. Se reutilizó el mismo lenguaje visual que el selector de proyección de A1/A2 (dos botones, el activo resaltado en azul — "specification by selection", Tominski 2011).
+
+**Implementación:** un solo contenedor (`#b1-chart`) recibe el render de `renderHusformerB1Chart` o `renderHusformerB2Chart` según `currentB1ViewMode` — ya no hay un `#b2-chart` ni un `ResizeObserver` separado para B2. Las dos leyendas (la de color dinámico de B1 y la categórica fija de B2) coexisten en el DOM y se alternan por CSS (`.husformer-b1-legend-hidden`) según el modo activo.
+
+**Espacio liberado, entregado a B3.** La grilla de Vista B pasó de 3 columnas iguales a 2 columnas (`1fr 2fr`, `.cmv-vista[data-vista="B"]` en `layout.css`) — el panel fusionado se queda con 1fr, B3 (pendiente de implementar) recibe 2fr, anticipando que va a necesitar más ancho (señal cruda densa + zoom).
+
+**Bug corregido (2026-07-17, reportado por Russell):** el label de trial activo (`.husformer-b1-trial-label`) y el selector Heatmap/Líneas quedaron en la MISMA esquina (`top:6px; right:8px`) al agregar el selector, superpuestos — el selector tapaba el nombre del trial en el modo Líneas. Corregido moviendo el label al centro superior del panel (`left:50%; transform:translateX(-50%)`), la única zona libre (el chip "B1" ocupa la esquina izquierda, el selector la derecha).
+
+**Decisión de alcance para B3 (aclarada en conversación, no implementada todavía):** B3 va a mostrar siempre la señal cruda de TODO el trial (no un segundo aislado) — clickear/hacer hover en una ventana puntual de B1/B2 marcaría esa posición dentro de la vista completa (línea vertical, como ya hace el modo Líneas), no cambiaría a una vista de 1 segundo solo. Ver un único segundo con el máximo detalle queda reservado para la futura Vista C (instante puntual, matriz 5×5 completa) — cada vista mantiene su escala propia: A = trial completo, B = serie temporal del trial, C = una ventana puntual.
+
+**Pendiente identificado (2026-07-17, pregunta de Russell aún sin resolver):** hoy clickear una celda de B1 (o un punto de B2) NO HACE NADA — solo hay hover, nunca se implementó un handler de click. Queda como decisión abierta: ¿el click debería, desde ya, dejar una marca persistente de "ventana seleccionada" (mismo patrón que `lastClickedTrial` en Vista A), pensando en que ese sea el trigger de Vista C más adelante? Ver la misma nota en `husformer_b2_resumen_implementacion.md`.
+
 ## 3. Qué NO está resuelto todavía
 
-- **B2 (líneas superpuestas por modalidad) y B3 (señal cruda + atención) no implementados** — mismo dato agregado que B1, pendientes.
+- **B3 (señal cruda + atención) no implementado** — diseño discutido en detalle (ver sección 2.6) pero sin código todavía.
 - **Sin comparación lado a lado de dos ventanas específicas** — eso corresponde a T7/C2 (Vista C, no implementada).
 - **Sin indicador visual de confiabilidad del patrón mostrado**, dado el desempeño modesto del modelo — posible mejora futura (ej. algún tipo de codificación de incertidumbre).
+- **Sin guía vertical compartida entre el modo Heatmap y el modo Líneas** — como ahora es el MISMO panel (uno u otro, no los dos a la vez), esto dejó de ser un problema de sincronización entre paneles distintos; sigue pendiente, eso sí, sincronizar el hover cuando B3 exista (marcar la misma ventana en B1/B2 y en B3 simultáneamente).
 
 ## 4. Mapa técnico rápido
 
-**Backend:** `backend/services/husformer_attention_service.py` (`load_husformer_trial_attention`), `backend/routes/husformer_attention_routes.py` (`GET /api/husformer/trial-attention?participant_id=X&trial=Y`), registrado en `backend/app.py` bajo `/api/husformer`.
+**Backend:** `backend/services/husformer_attention_service.py` (`load_husformer_trial_attention`), `backend/routes/husformer_attention_routes.py` (`GET /api/husformer/trial-attention?participant_id=X&trial=Y`), registrado en `backend/app.py` bajo `/api/husformer`. Compartido por los dos modos (Heatmap/Líneas) — un solo fetch por trial.
 
-**Frontend:** `frontend/js/charts/husformer_b1_chart.js` (render D3, colormap viridis, hover de columna), `frontend/js/husformer_main.js` (`lastClickedTrial`, `loadAndRenderB1`, `renderB1`, `renderB1Context`), `frontend/js/api.js` (`fetchHusformerTrialAttention`), `frontend/index.html` (`#panel-b1`), `frontend/css/layout.css` (`.husformer-b1-*`).
+**Frontend:** `frontend/js/charts/husformer_b1_chart.js` (modo Heatmap, colormap Plasma, hover de columna), `frontend/js/charts/husformer_b2_chart.js` (modo Líneas, hover con guía vertical + puntos por ventana), `frontend/js/husformer_main.js` (`lastClickedTrial`, `currentB1ViewMode`, `loadAndRenderB1`, `renderB1`, `renderB1Context`, `setupB1ViewToggle`), `frontend/js/api.js` (`fetchHusformerTrialAttention`), `frontend/index.html` (`#panel-b1`, único panel — ya no existe `#panel-b2`), `frontend/css/layout.css` (`.husformer-b1-*`, `.husformer-b2-*`, `.cmv-vista[data-vista="B"]` a 2 columnas).
 
 **Diagnóstico independiente (raíz del proyecto, no forma parte del pipeline de producción):** `diagnostico_attn_final.py` — standalone, sin dependencia de Flask, usado para aislar el bug de la máscara causal y luego para verificar la corrección tras el reentrenamiento.
 

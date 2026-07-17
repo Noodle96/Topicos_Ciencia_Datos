@@ -918,6 +918,17 @@ body {
   min-width: 0;
 }
 
+/* Vista B: 2 paneles, no 3 (2026-07-17, fusión B1+B2 en un solo panel con
+   selector Heatmap/Líneas -- ver #panel-b1 en index.html). B3 (señal cruda +
+   atención, pendiente de implementar) recibe el espacio extra que dejó
+   libre la fusión -- necesita más ancho que B1/B2 (señal densa + zoom), a
+   diferencia de B1/B2 que ya cabían cómodos en 1/3 de la fila. Override
+   puntual de grid-template-columns (no de las variables --col-1/2/3,
+   pensadas para 3 columnas) porque acá hay solo 2 paneles reales. */
+.cmv-vista[data-vista="B"] {
+  grid-template-columns: 1fr 2fr;
+}
+
 .cmv-panel {
   position: relative;
   background: #ffffff;
@@ -1292,10 +1303,18 @@ body {
    vacío (mismo lenguaje visual que .husformer-a3-empty).
    ========================= */
 
+/* Centrado arriba (2026-07-17, corrección de bug reportado por Russell):
+   antes estaba en top:6px/right:8px, EXACTAMENTE la misma esquina que
+   #husformer-b1-view-control (que reutiliza .husformer-a1-projection-control,
+   también top:6px/right:8px) -- las dos capas se superponían y el selector
+   Heatmap/Líneas tapaba el label de trial. El centro superior está libre
+   (el chip "B1" ocupa la esquina izquierda, el selector la derecha), así
+   que no compite con nada. */
 .husformer-b1-trial-label {
   position: absolute;
   top: 6px;
-  right: 8px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 5;
   font-size: 10px;
   font-weight: 700;
@@ -1305,6 +1324,17 @@ body {
   border-radius: 6px;
   pointer-events: none;
   white-space: nowrap;
+}
+
+/* Alterna qué leyenda se ve según el modo activo (heatmap/líneas) --
+   husformer_main.js la aplica tanto a .husformer-b1-legend como a
+   .husformer-b2-legend, nunca a las dos a la vez. Selector combinado (no
+   solo .husformer-b1-legend-hidden sola) para ganarle en especificidad a
+   `display:flex` de .husformer-b2-legend, que aparece más abajo en este
+   archivo -- si no, el orden de cascada haría que el flex ganara. */
+.husformer-b1-legend.husformer-b1-legend-hidden,
+.husformer-b2-legend.husformer-b1-legend-hidden {
+  display: none;
 }
 
 .husformer-b1-legend {
@@ -1396,6 +1426,66 @@ body {
   padding: 12px;
   font-size: 11px;
   color: #9ca3af;
+}
+
+/* =========================
+   B2 -- series superpuestas por modalidad: leyenda categórica fija +
+   tooltip propio (mismo estilo visual de fila que .husformer-b1-tooltip-row,
+   reutilizado directamente desde husformer_b2_chart.js).
+   ========================= */
+
+.husformer-b2-legend {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 3px 6px;
+  border-radius: 6px;
+  pointer-events: none;
+  font-size: 9px;
+  color: #111827;
+  font-weight: 700;
+}
+
+.husformer-b2-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.husformer-b2-legend-swatch {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.husformer-b2-tooltip {
+  position: absolute;
+  background: linear-gradient(135deg, #1f2937, #0f172a);
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.5;
+  z-index: 1000;
+}
+
+.husformer-b2-tooltip strong {
+  color: #93c5fd;
+}
+
+/* Filas del tooltip de B2 reutilizan .husformer-b1-tooltip-row (definida
+   arriba) para el layout -- acá solo se agrega el espacio para el punto de
+   color que antepone husformer_b2_chart.js a cada fila. */
+.husformer-b2-tooltip .husformer-b1-tooltip-row {
+  gap: 6px;
 }
 
 .husformer-a3-empty {

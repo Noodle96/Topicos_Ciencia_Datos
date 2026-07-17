@@ -571,6 +571,20 @@
                 <section class="cmv-panel" id="panel-b1" data-panel="B1">
                     <span class="cmv-panel-chip">B1</span>
 
+                    <!-- Selector Heatmap/Líneas (2026-07-17, fusión B1+B2 a
+                         pedido de Russell) -- mismo lenguaje visual que el
+                         selector de proyección de A1/A2 (botones excluyentes,
+                         "specification by selection", Tominski 2011): B1 y B2
+                         eran dos idioms visuales del MISMO dato, no dos capas
+                         independientes que se puedan combinar -- un checkbox
+                         hubiera sugerido lo segundo, dos botones excluyentes
+                         comunican correctamente que es una alternativa. -->
+                    <div class="husformer-a1-projection-control" id="husformer-b1-view-control">
+                        <span class="husformer-a1-projection-label">Vista:</span>
+                        <button class="husformer-a1-projection-option active" data-view-mode="heatmap" type="button">Heatmap</button>
+                        <button class="husformer-a1-projection-option" data-view-mode="lines" type="button">Líneas</button>
+                    </div>
+
                     <!-- Indicador de contexto -- B1 es un drill-down de UN
                          solo trial a la vez (el último clickeado en Vista
                          A), a diferencia de A1/A2 que muestran los 40
@@ -578,17 +592,25 @@
                          habría forma de saber QUÉ trial se está viendo. -->
                     <div class="husformer-b1-trial-label" id="husformer-b1-trial-label"></div>
 
-                    <!-- Leyenda de la escala de color -- dinámica (min/max
-                         del trial actual, no fija), ver justificación en
-                         husformer_b1_chart.js. -->
+                    <!-- Leyenda de la escala de color (modo heatmap) --
+                         dinámica (min/max del trial actual, no fija), ver
+                         justificación en husformer_b1_chart.js. -->
                     <div class="husformer-b1-legend" id="husformer-b1-legend"></div>
 
-                    <div class="cmv-panel-body" id="b1-chart"></div>
-                </section>
+                    <!-- Leyenda categórica FIJA (modo líneas, 5 modalidades
+                         siempre son las mismas) -- color + patrón de trazo,
+                         ver husformer_b2_chart.js. Oculta por defecto (modo
+                         inicial = heatmap), alternada por JS junto con el
+                         selector de arriba. -->
+                    <div class="husformer-b2-legend husformer-b1-legend-hidden" id="husformer-b2-legend">
+                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#2563eb"></span>EEG</div>
+                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#dc2626"></span>EOG</div>
+                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#16a34a"></span>EMG</div>
+                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#d97706"></span>GSR</div>
+                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#9333ea"></span>Resp+Plet+Temp</div>
+                    </div>
 
-                <section class="cmv-panel" id="panel-b2" data-panel="B2">
-                    <span class="cmv-panel-chip">B2</span>
-                    <div class="cmv-panel-body" id="b2-chart"></div>
+                    <div class="cmv-panel-body" id="b1-chart"></div>
                 </section>
 
                 <section class="cmv-panel" id="panel-b3" data-panel="B3">

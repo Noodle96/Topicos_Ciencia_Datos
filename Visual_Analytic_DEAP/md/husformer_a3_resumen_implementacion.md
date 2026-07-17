@@ -1,16 +1,18 @@
-# Resumen de implementación — T2 (Vista A / sub-panel A3)
+# Resumen de implementación — T1 (Vista A / sub-panel A3)
 
-Documento vivo, creado 2026-07-17. Objetivo: documentar en el momento (no al final) qué hace el sistema respecto a cada tarea, con las decisiones de diseño y su justificación, como insumo directo para la exposición y la redacción del paper.
+Documento vivo, creado 2026-07-17, corregido el mismo día (ver nota de corrección abajo). Objetivo: documentar en el momento (no al final) qué hace el sistema respecto a cada tarea, con las decisiones de diseño y su justificación, como insumo directo para la exposición y la redacción del paper.
 
-## 1. Qué es T2 y por qué importa (ver también `husformer_a2_resumen_implementacion.md`)
+**⚠️ Corrección (2026-07-17):** este documento decía originalmente que A3 servía a T2, igual que A2. Al cruzar contra el `.tex` real de Russell (Sección 5), la justificación oficial de A3 dice explícitamente que **NO** hace la comparación estructural de T2 (esa la hace A2) sino que sirve a **T1**, como vía complementaria de explicación. Corregido acá.
 
-**T2:** *"Comparar trials o participantes en el espacio de representación fusionada."* — Categoría: Query — Compare. Goals: G1, G4.
+## 1. Qué es T1 y por qué importa (ver también `husformer_a1_resumen_implementacion.md`)
 
-Vista A atiende T2 con dos mecanismos complementarios: **A2** (agrupación algorítmica automática, KMeans/HDBSCAN) y **A3** (comparación GUIADA de perfiles, este documento) — el usuario elige explícitamente qué participantes comparar (seleccionándolos en A1/A2), en vez de que un algoritmo los agrupe por él.
+**T1:** *"Identificar participantes o trials cuya representación latente se aparta del resto."* — Categoría: Query — Identify. Goals: G1, G4.
 
-**Nota de diseño (Vista D → A3):** A3 nació como una "Vista D" independiente propuesta durante el diseño, pero se decidió fusionarla dentro de Vista A (2026-07-07) — mismas tareas (T1/T2), evitar duplicar justificación entre una Vista D separada y A1/A2. El diseño final quedó en 3 vistas (A/B/C), 3 sub-paneles cada una.
+A1 atiende T1 directamente (ver su documento). **A3 lo atiende de forma complementaria**, no comparando posiciones dentro del espacio de representación (esa comparación estructural la habilita **A2**, para **T2**) sino ofreciendo una vía explicativa: una vez identificado un trial o participante cuya representación se aparta del resto (T1, vía A1), A3 permite examinar si ese subconjunto comparte rasgos demográficos o de cuestionario — una hipótesis explicativa adicional, más allá del espacio de representación en sí. Es una distinción deliberada, no accidental: A2 y A3 NO hacen "lo mismo con otra forma" — A2 sirve T2 (comparación estructural algorítmica), A3 sirve T1 (explicación de outliers/casos identificados).
 
-## 2. Cómo el sistema atiende T2 hoy — Vista A, sub-panel A3
+**Nota de diseño (Vista D → A3):** A3 nació como una "Vista D" independiente propuesta durante el diseño, pero se decidió fusionarla dentro de Vista A (2026-07-07). El diseño final quedó en 3 vistas (A/B/C), 3 sub-paneles cada una.
+
+## 2. Cómo el sistema atiende T1 hoy — Vista A, sub-panel A3
 
 ### 2.1 Qué hace A3
 

@@ -23,6 +23,10 @@ import {
     renderHusformerB1Chart,
 } from "./charts/husformer_b1_chart.js";
 
+import {
+    renderHusformerB2Chart,
+} from "./charts/husformer_b2_chart.js";
+
 /**
  * Construye la clave única de un trial (participante+trial). Duplicada a
  * propósito en husformer_a1_chart.js/husformer_a2_chart.js (una línea; este
@@ -199,36 +203,61 @@ let resizeObserverB1 = null;
 let lastObservedWidthB1 = 0;
 let lastObservedHeightB1 = 0;
 
+// Modo de vista de B1 -- "heatmap" (default) o "lines" (2026-07-17, fusión
+// B1+B2 en un solo panel a pedido de Russell: eran dos idioms del MISMO
+// dato ocupando dos espacios, con un selector arriba pasan a ocupar uno
+// solo -- ver #husformer-b1-view-control en index.html). El panel B2
+// original (frontend/js/charts/husformer_b2_chart.js) NO se eliminó -- se
+// sigue usando tal cual, solo que renderizado adentro de #b1-chart cuando
+// este modo está activo, en vez de tener su propio contenedor/observer.
+const DEFAULT_B1_VIEW_MODE = "heatmap";
+let currentB1ViewMode = DEFAULT_B1_VIEW_MODE;
+
 function renderB1() {
-    renderHusformerB1Chart({
-        containerId: "b1-chart",
-        activeTrial: lastClickedTrial,
-        attentionData: latestB1Data,
-    });
+    if (currentB1ViewMode === "heatmap") {
+        renderHusformerB1Chart({
+            containerId: "b1-chart",
+            activeTrial: lastClickedTrial,
+            attentionData: latestB1Data,
+        });
+    } else {
+        renderHusformerB2Chart({
+            containerId: "b1-chart",
+            activeTrial: lastClickedTrial,
+            attentionData: latestB1Data,
+        });
+    }
 
     renderB1Context();
 }
 
 /**
- * Actualiza el label de trial activo y la leyenda de color de B1 -- ambos
- * dependen del trial/dato actual, igual que la leyenda de A2 (construida en
- * este mismo archivo, no en el módulo de chart) en vez de la leyenda
- * estática de A1.
+ * Actualiza el label de trial activo (compartido por ambos modos) y
+ * alterna cuál de las dos leyendas se ve -- la de color dinámico (heatmap)
+ * o la categórica fija (líneas), nunca las dos a la vez.
  */
 function renderB1Context() {
     const label = document.getElementById("husformer-b1-trial-label");
-    const legend = document.getElementById("husformer-b1-legend");
+    const heatmapLegend = document.getElementById("husformer-b1-legend");
+    const linesLegend = document.getElementById("husformer-b2-legend");
+
+    heatmapLegend.classList.toggle("husformer-b1-legend-hidden", currentB1ViewMode !== "heatmap");
+    linesLegend.classList.toggle("husformer-b1-legend-hidden", currentB1ViewMode !== "lines");
 
     if (!lastClickedTrial) {
         label.textContent = "";
-        legend.innerHTML = "";
+        heatmapLegend.innerHTML = "";
         return;
     }
 
     label.textContent = `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`;
 
+    if (currentB1ViewMode !== "heatmap") {
+        return;
+    }
+
     if (!latestB1Data || !latestB1Data.windows || latestB1Data.windows.length === 0) {
-        legend.innerHTML = "";
+        heatmapLegend.innerHTML = "";
         return;
     }
 
@@ -239,7 +268,7 @@ function renderB1Context() {
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
 
-    legend.innerHTML = `
+    heatmapLegend.innerHTML = `
         <span class="husformer-b1-legend-label">% Dominancia</span>
         <div class="husformer-b1-legend-bar"></div>
         <div class="husformer-b1-legend-ticks">
@@ -252,7 +281,7 @@ function renderB1Context() {
 /**
  * Pide al backend la serie temporal de dominancia de modalidad del trial
  * dado (husformer_attention_service.py, calculado al vuelo -- mismo patrón
- * que loadAndRenderClusters de A2) y renderiza B1.
+ * que loadAndRenderClusters de A2) y renderiza B1 (en el modo activo).
  */
 async function loadAndRenderB1(trialPoint) {
     lastClickedTrial = trialPoint;
@@ -277,6 +306,34 @@ async function loadAndRenderB1(trialPoint) {
 
     latestB1Data = data;
     renderB1();
+}
+
+/**
+ * Botones "Heatmap"/"Líneas" -- mismo patrón que setupProjectionControls de
+ * A1/A2 (botones excluyentes, no checkboxes).
+ */
+function setupB1ViewToggle() {
+    const buttons = document.querySelectorAll(
+        "#husformer-b1-view-control .husformer-a1-projection-option"
+    );
+
+    buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+            const viewMode = button.dataset.viewMode;
+
+            if (viewMode === currentB1ViewMode) {
+                return;
+            }
+
+            currentB1ViewMode = viewMode;
+
+            buttons.forEach((otherButton) => {
+                otherButton.classList.toggle("active", otherButton === button);
+            });
+
+            renderB1();
+        });
+    });
 }
 
 function observeB1Container() {
@@ -710,6 +767,7 @@ export function initializeHusformerView() {
     setupProjectionControls();
     setupFilterControls();
     setupA2Controls();
+    setupB1ViewToggle();
     observeA1Container();
     observeA2Container();
     observeB1Container();
