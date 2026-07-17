@@ -3,6 +3,7 @@ import {
     fetchHusformerTrialClusters,
     fetchHusformerTrialAttention,
     fetchH2ParticipantProfiles,
+    fetchTrialSignals,
 } from "./api.js";
 
 import {
@@ -26,6 +27,10 @@ import {
 import {
     renderHusformerB2Chart,
 } from "./charts/husformer_b2_chart.js";
+
+import {
+    renderHusformerB3SignalChart,
+} from "./charts/husformer_b3_chart.js";
 
 /**
  * Construye la clave única de un trial (participante+trial). Duplicada a
@@ -361,6 +366,138 @@ function observeB1Container() {
     resizeObserverB1.observe(container);
 }
 
+// ============================================================
+// B3 -- señal cruda (un canal, seleccionable) + atención (B2 reutilizado
+// sin modificar) apilados, ver husformer_b3_chart.js para la justificación
+// completa (juxtapose, no dual-axis).
+// ============================================================
+const DEFAULT_B3_CHANNEL = "Fz";
+let currentB3Channel = DEFAULT_B3_CHANNEL;
+
+// Respuesta cruda de /api/trial-signals para el canal activo -- distinta
+// de latestB1Data (que es la atención, ya cargada aparte).
+let latestB3SignalData = null;
+let b3RequestId = 0;
+
+let resizeObserverB3Signal = null;
+let lastObservedWidthB3Signal = 0;
+let lastObservedHeightB3Signal = 0;
+
+let resizeObserverB3Attention = null;
+let lastObservedWidthB3Attention = 0;
+let lastObservedHeightB3Attention = 0;
+
+function renderB3() {
+    const label = document.getElementById("husformer-b3-trial-label");
+    label.textContent = lastClickedTrial
+        ? `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`
+        : "";
+
+    renderHusformerB3SignalChart({
+        containerId: "b3-signal-chart",
+        activeTrial: lastClickedTrial,
+        signalData: latestB3SignalData,
+        channelName: currentB3Channel,
+    });
+
+    // Panel de atención -- MISMO renderer que el modo Líneas de B1/B2, sin
+    // tocarlo, reutilizando latestB1Data (ya cargado por loadAndRenderB1,
+    // mismo trial). No hace falta pedirle nada nuevo al backend para esto.
+    renderHusformerB2Chart({
+        containerId: "b3-attention-chart",
+        activeTrial: lastClickedTrial,
+        attentionData: latestB1Data,
+    });
+}
+
+/**
+ * Pide la señal cruda del canal activo para el trial dado -- fetch
+ * INDEPENDIENTE del de atención (latestB1Data), porque es un endpoint y un
+ * dato distintos (/api/trial-signals, no /api/husformer/trial-attention).
+ */
+async function loadAndRenderB3(trialPoint) {
+    b3RequestId += 1;
+    const requestId = b3RequestId;
+
+    latestB3SignalData = null;
+    renderB3();
+
+    const data = await fetchTrialSignals({
+        participant: trialPoint.Participant_id,
+        trial: trialPoint.Trial,
+        channels: [currentB3Channel],
+    });
+
+    if (requestId !== b3RequestId) {
+        return;
+    }
+
+    latestB3SignalData = data;
+    renderB3();
+}
+
+function setupB3ChannelControl() {
+    const select = document.getElementById("husformer-b3-channel-select");
+
+    select.addEventListener("change", () => {
+        currentB3Channel = select.value;
+
+        if (lastClickedTrial) {
+            loadAndRenderB3(lastClickedTrial);
+        }
+    });
+}
+
+function observeB3SignalContainer() {
+    const container = document.getElementById("b3-signal-chart");
+
+    if (!container || resizeObserverB3Signal) {
+        return;
+    }
+
+    resizeObserverB3Signal = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthB3Signal && height === lastObservedHeightB3Signal) {
+            return;
+        }
+
+        lastObservedWidthB3Signal = width;
+        lastObservedHeightB3Signal = height;
+
+        if (width > 0 && height > 0) {
+            renderB3();
+        }
+    });
+
+    resizeObserverB3Signal.observe(container);
+}
+
+function observeB3AttentionContainer() {
+    const container = document.getElementById("b3-attention-chart");
+
+    if (!container || resizeObserverB3Attention) {
+        return;
+    }
+
+    resizeObserverB3Attention = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthB3Attention && height === lastObservedHeightB3Attention) {
+            return;
+        }
+
+        lastObservedWidthB3Attention = width;
+        lastObservedHeightB3Attention = height;
+
+        if (width > 0 && height > 0) {
+            renderB3();
+        }
+    });
+
+    resizeObserverB3Attention.observe(container);
+}
+
 // Handlers de selección/fondo COMPARTIDOS entre A1 y A2 -- clickear un punto
 // (o el fondo) en cualquiera de los dos paneles re-renderiza los TRES
 // paneles de Vista A (compound brushing/linked highlighting entre vistas
@@ -382,6 +519,11 @@ function handlePointToggle(point) {
     // Se dispara SIEMPRE que se clickea un punto (agregar o quitar de la
     // selección), independientemente del resultado en selectedTrials.
     loadAndRenderB1(point);
+
+    // lastClickedTrial recién queda actualizado DESPUÉS de loadAndRenderB1
+    // (es quien lo asigna) -- por eso B3 se dispara con `point` directo, no
+    // con la variable, para no depender del orden de ejecución async.
+    loadAndRenderB3(point);
 }
 
 function handleBackgroundClick() {
@@ -768,9 +910,12 @@ export function initializeHusformerView() {
     setupFilterControls();
     setupA2Controls();
     setupB1ViewToggle();
+    setupB3ChannelControl();
     observeA1Container();
     observeA2Container();
     observeB1Container();
+    observeB3SignalContainer();
+    observeB3AttentionContainer();
 
     // A1/A2 dependen de fetches asíncronos independientes (proyección y
     // clustering respectivamente) -- se piden en paralelo; cada uno
@@ -787,4 +932,7 @@ export function initializeHusformerView() {
     // muestra el estado vacío ("Selecciona un trial en Vista A"), sin
     // fetch, hasta el primer click en A1/A2 (ver loadAndRenderB1).
     renderB1();
+
+    // B3 igual -- estado vacío hasta el primer click (ver loadAndRenderB3).
+    renderB3();
 }

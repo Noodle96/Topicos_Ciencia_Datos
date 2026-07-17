@@ -615,7 +615,88 @@
 
                 <section class="cmv-panel" id="panel-b3" data-panel="B3">
                     <span class="cmv-panel-chip">B3</span>
-                    <div class="cmv-panel-body" id="b3-chart"></div>
+
+                    <!-- Mismo indicador de contexto que B1/B2 (drill-down
+                         de UN trial). -->
+                    <div class="husformer-b1-trial-label" id="husformer-b3-trial-label"></div>
+
+                    <!-- Selector de canal, agrupado por modalidad
+                         (optgroup) -- 44 canales en total. Default: Fz
+                         (2026-07-17, decisión de Russell: un canal EEG
+                         representativo en vez de GSR1, aunque reintroduce
+                         el desajuste de granularidad canal/modalidad desde
+                         la primera impresión -- ver nota debajo). -->
+                    <div class="husformer-b3-channel-control" id="husformer-b3-channel-control">
+                        <span class="husformer-a1-projection-label">Canal:</span>
+                        <select id="husformer-b3-channel-select" class="husformer-a1-filter-select">
+                            <optgroup label="EEG">
+                                <option value="Fp1">Fp1</option>
+                                <option value="AF3">AF3</option>
+                                <option value="F3">F3</option>
+                                <option value="F7">F7</option>
+                                <option value="FC5">FC5</option>
+                                <option value="FC1">FC1</option>
+                                <option value="C3">C3</option>
+                                <option value="T7">T7</option>
+                                <option value="CP5">CP5</option>
+                                <option value="CP1">CP1</option>
+                                <option value="P3">P3</option>
+                                <option value="P7">P7</option>
+                                <option value="PO3">PO3</option>
+                                <option value="O1">O1</option>
+                                <option value="Oz">Oz</option>
+                                <option value="Pz">Pz</option>
+                                <option value="Fp2">Fp2</option>
+                                <option value="AF4">AF4</option>
+                                <option value="Fz" selected>Fz</option>
+                                <option value="F4">F4</option>
+                                <option value="F8">F8</option>
+                                <option value="FC6">FC6</option>
+                                <option value="FC2">FC2</option>
+                                <option value="Cz">Cz</option>
+                                <option value="C4">C4</option>
+                                <option value="T8">T8</option>
+                                <option value="CP6">CP6</option>
+                                <option value="CP2">CP2</option>
+                                <option value="P4">P4</option>
+                                <option value="P8">P8</option>
+                                <option value="PO4">PO4</option>
+                                <option value="O2">O2</option>
+                            </optgroup>
+                            <optgroup label="EOG">
+                                <option value="EXG1">EXG1</option>
+                                <option value="EXG2">EXG2</option>
+                                <option value="EXG3">EXG3</option>
+                                <option value="EXG4">EXG4</option>
+                            </optgroup>
+                            <optgroup label="EMG">
+                                <option value="EXG5">EXG5</option>
+                                <option value="EXG6">EXG6</option>
+                                <option value="EXG7">EXG7</option>
+                                <option value="EXG8">EXG8</option>
+                            </optgroup>
+                            <optgroup label="GSR">
+                                <option value="GSR1">GSR1</option>
+                            </optgroup>
+                            <optgroup label="Resp+Plet+Temp">
+                                <option value="Resp">Resp</option>
+                                <option value="Plet">Plet</option>
+                                <option value="Temp">Temp</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- Aviso de desajuste de granularidad (2026-07-17) --
+                         la atención se calcula por MODALIDAD completa, no
+                         por canal individual -- sin este aviso, mostrar un
+                         canal puntual junto a "la atención de EEG" podría
+                         sugerir una precisión que no existe. -->
+                    <div class="husformer-b3-note">La atención mostrada abajo es por modalidad completa, no por este canal específico.</div>
+
+                    <div class="husformer-b3-stack">
+                        <div class="cmv-panel-body husformer-b3-signal-body" id="b3-signal-chart"></div>
+                        <div class="cmv-panel-body husformer-b3-attention-body" id="b3-attention-chart"></div>
+                    </div>
                 </section>
             </section>
 
