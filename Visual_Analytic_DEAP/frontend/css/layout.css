@@ -1331,14 +1331,15 @@ body {
   width: 70px;
   height: 6px;
   border-radius: 3px;
-  /* Gradiente de viridis (mismo interpolador que ATTENTION_COLOR_
-     INTERPOLATOR en husformer_b1_chart.js) -- construido a mano con stops
-     de d3.interpolateViridis, ya que CSS no tiene ese interpolador nativo.
-     Debe coincidir con el JS si algún día se cambia el colormap. */
+  /* Gradiente de Plasma (2026-07-17, cambiado desde Viridis -- mismo
+     interpolador que ATTENTION_COLOR_INTERPOLATOR en husformer_b1_chart.js)
+     -- construido a mano con stops de d3.interpolatePlasma, ya que CSS no
+     tiene ese interpolador nativo. Debe coincidir con el JS si algún día se
+     cambia el colormap. */
   background: linear-gradient(
     to right,
-    #440154, #482878, #3e4a89, #31688e, #26828e,
-    #1f9e89, #35b779, #6ece58, #b5de2b, #fde725
+    #0d0887, #46039f, #7201a8, #9c179e, #bd3786,
+    #d8576b, #ed7953, #fb9f3a, #fdca26, #f0f921
   );
 }
 
@@ -1365,6 +1366,25 @@ body {
 
 .husformer-b1-tooltip strong {
   color: #93c5fd;
+}
+
+/* Filas del tooltip consolidado (2026-07-17) -- una por modalidad, en vez
+   de 5 ventanitas separadas (ver justificación en husformer_b1_chart.js).
+   Layout en fila (modalidad a la izquierda, % a la derecha) para que las 5
+   se lean rápido, una debajo de otra, sin desbordar el ancho del tooltip. */
+.husformer-b1-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1px 0;
+}
+
+/* La fila de la modalidad exacta bajo el cursor se resalta (no las otras
+   4) -- mismo principio de "un solo punto de foco, con un elemento
+   marcado dentro" que el resaltado de columna en el heatmap. */
+.husformer-b1-tooltip-row-active {
+  color: #93c5fd;
+  font-weight: 700;
 }
 
 .husformer-b1-empty {

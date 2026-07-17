@@ -21,14 +21,15 @@ const MODALITY_KEYS = ["modality_1", "modality_2", "modality_3", "modality_4", "
 // naranja de A1, ni la paleta categórica de A2 (que codifica identidad de
 // cluster, no magnitud).
 //
-// d3.interpolateViridis se elige específicamente (no un colormap arcoíris
-// genérico) porque es la solución que Munzner recomienda explícitamente en
-// 10.3.2: "colormaps de luminancia monótonamente creciente combinados con
-// múltiples hues" -- viridis fue diseñado siguiendo exactamente ese
-// principio (perceptualmente uniforme, luminancia monótona, seguro para
-// daltonismo), a diferencia de un rainbow/jet clásico (hue sin orden
-// perceptual, no lineal, detalle fino ilegible).
-const ATTENTION_COLOR_INTERPOLATOR = d3.interpolateViridis;
+// d3.interpolatePlasma (2026-07-17, cambiado desde Viridis a pedido de
+// Russell -- "más llamativo") -- misma familia de colormaps perceptualmente
+// uniformes que Viridis (matplotlib/BIDS), NO un colormap arcoíris genérico:
+// sigue cumpliendo la recomendación explícita de Munzner 10.3.2 ("colormaps
+// de luminancia monótonamente creciente combinados con múltiples hues"),
+// solo que con una paleta cálida (morado-rosa-naranja-amarillo) en vez de la
+// fría de Viridis (morado-verde azulado-amarillo) -- mismo rigor perceptual
+// y de accesibilidad (colorblind-safe, luminancia monótona), más vívida.
+const ATTENTION_COLOR_INTERPOLATOR = d3.interpolatePlasma;
 
 let clipIdCounter = 0;
 
@@ -57,22 +58,32 @@ let clipIdCounter = 0;
  * trial a la vez (el del drill-down desde Vista A), con tooltip como único
  * mecanismo de detalle-bajo-demanda (Shneiderman, "details on demand").
  *
- * ESCALA DE COLOR DINÁMICA (por trial, no fija [0,1]) -- justificado en
+ * DATO: % DE DOMINANCIA, NO PESO CRUDO (2026-07-17, a pedido de Russell) --
+ * husformer_attention_service.py ya no devuelve el peso crudo de atención
+ * (~1/640, con toda la variación real comprimida en el 3er-4to dígito
+ * decimal -- dos valores distintos podían redondear ambos a "0.002" en la
+ * UI). Devuelve en cambio el % de participación de cada modalidad DENTRO de
+ * su ventana (las 5 modalidades de una ventana siempre suman 100, línea
+ * base uniforme = 20% c/u) -- derivación justificada en Munzner Cap. 3
+ * ("Derive": nuevo atributo por transformación de uno existente) y Aigner
+ * Cap. 4 (4.2.2: tareas de COMPARACIÓN -- T4 compara 5 modalidades entre sí
+ * -- requieren una escala unificada entre lo comparado).
+ *
+ * ESCALA DE COLOR DINÁMICA (por trial, no fija [0,100]) -- justificado en
  * Aigner et al. Cap. 4 (4.2.2, "Codificación de color dependiente de la
  * tarea"): Telea (2007), factor 1, advierte que una función de mapeo lineal
  * sobre un dataset sesgado comprime la mayoría de los valores en un rango
- * estrecho de colores. Como cada peso de dominancia es un promedio de 5
- * valores de atención que típicamente rondan ~0.2 (1/5) con variación
- * moderada, un dominio fijo [0,1] dejaría casi toda la variación real
- * comprimida cerca del extremo bajo de la escala. Se usa en cambio la
- * técnica de "expansión del rango de valores" (Schulze-Wollgast et al. 2005;
- * Tominski et al. 2008, citados en el mismo capítulo): el dominio de color
- * se ajusta al mín/máx REAL de los datos del trial actual, maximizando el
- * contraste para la tarea de comparación local (T4: identificar qué
- * modalidad domina y cuándo, DENTRO de este trial) a costa de que el color
- * ya no sea comparable en términos absolutos entre trials distintos -- un
- * trade-off aceptable porque T4 es una tarea de comparación LOCAL, no una
- * de lookup de magnitud absoluta.
+ * estrecho de colores. Aun en porcentaje, los 5 valores de una ventana
+ * rondan ~20% con variación moderada -- un dominio fijo [0,100] dejaría
+ * casi toda la variación real comprimida en una franja angosta de la
+ * escala. Se usa en cambio la técnica de "expansión del rango de valores"
+ * (Schulze-Wollgast et al. 2005; Tominski et al. 2008, citados en el mismo
+ * capítulo): el dominio de color se ajusta al mín/máx REAL de los datos del
+ * trial actual, maximizando el contraste para la tarea de comparación local
+ * (T4: identificar qué modalidad domina y cuándo, DENTRO de este trial) a
+ * costa de que el color ya no sea comparable en términos absolutos entre
+ * trials distintos -- un trade-off aceptable porque T4 es una tarea de
+ * comparación LOCAL, no una de lookup de magnitud absoluta.
  */
 export function renderHusformerB1Chart({ containerId, activeTrial, attentionData }) {
     const container = document.getElementById(containerId);
@@ -192,7 +203,10 @@ export function renderHusformerB1Chart({ containerId, activeTrial, attentionData
             windowStartSec: w.window_start_sec,
             modalityKey,
             modalityLabel: modalityLabels[modalityKey],
-            value: w[modalityKey],
+            // Porcentaje de dominancia dentro de la ventana (0-100, las 5
+            // modalidades de una misma ventana suman 100) -- ver
+            // husformer_attention_service.py para la derivación exacta.
+            valuePct: w[modalityKey],
         }))
     );
 
@@ -202,7 +216,20 @@ export function renderHusformerB1Chart({ containerId, activeTrial, attentionData
         .attr("class", "husformer-b1-tooltip")
         .style("opacity", 0);
 
-    cellsGroup
+    // Agrupa las celdas por ventana -- permite armar UN tooltip consolidado
+    // con las 5 modalidades de la ventana hovereada, en vez de 5 tooltips
+    // separados. Decisión de diseño (Russell, 2026-07-17, tras discutir
+    // ambas opciones): un solo tooltip con las 5 filas listadas evita que la
+    // información quede repartida en 5 puntos distintos de la pantalla --
+    // Munzner Cap. 6 (6.5.3, Change Blindness: "somos sorprendentemente
+    // ciegos a cambios fuera del foco de nuestra atención") es un argumento
+    // directo en contra de fragmentar el detalle en varias ventanitas
+    // simultáneas lejos entre sí; consolidarlo en un solo punto mantiene
+    // todo dentro del mismo foco visual (el cursor), un solo golpe de vista
+    // real en vez de 5 saccades.
+    const cellsByWindow = d3.group(cellData, (d) => d.windowIndex);
+
+    const cellSelection = cellsGroup
         .selectAll(".husformer-b1-cell")
         .data(cellData)
         .enter()
@@ -212,25 +239,63 @@ export function renderHusformerB1Chart({ containerId, activeTrial, attentionData
         .attr("y", (d) => yScale(d.modalityKey))
         .attr("width", xScale.bandwidth())
         .attr("height", yScale.bandwidth())
-        .attr("fill", (d) => colorScale(d.value))
-        .attr("cursor", "default")
+        .attr("fill", (d) => colorScale(d.valuePct))
+        .attr("cursor", "default");
+
+    // HOVER -- resalta la ventana (columna) completa de las 5 modalidades,
+    // atenuando el resto. Decisión de diseño (Russell, 2026-07-17):
+    //
+    // Munzner Cap. 11 (11.4.2, Highlighting) distingue el idiom de
+    // INTERACCIÓN (acá: hover) del idiom de CODIFICACIÓN visual del
+    // resaltado, y advierte explícitamente que cambiar el COLOR DE RELLENO
+    // para resaltar oculta la codificación de color ya existente -- acá el
+    // color YA codifica el % de dominancia (el dato que se está
+    // inspeccionando), así que un highlight por color lo taparía. Por eso
+    // el resaltado se hace con CONTORNO/stroke (preserva el color de cada
+    // celda) + bajar la opacidad de las columnas no relacionadas -- mismo
+    // patrón que "Dynamic Layers" (Munzner Cap. 12.5.3, ejemplo Cerebral):
+    // una capa de primer plano saturada/prominente contra un fondo de baja
+    // saturación, construida al vuelo sobre el elemento bajo el cursor.
+    cellSelection
         .on("mouseover", function (event, d) {
-            d3.select(this)
-                .attr("stroke", "#111827")
-                .attr("stroke-width", 1.2);
+            cellSelection.attr("opacity", (other) => (
+                other.windowIndex === d.windowIndex ? 1 : 0.25
+            ));
+
+            cellSelection.attr("stroke", (other) => {
+                if (other.windowIndex !== d.windowIndex) return "none";
+                return other.modalityKey === d.modalityKey ? "#111827" : "#4b5563";
+            });
+
+            cellSelection.attr("stroke-width", (other) => {
+                if (other.windowIndex !== d.windowIndex) return 0;
+                return other.modalityKey === d.modalityKey ? 1.6 : 0.8;
+            });
+
+            const windowCells = cellsByWindow.get(d.windowIndex);
+            const rowsHtml = windowCells
+                .map((cell) => {
+                    const isHovered = cell.modalityKey === d.modalityKey;
+                    return `
+                        <div class="husformer-b1-tooltip-row${isHovered ? " husformer-b1-tooltip-row-active" : ""}">
+                            <span>${cell.modalityLabel}</span>
+                            <span>${cell.valuePct.toFixed(1)}%</span>
+                        </div>
+                    `;
+                })
+                .join("");
 
             tooltip
                 .style("opacity", 1)
                 .html(`
-                    <strong>Modalidad:</strong> ${d.modalityLabel}<br>
-                    <strong>Tiempo:</strong> ${d.windowStartSec.toFixed(1)}s<br>
-                    <strong>Peso de dominancia:</strong> ${d.value.toFixed(3)}
+                    <strong>Tiempo: ${d.windowStartSec.toFixed(1)}s</strong>
+                    ${rowsHtml}
                 `)
                 .style("left", `${event.pageX + 14}px`)
                 .style("top", `${event.pageY - 18}px`);
         })
         .on("mouseout", function () {
-            d3.select(this).attr("stroke", "none");
+            cellSelection.attr("opacity", 1).attr("stroke", "none").attr("stroke-width", 0);
             tooltip.style("opacity", 0);
         });
 }

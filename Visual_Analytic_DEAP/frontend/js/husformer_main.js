@@ -232,17 +232,19 @@ function renderB1Context() {
         return;
     }
 
+    // Los 5 valores de una ventana son PORCENTAJE de dominancia (0-100,
+    // suman 100 dentro de la ventana) -- ver husformer_attention_service.py.
     const modalityKeys = Object.keys(latestB1Data.modality_labels);
     const allValues = latestB1Data.windows.flatMap((w) => modalityKeys.map((key) => w[key]));
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
 
     legend.innerHTML = `
-        <span class="husformer-b1-legend-label">Dominancia</span>
+        <span class="husformer-b1-legend-label">% Dominancia</span>
         <div class="husformer-b1-legend-bar"></div>
         <div class="husformer-b1-legend-ticks">
-            <span>${minValue.toFixed(2)}</span>
-            <span>${maxValue.toFixed(2)}</span>
+            <span>${minValue.toFixed(1)}%</span>
+            <span>${maxValue.toFixed(1)}%</span>
         </div>
     `;
 }

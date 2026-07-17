@@ -82,6 +82,11 @@ def load_husformer_trial_attention(participant_id: int, trial: int) -> dict[str,
     window_index), reduce su attn_final_summary (5x5: query x key) a un
     vector de 5 valores promediando sobre el eje query (filas) -- cuánta
     atención recibe cada modalidad en promedio de todas las que preguntan.
+
+    Los 5 valores devueltos por ventana (`modality_1`..`modality_5`) son
+    PORCENTAJES (0-100, siempre suman 100 dentro de una misma ventana) --
+    no el peso crudo de atención. Ver comentario en el cuerpo de la función
+    para la derivación matemática exacta.
     """
     manifest: pd.DataFrame = _load_manifest()
 
@@ -114,10 +119,33 @@ def load_husformer_trial_attention(participant_id: int, trial: int) -> dict[str,
     # cada modalidad (columna/key) de todas las que preguntan (filas/query)".
     modality_dominance: np.ndarray = trial_attn.mean(axis=1)  # (n_windows, 5)
 
+    # Reescalado a PORCENTAJE DE DOMINANCIA dentro de la ventana (2026-07-17,
+    # a pedido de Russell) -- justificado en Munzner Cap. 3 ("Derive":
+    # producir un atributo nuevo por transformación de uno existente) y
+    # Aigner Cap. 4 (4.2.2: tareas de COMPARACIÓN -- T4 compara 5 modalidades
+    # entre sí -- requieren que todas compartan una escala unificada). El
+    # peso crudo de dominancia ronda ~1/640 (0.0015-0.002), un rango donde
+    # la variación real (confirmada tras desactivar attn_mask y reentrenar
+    # 40 épocas) queda comprimida en el 3er-4to dígito decimal --
+    # prácticamente ilegible en una UI (dos valores distintos redondeaban
+    # ambos a "0.002").
+    #
+    # La suma de los 5 valores de dominancia de UNA ventana es, por
+    # construcción matemática (softmax por fila real sobre 640 posiciones,
+    # ver docstring del módulo), SIEMPRE 1/128 = 0.0078125, sin importar el
+    # contenido -- así que dividir por esa suma y multiplicar por 100 no es
+    # un reescalado arbitrario: es la participación relativa REAL de cada
+    # modalidad dentro del total de esa ventana (siempre suma 100%, línea
+    # base uniforme = 20% por modalidad). Se calcula empíricamente (dividir
+    # por la suma real de esa ventana, no por la constante teórica 1/128)
+    # para ser robustos a cualquier desviación numérica mínima.
+    row_sums: np.ndarray = modality_dominance.sum(axis=1, keepdims=True)  # (n_windows, 1)
+    modality_dominance_pct: np.ndarray = modality_dominance / row_sums * 100.0
+
     windows: list[dict[str, Any]] = []
 
     for row_position, (_, row) in enumerate(trial_rows.iterrows()):
-        weights: np.ndarray = modality_dominance[row_position]
+        weights: np.ndarray = modality_dominance_pct[row_position]
 
         window_entry: dict[str, Any] = {
             "window_index": int(row["window_index"]),
