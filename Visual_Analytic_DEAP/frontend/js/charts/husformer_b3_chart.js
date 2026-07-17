@@ -4,23 +4,14 @@ let clipIdCounter = 0;
 
 /**
  * Extrae, de la respuesta de /api/trial-signals, los puntos de UN canal
- * reubicados en el mismo eje temporal que usan B1/B2 (window_start_sec,
- * relativo al inicio de la fase "During" -- los 60s de estímulo).
+ * reubicados en el mismo eje temporal que usan B1/B2 (relativo al inicio
+ * de la fase "During", no al registro completo).
  *
- * ALINEACIÓN CRÍTICA (2026-07-17, verificado leyendo el pipeline antes de
- * implementar, no asumido): /api/trial-signals (backend/services/
- * signal_service.py, usado por H1/Tarea1) devuelve tiempos relativos al
- * REGISTRO COMPLETO del participante (incluye fases Before/During/After).
- * En cambio, `window_start_sec` de attn_final_summary (husformer_
- * attention_service.py, el dato que consume B1/B2) es relativo SOLO al
- * inicio de la fase During -- confirmado en preprocess_representation_
- * inputs.py: "Extraer 60 segundos de During desde el archivo BDF original".
- * Sin corregir este offset, la señal cruda de B3 quedaría desplazada
- * respecto a la atención de B2 -- exactamente el tipo de error que
- * invalidaría T5 (relacionar picos de atención con eventos en la señal),
- * el propósito entero de este panel. Se resta el `start` de la fase
- * "During" (viene en signalResponse.phases) a cada timestamp, y se recorta
- * a[0, ~60s] para quedar en el mismo rango que B1/B2.
+ * ALINEACIÓN CRÍTICA (ver husformer_b3_resumen_implementacion.md para el
+ * detalle completo): /api/trial-signals devuelve tiempos relativos al
+ * registro completo del participante (incluye Before/During/After);
+ * window_start_sec de la atención es relativo solo al inicio de During.
+ * Se corrige restando el `start` de la fase "During" a cada timestamp.
  */
 function extractDuringPhaseSamples(signalResponse, channelName) {
     const duringPhase = signalResponse.phases.find((phase) => phase.name === "During");
@@ -44,26 +35,92 @@ function extractDuringPhaseSamples(signalResponse, channelName) {
 }
 
 /**
- * Renderiza el panel superior de B3: la señal fisiológica cruda de UN canal
- * seleccionado, a lo largo de toda la fase During del trial (0 a ~60s,
- * mismo rango que el panel de atención de abajo, que reutiliza
- * husformer_b2_chart.js sin modificarlo).
- *
- * JUXTAPOSE, no superimpose (Munzner Cap. 12.5.2, hallazgo de Javed et al.
- * 2010): "superponer es mejor para comparaciones LOCALES (un punto
- * temporal específico); juxtaponer es mejor para tareas GLOBALES
- * DISPERSAS, especialmente con más series" -- T5 (relacionar picos de
- * atención con eventos en la señal a lo largo de TODO el trial) es una
- * tarea global dispersa, no un chequeo puntual. Argumento adicional (Cap.
- * 12.2): superimponer tiene un límite duro de capas (2 muy viable, 3 con
- * cuidado) -- el panel de atención ya tiene 5 líneas, agregar la señal
- * cruda encima en el mismo eje sería inviable. Por eso este panel vive
- * SEPARADO, apilado arriba del panel de atención, compartiendo el eje X
- * (tiempo) -- "Share Navigation: Synchronize" (Cap. 12.3.3) es el target a
- * futuro (zoom sincronizado entre ambos), no implementado en esta primera
- * versión (ver "Qué NO está resuelto" en el .md).
+ * Promedia varios canales punto a punto (mismo índice temporal, ya que
+ * /api/trial-signals downsamplea todos los canales de un mismo trial con
+ * el mismo esquema -- mismo total_points, mismo max_points -- así que
+ * quedan alineados sin necesitar interpolación).
  */
-export function renderHusformerB3SignalChart({ containerId, activeTrial, signalData, channelName }) {
+function averageChannels(signalResponse, channelNames) {
+    const perChannelSamples = channelNames.map(
+        (channelName) => extractDuringPhaseSamples(signalResponse, channelName)
+    );
+
+    const validSamples = perChannelSamples.filter((samples) => samples.length > 0);
+
+    if (validSamples.length === 0) {
+        return [];
+    }
+
+    const pointCount = Math.min(...validSamples.map((samples) => samples.length));
+    const averaged = [];
+
+    for (let index = 0; index < pointCount; index += 1) {
+        const time = validSamples[0][index].time;
+        const mean = d3.mean(validSamples, (samples) => samples[index].value);
+        averaged.push({ time, value: mean });
+    }
+
+    return averaged;
+}
+
+/**
+ * Normaliza una serie a z-score (media 0, desvío 1) -- necesario para
+ * poder superponer señales de unidades físicas distintas (µV de EEG, µS de
+ * GSR, etc.) en el mismo eje Y sin que una magnitud arbitraria del sensor
+ * distorsione la comparación visual.
+ */
+function zScoreNormalize(samples) {
+    const values = samples.map((d) => d.value);
+    const mean = d3.mean(values);
+    const std = d3.deviation(values) || 1;
+
+    return samples.map((d) => ({
+        time: d.time,
+        value: (d.value - mean) / std,
+    }));
+}
+
+/**
+ * Dado el JSON crudo de /api/trial-signals y la lista de grupos
+ * seleccionados (ver husformer_b3_channel_groups.js), arma las series
+ * finales: una por grupo, promediada sobre sus canales y normalizada.
+ */
+export function buildB3Series(signalResponse, selectedGroups) {
+    return selectedGroups
+        .map((group) => {
+            const averaged = averageChannels(signalResponse, group.channels);
+
+            if (averaged.length === 0) {
+                return null;
+            }
+
+            return {
+                id: group.id,
+                label: group.label,
+                color: group.color,
+                samples: zScoreNormalize(averaged),
+            };
+        })
+        .filter((series) => series !== null);
+}
+
+/**
+ * Renderiza B3: N señales normalizadas superpuestas (una por grupo
+ * seleccionado), a lo largo de toda la fase During del trial.
+ *
+ * REDISEÑO 2026-07-17 (a pedido de Russell, tras evaluación crítica): la
+ * versión anterior apilaba un panel de atención (B2 reutilizado) debajo de
+ * la señal cruda -- redundante, porque B1/B2 ya está visible al lado en la
+ * misma fila del CMV todo el tiempo (Eyes Beat Memory, Munzner Cap. 6.5,
+ * ya se cumple con los paneles juxtapuestos, no hace falta repetir el
+ * contenido DENTRO de B3). B3 ahora usa todo su espacio para comparar
+ * varias señales crudas entre sí, normalizadas.
+ *
+ * Colores compartidos con el panel de atención de B1/B2 (ver
+ * husformer_b3_channel_groups.js, getSignalColor) -- misma justificación
+ * de "share encoding" ya usada ahí.
+ */
+export function renderHusformerB3Chart({ containerId, activeTrial, seriesList }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
 
@@ -74,28 +131,24 @@ export function renderHusformerB3SignalChart({ containerId, activeTrial, signalD
         return;
     }
 
-    if (!signalData) {
+    if (!seriesList) {
         container.innerHTML = '<div class="husformer-b1-empty">Cargando...</div>';
         return;
     }
 
-    const samples = extractDuringPhaseSamples(signalData, channelName);
-
-    if (samples.length === 0) {
-        container.innerHTML = '<div class="husformer-b1-empty">Sin datos para este canal.</div>';
+    if (seriesList.length === 0) {
+        container.innerHTML = '<div class="husformer-b1-empty">Elegí una o más señales arriba para comparar.</div>';
         return;
     }
 
     const width = container.clientWidth || 360;
-    const height = container.clientHeight || 140;
+    const height = container.clientHeight || 220;
 
     const margin = {
         top: 8,
         right: 10,
         bottom: 18,
-        left: 44, // ancho fijo compartido con husformer_b2_chart.js NO es
-                  // necesario pixel-perfecto acá (son 2 SVGs separados,
-                  // ver nota en el .md) -- se deja consistente a ojo.
+        left: 34,
     };
 
     const svg = d3
@@ -121,14 +174,22 @@ export function renderHusformerB3SignalChart({ containerId, activeTrial, signalD
         .append("g")
         .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
+    const allSamples = seriesList.flatMap((series) => series.samples);
+
     const xScale = d3
         .scaleLinear()
-        .domain(d3.extent(samples, (d) => d.time))
+        .domain(d3.extent(allSamples, (d) => d.time))
         .range([0, plotWidth]);
+
+    // Dominio Y simétrico alrededor de 0 (z-score) -- todas las señales ya
+    // están en la misma escala normalizada, así que un solo eje Y compartido
+    // es válido y comparable entre ellas.
+    const yExtent = d3.extent(allSamples, (d) => d.value);
+    const yAbsMax = Math.max(Math.abs(yExtent[0]), Math.abs(yExtent[1]), 1);
 
     const yScale = d3
         .scaleLinear()
-        .domain(d3.extent(samples, (d) => d.value))
+        .domain([-yAbsMax, yAbsMax])
         .nice()
         .range([plotHeight, 0]);
 
@@ -136,31 +197,34 @@ export function renderHusformerB3SignalChart({ containerId, activeTrial, signalD
         .append("g")
         .attr("transform", `translate(0, ${plotHeight})`)
         .attr("font-size", "8px")
-        .call(
-            d3.axisBottom(xScale).ticks(6).tickSize(3).tickFormat((sec) => `${Math.round(sec)}s`)
-        );
+        .call(d3.axisBottom(xScale).ticks(6).tickSize(3).tickFormat((sec) => `${Math.round(sec)}s`));
 
     plotGroup
         .append("g")
         .attr("font-size", "8px")
-        .call(d3.axisLeft(yScale).ticks(3).tickSize(3));
+        .call(d3.axisLeft(yScale).ticks(4).tickSize(3));
+
+    const linesGroup = plotGroup
+        .append("g")
+        .attr("clip-path", `url(#${clipId})`);
 
     const lineGenerator = d3
         .line()
         .x((d) => xScale(d.time))
         .y((d) => yScale(d.value));
 
-    plotGroup
-        .append("g")
-        .attr("clip-path", `url(#${clipId})`)
-        .append("path")
-        .attr("fill", "none")
-        .attr("stroke", "#0f172a")
-        .attr("stroke-width", 1)
-        .attr("d", lineGenerator(samples));
+    seriesList.forEach((series) => {
+        linesGroup
+            .append("path")
+            .attr("fill", "none")
+            .attr("stroke", series.color)
+            .attr("stroke-width", 1.4)
+            .attr("d", lineGenerator(series.samples));
+    });
 
-    // Guía vertical + tooltip -- mismo patrón que B2 (bisector sobre el
-    // punto más cercano en X).
+    // Guía vertical + tooltip consolidado (mismo patrón que B1/B2, Munzner
+    // Cap. 6.5.3 Change Blindness): un solo punto de foco con TODAS las
+    // señales seleccionadas listadas, no una por serie.
     const hoverLine = plotGroup
         .append("line")
         .attr("y1", 0)
@@ -188,22 +252,39 @@ export function renderHusformerB3SignalChart({ containerId, activeTrial, signalD
             const [mouseX] = d3.pointer(event, this);
             const hoveredTime = xScale.invert(mouseX);
 
-            let index = bisectTime(samples, hoveredTime);
-            index = Math.max(0, Math.min(samples.length - 1, index));
+            const rowsHtml = seriesList
+                .map((series) => {
+                    let index = bisectTime(series.samples, hoveredTime);
+                    index = Math.max(0, Math.min(series.samples.length - 1, index));
+                    const point = series.samples[index];
 
-            const activeSample = samples[index];
+                    return `
+                        <div class="husformer-b1-tooltip-row">
+                            <span style="color:${series.color}">●</span>
+                            <span>${series.label}</span>
+                            <span>${point.value.toFixed(2)}</span>
+                        </div>
+                    `;
+                })
+                .join("");
+
+            const referenceTime = seriesList[0].samples[
+                Math.max(0, Math.min(
+                    seriesList[0].samples.length - 1,
+                    bisectTime(seriesList[0].samples, hoveredTime)
+                ))
+            ].time;
 
             hoverLine
-                .attr("x1", xScale(activeSample.time))
-                .attr("x2", xScale(activeSample.time))
+                .attr("x1", xScale(referenceTime))
+                .attr("x2", xScale(referenceTime))
                 .style("opacity", 1);
 
             tooltip
                 .style("opacity", 1)
                 .html(`
-                    <strong>Canal: ${channelName}</strong><br>
-                    Tiempo: ${activeSample.time.toFixed(1)}s<br>
-                    Valor: ${activeSample.value.toFixed(2)}
+                    <strong>Tiempo: ${referenceTime.toFixed(1)}s (z-score)</strong>
+                    ${rowsHtml}
                 `)
                 .style("left", `${event.pageX + 14}px`)
                 .style("top", `${event.pageY - 18}px`);

@@ -29,8 +29,21 @@ import {
 } from "./charts/husformer_b2_chart.js";
 
 import {
-    renderHusformerB3SignalChart,
+    renderHusformerB3Chart,
+    buildB3Series,
 } from "./charts/husformer_b3_chart.js";
+
+import {
+    EEG_REGION_GROUPS,
+    EEG_HEMISPHERE_GROUPS,
+    EOG_GROUPS,
+    EMG_GROUPS,
+    GSR_GROUPS,
+    AUTONOMIC_GROUPS,
+    findB3Group,
+    MAX_SIMULTANEOUS_SIGNALS,
+    getSignalColor,
+} from "./husformer_b3_channel_groups.js";
 
 /**
  * Construye la clave única de un trial (participante+trial). Duplicada a
@@ -367,135 +380,233 @@ function observeB1Container() {
 }
 
 // ============================================================
-// B3 -- señal cruda (un canal, seleccionable) + atención (B2 reutilizado
-// sin modificar) apilados, ver husformer_b3_chart.js para la justificación
-// completa (juxtapose, no dual-axis).
+// B3 -- comparación de señales crudas normalizadas (rediseño 2026-07-17,
+// ver husformer_b3_chart.js / husformer_b3_channel_groups.js). Selección
+// MÚLTIPLE de grupos (no un canal suelto), hasta MAX_SIMULTANEOUS_SIGNALS
+// a la vez. Ya NO muestra atención acá -- B1/B2 está siempre visible al
+// lado, mostrarla de nuevo era redundante (ver corrección en el .md).
 // ============================================================
-const DEFAULT_B3_CHANNEL = "Fz";
-let currentB3Channel = DEFAULT_B3_CHANNEL;
 
-// Respuesta cruda de /api/trial-signals para el canal activo -- distinta
-// de latestB1Data (que es la atención, ya cargada aparte).
-let latestB3SignalData = null;
+// IDs de los grupos actualmente seleccionados, en orden de selección
+// (Set preserva orden de inserción en JS) -- el orden importa para que el
+// color de cada señal sea estable mientras no cambie la selección.
+let selectedB3GroupIds = new Set();
+
+// Respuesta cruda de /api/trial-signals -- incluye TODOS los canales que
+// hacen falta para promediar los grupos actualmente seleccionados (un solo
+// fetch combinado, no uno por grupo).
+let latestB3RawResponse = null;
 let b3RequestId = 0;
 
-let resizeObserverB3Signal = null;
-let lastObservedWidthB3Signal = 0;
-let lastObservedHeightB3Signal = 0;
+let resizeObserverB3 = null;
+let lastObservedWidthB3 = 0;
+let lastObservedHeightB3 = 0;
 
-let resizeObserverB3Attention = null;
-let lastObservedWidthB3Attention = 0;
-let lastObservedHeightB3Attention = 0;
-
+/**
+ * Arma la lista de series (una por grupo seleccionado, promediada y
+ * normalizada) a partir de la respuesta cruda ya cargada, y renderiza B3.
+ * Separado de loadAndRenderB3 porque cambiar CUÁLES colores usa cada
+ * chip activo (getSignalColor) no necesita un fetch nuevo -- solo
+ * reconstruir las series con el mismo dato ya en memoria.
+ */
 function renderB3() {
     const label = document.getElementById("husformer-b3-trial-label");
     label.textContent = lastClickedTrial
         ? `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`
         : "";
 
-    renderHusformerB3SignalChart({
-        containerId: "b3-signal-chart",
+    const selectedGroups = getSelectedB3GroupsWithColor();
+
+    // Tres estados posibles cuando hay trial activo: sin grupos elegidos
+    // ([] -- "elegí algo"), esperando el fetch (null -- "cargando"), o ya
+    // con datos (array de series). Si no hay trial activo, el valor no
+    // importa -- renderHusformerB3Chart revisa activeTrial primero.
+    let seriesList = null;
+
+    if (lastClickedTrial && selectedGroups.length === 0) {
+        seriesList = [];
+    } else if (lastClickedTrial && latestB3RawResponse) {
+        seriesList = buildB3Series(latestB3RawResponse, selectedGroups);
+    }
+
+    renderHusformerB3Chart({
+        containerId: "b3-chart",
         activeTrial: lastClickedTrial,
-        signalData: latestB3SignalData,
-        channelName: currentB3Channel,
+        seriesList,
     });
 
-    // Panel de atención -- MISMO renderer que el modo Líneas de B1/B2, sin
-    // tocarlo, reutilizando latestB1Data (ya cargado por loadAndRenderB1,
-    // mismo trial). No hace falta pedirle nada nuevo al backend para esto.
-    renderHusformerB2Chart({
-        containerId: "b3-attention-chart",
-        activeTrial: lastClickedTrial,
-        attentionData: latestB1Data,
-    });
+    renderB3SelectorUI();
 }
 
 /**
- * Pide la señal cruda del canal activo para el trial dado -- fetch
- * INDEPENDIENTE del de atención (latestB1Data), porque es un endpoint y un
- * dato distintos (/api/trial-signals, no /api/husformer/trial-attention).
+ * Resuelve los grupos seleccionados (definición completa + color final),
+ * asignando el color según su posición ENTRE los grupos de la misma
+ * modalidad ya seleccionados -- ver getSignalColor en husformer_b3_
+ * channel_groups.js.
+ */
+function getSelectedB3GroupsWithColor() {
+    const countByModality = new Map();
+
+    return Array.from(selectedB3GroupIds)
+        .map((groupId) => findB3Group(groupId))
+        .filter((group) => group !== undefined)
+        .map((group) => {
+            const indexWithinModality = countByModality.get(group.modalityKey) ?? 0;
+            countByModality.set(group.modalityKey, indexWithinModality + 1);
+
+            return {
+                ...group,
+                color: getSignalColor(group.modalityKey, indexWithinModality),
+            };
+        });
+}
+
+/**
+ * Pide al backend TODOS los canales que hacen falta para los grupos
+ * actualmente seleccionados, en un solo request (la unión de sus listas de
+ * canales) -- evita un fetch por grupo cuando hay varios seleccionados.
  */
 async function loadAndRenderB3(trialPoint) {
+    lastClickedTrial = trialPoint;
+
     b3RequestId += 1;
     const requestId = b3RequestId;
 
-    latestB3SignalData = null;
+    latestB3RawResponse = null;
     renderB3();
+
+    const selectedGroups = getSelectedB3GroupsWithColor();
+
+    if (selectedGroups.length === 0) {
+        return;
+    }
+
+    const allChannels = Array.from(new Set(
+        selectedGroups.flatMap((group) => group.channels)
+    ));
 
     const data = await fetchTrialSignals({
         participant: trialPoint.Participant_id,
         trial: trialPoint.Trial,
-        channels: [currentB3Channel],
+        channels: allChannels,
     });
 
     if (requestId !== b3RequestId) {
         return;
     }
 
-    latestB3SignalData = data;
+    latestB3RawResponse = data;
     renderB3();
 }
 
+/**
+ * Alterna un grupo dentro/fuera de la selección -- respeta el tope
+ * MAX_SIMULTANEOUS_SIGNALS (Munzner Cap. 10, límite práctico de bins
+ * categóricos discriminables + Cap. 12.5.2, Javed et al. 2010). Si ya no
+ * hay ningún trial clickeado todavía, solo actualiza la selección (sin
+ * fetch) -- el fetch se dispara recién cuando haya un trial activo.
+ */
+function toggleB3Group(groupId) {
+    if (selectedB3GroupIds.has(groupId)) {
+        selectedB3GroupIds.delete(groupId);
+    } else {
+        if (selectedB3GroupIds.size >= MAX_SIMULTANEOUS_SIGNALS) {
+            return;
+        }
+        selectedB3GroupIds.add(groupId);
+    }
+
+    if (lastClickedTrial) {
+        loadAndRenderB3(lastClickedTrial);
+    } else {
+        renderB3SelectorUI();
+    }
+}
+
+/**
+ * Construye el selector de chips agrupados por modalidad -- EEG con dos
+ * esquemas (Región / Hemisferio), el resto de las modalidades con sus
+ * canales individuales (pocos, no hace falta agruparlos más). Se
+ * reconstruye en cada render de B3 (barato, son ~20 botones) para que el
+ * estado activo/deshabilitado siempre refleje selectedB3GroupIds.
+ */
+function renderB3SelectorUI() {
+    const container = document.getElementById("husformer-b3-selector");
+    container.innerHTML = "";
+
+    const atCap = selectedB3GroupIds.size >= MAX_SIMULTANEOUS_SIGNALS;
+
+    // Mismo color que va a usar el chart -- reutiliza getSelectedB3Groups
+    // WithColor en vez de recalcular el índice por modalidad acá también
+    // (única fuente de verdad para "qué color le toca a cada grupo activo").
+    const colorByGroupId = new Map(
+        getSelectedB3GroupsWithColor().map((group) => [group.id, group.color])
+    );
+
+    function buildRow(label, groups) {
+        const row = document.createElement("div");
+        row.className = "husformer-b3-selector-row";
+
+        const rowLabel = document.createElement("span");
+        rowLabel.className = "husformer-b3-selector-group-label";
+        rowLabel.textContent = label;
+        row.appendChild(rowLabel);
+
+        groups.forEach((group) => {
+            const isActive = selectedB3GroupIds.has(group.id);
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `husformer-b3-chip${isActive ? " active" : ""}`;
+            button.textContent = group.label;
+            button.disabled = !isActive && atCap;
+
+            if (isActive) {
+                button.style.setProperty("--chip-color", colorByGroupId.get(group.id));
+            }
+
+            button.addEventListener("click", () => toggleB3Group(group.id));
+            row.appendChild(button);
+        });
+
+        container.appendChild(row);
+    }
+
+    buildRow("EEG · Región:", EEG_REGION_GROUPS);
+    buildRow("EEG · Hemisferio:", EEG_HEMISPHERE_GROUPS);
+    buildRow("EOG:", EOG_GROUPS);
+    buildRow("EMG:", EMG_GROUPS);
+    buildRow("GSR:", GSR_GROUPS);
+    buildRow("Resp+Plet+Temp:", AUTONOMIC_GROUPS);
+}
+
 function setupB3ChannelControl() {
-    const select = document.getElementById("husformer-b3-channel-select");
-
-    select.addEventListener("change", () => {
-        currentB3Channel = select.value;
-
-        if (lastClickedTrial) {
-            loadAndRenderB3(lastClickedTrial);
-        }
-    });
+    renderB3SelectorUI();
 }
 
-function observeB3SignalContainer() {
-    const container = document.getElementById("b3-signal-chart");
+function observeB3Container() {
+    const container = document.getElementById("b3-chart");
 
-    if (!container || resizeObserverB3Signal) {
+    if (!container || resizeObserverB3) {
         return;
     }
 
-    resizeObserverB3Signal = new ResizeObserver((entries) => {
+    resizeObserverB3 = new ResizeObserver((entries) => {
         const { width, height } = entries[0].contentRect;
 
-        if (width === lastObservedWidthB3Signal && height === lastObservedHeightB3Signal) {
+        if (width === lastObservedWidthB3 && height === lastObservedHeightB3) {
             return;
         }
 
-        lastObservedWidthB3Signal = width;
-        lastObservedHeightB3Signal = height;
+        lastObservedWidthB3 = width;
+        lastObservedHeightB3 = height;
 
         if (width > 0 && height > 0) {
             renderB3();
         }
     });
 
-    resizeObserverB3Signal.observe(container);
-}
-
-function observeB3AttentionContainer() {
-    const container = document.getElementById("b3-attention-chart");
-
-    if (!container || resizeObserverB3Attention) {
-        return;
-    }
-
-    resizeObserverB3Attention = new ResizeObserver((entries) => {
-        const { width, height } = entries[0].contentRect;
-
-        if (width === lastObservedWidthB3Attention && height === lastObservedHeightB3Attention) {
-            return;
-        }
-
-        lastObservedWidthB3Attention = width;
-        lastObservedHeightB3Attention = height;
-
-        if (width > 0 && height > 0) {
-            renderB3();
-        }
-    });
-
-    resizeObserverB3Attention.observe(container);
+    resizeObserverB3.observe(container);
 }
 
 // Handlers de selección/fondo COMPARTIDOS entre A1 y A2 -- clickear un punto
@@ -914,8 +1025,7 @@ export function initializeHusformerView() {
     observeA1Container();
     observeA2Container();
     observeB1Container();
-    observeB3SignalContainer();
-    observeB3AttentionContainer();
+    observeB3Container();
 
     // A1/A2 dependen de fetches asíncronos independientes (proyección y
     // clustering respectivamente) -- se piden en paralelo; cada uno
