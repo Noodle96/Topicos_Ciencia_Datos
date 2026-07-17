@@ -1,0 +1,41 @@
+\section{Trabajos Relacionadosss}\label{sec:related}
+
+\subsection{Reconocimiento de Emociones a partir de Señales Fisiológicas}
+% TODO Russell: análogo a "2.1 Emotion Modalities" de EmoCo.
+% Cubrir: qué modalidades fisiológicas se usan típicamente para inferir estados afectivos
+% (EEG, GSR, EMG, respiración, BVP), qué ventajas tienen frente a modalidades visuales/de audio
+% (menor susceptibilidad a manipulación consciente por parte del sujeto), y citar brevemente
+% trabajos de fusión multimodal generales (baltrusaitis2019multimodal) antes de entrar a Husformer
+% en la Sección 3.
+
+\subsection{Visualización de Emociones}
+% TODO Russell: análogo a "2.2 Emotion Visualization" de EmoCo.
+% Cubrir técnicas de visualización usadas previamente para representar estados afectivos:
+% mapas de valencia-activación, líneas de tiempo emocionales, proyecciones de espacios latentes
+% (t-SNE/UMAP) en trabajos previos. Aquí es un buen lugar para citar zeng2019emoco y
+% maher2022effective como ejemplos de visualización de emociones (no solo como sistemas VA
+% completos, que se retoman abajo).
+
+\subsection{Visual Analytics para Datos Multimodales}
+% TODO Russell: análogo a "2.3 Multimedia Visual Analytics" de EmoCo.
+% Aquí van los sistemas VA completos más cercanos: zeng2019emoco, maher2022effective,
+% garcia2019vawake, kui2024tsseer. Comparar sus dominios de datos y, sobre todo, señalar que
+% ninguno inspecciona representaciones latentes/atención de un modelo de fusión aplicado a
+% señales EEG+fisiológicas -- ese es el vacío que llena este trabajo.
+
+% Tabla comparativa (mantener como table* -- 4 columnas no caben en una sola columna)
+% \begin{table*}[tb]
+% \tabcolsep8.1pt
+% \centering
+% \caption{Comparación de sistemas de visual analytics para datos afectivos y multimodales relacionados con este trabajo.}
+% \label{table:related_work}
+% {%
+% \begin{tabular}{@{}lllll@{}}\toprule
+% Sistema & Dominio de datos & Modelo externo & Nivel de tareas & Coordinación (CMV) \\\colrule
+% EmoCo \cite{zeng2019emoco} & Video (rostro/texto/audio) & Sí (reconoc. de emoción) & Video / Frase / Palabra & Sí \\
+% E-ffective \cite{maher2022effective} & Video + audio (discursos) & Sí (factores de efectividad) & Global / Individual & Sí \\
+% V-Awake \cite{garcia2019vawake} & EEG (sueño) & Sí (predicción de sueño) & Global / Época & Sí \\
+% TSSeer \cite{kui2024tsseer} & Video + audio (docentes) & Sí (emoción multimodal) & Curso / Sesión / Momento & Sí \\
+% \textbf{Este trabajo} & EEG + fisiológicas (DEAP) & Sí (Husformer) & Participante / Trial / Canal-instante & Sí \\\botrule
+% \end{tabular}}
+% \end{table*}

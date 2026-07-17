@@ -1,0 +1,24 @@
+\section{Descripción General del Sistema}\label{sec:overview}
+
+% TODO Russell: aquí va el resumen de arquitectura, siguiendo el patrón de la Sección 4
+% "System Overview" de EmoCo: retomar el pipeline de la Sección 3 como diagrama de
+% "fases", y luego enumerar las vistas coordinadas.
+
+Nuestro sistema se organiza en dos fases (\cref{fig:pipeline}): una \emph{fase de procesamiento de datos}, en la que las señales EEG y fisiológicas de DEAP son preprocesadas y pasadas por Husformer \cite{wang2022husformer} para obtener representaciones latentes y pesos de atención cross-modal; y una \emph{fase de exploración visual}, en la que dichas representaciones se exponen a través de un conjunto de vistas coordinadas (CMV) mediante \emph{brushing-and-linking}.
+
+\begin{figure*}
+\centering
+% \includegraphics[width=0.85\textwidth]{fig_pipeline.eps}
+\caption{Pipeline del sistema: Fase de Procesamiento de Datos (preprocesamiento DEAP $\rightarrow$ Husformer $\rightarrow$ representaciones latentes / atención cross-modal) seguida de la Fase de Exploración Visual (vistas coordinadas).}
+\label{fig:pipeline}
+\end{figure*}
+
+% TODO Russell: describir brevemente cada una de las 4 vistas (una oración por vista,
+% el detalle completo va en la Sección 5):
+% - Vista de Espacio Latente
+% - Vista de Señal Original
+% - Vista de Perfil del Participante
+% - Vista de Representación Fusionada y Atención Cross-Modal
+% Cerrar la sección indicando el usuario objetivo (p. ej. investigadores en cómputo afectivo
+% que necesitan validar/depurar modelos de fusión multimodal) y el requisito de coordinación
+% CMV entre las 4 vistas.

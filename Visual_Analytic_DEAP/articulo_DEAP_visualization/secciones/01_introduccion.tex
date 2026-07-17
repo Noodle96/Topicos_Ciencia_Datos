@@ -1,0 +1,29 @@
+\section{Introducción}\label{sec:intro}
+
+% --- Motivación ---
+El reconocimiento automático de estados afectivos a partir de señales fisiológicas ha cobrado creciente relevancia en dominios como la interacción humano-computador, la salud mental y los sistemas educativos adaptativos. Bases de datos multimodales como DEAP \cite{koelstra2012deap}, que combinan electroencefalografía (EEG) con señales periféricas (EOG, EMG, respuesta galvánica de la piel, entre otras) durante la exposición a estímulos audiovisuales, han permitido el desarrollo de modelos capaces de estimar dimensiones afectivas como valencia y activación (\emph{arousal}) con niveles de precisión cada vez mayores.
+
+% --- Contexto (2 párrafos) ---
+Sin embargo, la mayoría de estos modelos multimodales operan como cajas negras: fusionan las modalidades mediante mecanismos internos (por ejemplo, atención cruzada entre pares de modalidades) cuyas representaciones intermedias rara vez son inspeccionadas por quienes los desarrollan o los aplican \cite{baltrusaitis2019multimodal}. Esta opacidad dificulta responder preguntas básicas mas no triviales: ¿qué modalidad domina la predicción en un instante dado?, ¿la atención del modelo coincide con lo que se esperaría fisiológicamente?, ¿existen artefactos o segmentos ruidosos que el modelo esté atendiendo incorrectamente?
+
+El campo de la visual analytics (VA) ofrece un marco metodológico consolidado para abordar este tipo de opacidad, combinando visualización interactiva con métodos analíticos automáticos para apoyar el razonamiento humano sobre datos complejos \cite{keim2008visual}. En los últimos años han surgido varios sistemas VA orientados específicamente al análisis de emociones y datos multimodales, como EmoCo \cite{Emoco2019} para coherencia emocional en videos de presentaciones, E-ffective \cite{maher2022effective} para la efectividad de discursos inspiracionales, V-Awake \cite{garcia2019vawake} para la corrección de predicciones de sueño, y TSSeer \cite{kui2024tsseer} para la correlación entre emociones docentes y comportamiento estudiantil. Ninguno de estos sistemas, sin embargo, aborda específicamente la inspección de representaciones aprendidas por un modelo de fusión multimodal aplicado a señales EEG y fisiológicas.
+
+% --- Problema ---
+Existe entonces una carencia de herramientas de visual analytics que permitan explorar, de forma \emph{agnóstica al modelo}, las representaciones latentes y los pesos de atención cross-modal producidos por arquitecturas de fusión multimodal sobre datos como los de DEAP \cite{koelstra2012deap}. Sin dicha exploración, resulta difícil validar si el modelo está aprendiendo patrones fisiológicamente plausibles o simplemente explotando correlaciones espurias del conjunto de datos.
+
+Este trabajo propone abordar dicha carencia mediante un sistema de visual analytics centrado en las representaciones aprendidas de un modelo de fusión multimodal aplicado a DEAP.
+
+% --- Objetivo general + específicos ---
+El objetivo general de este trabajo es diseñar e implementar un sistema de visual analytics que permita explorar e interpretar las representaciones latentes y los patrones de atención cross-modal generados por un modelo de fusión multimodal sobre señales EEG y fisiológicas del dataset DEAP. Los objetivos específicos son:
+
+\begin{itemize}
+    \item OE1: Caracterizar la estructura del espacio de representaciones latentes producido por el modelo de fusión, identificando agrupamientos relacionados con las dimensiones afectivas de valencia y activación.
+    \item OE2: Visualizar la evolución temporal de los pesos de atención cross-modal entre EEG y señales periféricas a lo largo de cada segmento (trial).
+    \item OE3: Permitir la comparación entre la señal fisiológica original y la atención asignada por el modelo, para facilitar la detección de coincidencias o discrepancias con el conocimiento del dominio.
+    \item OE4: Proveer una vista de perfil por participante que resuma patrones individuales de representación y activación, apoyando comparaciones entre sujetos.
+\end{itemize}
+
+Como caso de estudio, este trabajo instancia dicho sistema utilizando Husformer \cite{wang2022husformer}, un transformer multimodal para reconocimiento de estados humanos, aplicado sobre el dataset DEAP; no obstante, el diseño del sistema busca mantenerse agnóstico a la arquitectura específica del modelo de fusión utilizado.
+
+% --- Roadmap (ACTUALIZADO a la estructura de EmoCo) ---
+El resto de este artículo se organiza de la siguiente manera. \Cref{sec:related} revisa los trabajos relacionados en visual analytics para datos afectivos y multimodales, y para señales EEG y fisiológicas. \Cref{sec:data-tasks} describe el procesamiento de datos, el conjunto DEAP y el análisis de tareas que guía el diseño del sistema. \Cref{sec:overview} presenta una visión general de la arquitectura del sistema. \Cref{sec:visualdesign} detalla el diseño de cada vista visual. \Cref{sec:usage} ilustra el uso del sistema mediante un escenario concreto. \Cref{sec:evaluation} reporta la evaluación realizada, \cref{sec:discussion} discute limitaciones y trabajo futuro, y \cref{sec:conclusion} concluye el artículo.

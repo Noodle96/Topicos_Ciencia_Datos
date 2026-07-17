@@ -1,0 +1,94 @@
+\section{Datos y Tareas Analíticas}\label{sec:data-tasks}
+
+\subsection{Procesamiento de Datos}\label{sec:data-processing}
+% Aquí va el pipeline técnico -- el equivalente a "3.1 Data Processing" de EmoCo
+% (que en EmoCo cubre Facial/Text/Audio Feature Extraction + Multi-modal and Multi-level Fusion).
+
+El dataset DEAP \cite{koelstra2012deap} contiene, para 32 participantes, registros de 40 ensayos (\emph{trials}) de un minuto de duración cada uno, en los que se capturaron 32 canales de EEG (sistema 10-20) junto con 8 señales periféricas (EOG horizontal y vertical, EMG de zigomático mayor y trapecio, respuesta galvánica de la piel, respiración, fotopletismografía y temperatura de la piel), además de autoevaluaciones de valencia, activación, dominancia y agrado en escalas continuas de 1 a 9.
+
+% TODO Russell: describir aquí el preprocesamiento real que aplicas antes de Husformer
+% (filtrado, segmentación en ventanas, normalización, extracción de features por modalidad
+% si corresponde) y luego el pipeline de fusión de Husformer \cite{wang2022husformer}:
+% embeddings por modalidad -> transformers cruzados por pares de modalidades ->
+% transformer de fusión -> estado oculto final (last_hs) + pesos de atención cross-modal.
+% Este pipeline se retoma como diagrama de alto nivel en la Sección 4 (Fig. de pipeline),
+% siguiendo el mismo patrón que EmoCo (su Fig. 2 repite el pipeline de 3.1 pero a nivel
+% de "fases" dentro de la Sección 4).
+
+\subsection{Descripción de los Datos}\label{sec:data-description}
+% TODO Russell: análogo a "3.2 Data Description" de EmoCo.
+% Aquí formalizar la notación: cuántos participantes, trials, canales, la forma final de
+% los tensores de entrada a Husformer, y qué etiquetas/ratings se usan como referencia
+% (p. ej. binarización de valencia/arousal en alto/bajo, umbral en 5).
+
+
+
+\subsection{Objetivos de Diseño}\label{sec:design-goals}
+% Cada Goal se traza explícitamente a una cláusula del Problem Statement (Sec. 1),
+% siguiendo el patrón de E-ffective (Maher et al., Sec. 3.2) y del framework de
+% time-series feature representation (Sec. 3.1): primero se establecen los Goals
+% de alto nivel, y en la sección siguiente se derivan las Tareas concretas de cada uno.
+
+\textbf{G1: Comprender la variabilidad entre participantes y trials en el espacio de representaciones aprendidas.} El Problem Statement señala la falta de una forma sistemática de examinar cómo estas representaciones se relacionan con \emph{la variabilidad entre sujetos} y con el autorreporte subjetivo de las dimensiones afectivas (Valencia, Activación, Dominancia). Este objetivo busca que el usuario pueda contrastar la posición de un participante o trial en el espacio de representaciones fusionadas contra sus propias etiquetas subjetivas, identificando casos que se comportan de forma esperada o atípica.
+
+\textbf{G2: Comprender la dinámica temporal de la atención cross-modal dentro de un trial.} Responde directamente a la carencia señalada sobre \emph{la dinámica temporal del estímulo}: no existe hoy una forma de examinar cómo la atención del modelo evoluciona en el tiempo en relación con las fases del estímulo dentro de un mismo trial.
+
+\textbf{G3: Relacionar los patrones de atención del modelo con las señales fisiológicas originales y con el conocimiento fisiológico esperado.} Atiende la cláusula del problema sobre \emph{examinar cómo las representaciones aprendidas se relacionan con las señales fisiológicas originales}, permitiendo validar (o refutar) si la atención del modelo es fisiológicamente plausible, y detectar posibles artefactos en la señal que el modelo podría estar interpretando erróneamente.
+
+\textbf{G4: Sostener una exploración interactiva y bajo demanda de los pesos de atención.} El problema señala explícitamente que las herramientas de interpretación existentes \emph{``suelen limitarse a visualizaciones estáticas y post-hoc de los pesos de atención, sin posibilidad de exploración interactiva''}. Este objetivo es transversal a G1-G3: cualquier tarea derivada de ellos debe poder explorarse interactivamente (selección, filtrado, detalle bajo demanda), no solo observarse en una figura fija.
+
+
+
+
+
+
+
+\subsection{Análisis de Tareas}\label{sec:task-analysis}
+% Siguiendo el patrón de EmoCo (granularidad Video/Sentence/Word), organizamos las
+% tareas en 3 niveles: Participante -> Trial -> Modalidad/instante. Cada tarea se
+% presenta en formato corto "verbo + objeto" (sin justificación embebida): la
+% justificación de cada una vive en su(s) Goal(s) correspondiente(s), listados en
+% la Tabla \ref{tab:task-goals}, siguiendo la convención de E-ffective (Maher et
+% al., Tabla 2).
+
+\textbf{Nivel de participante.}
+\begin{itemize}
+    \item[\textbf{T1}] Identificar participantes o trials cuya representación latente se aparta del resto.
+    \item[\textbf{T2}] Comparar trials o participantes en el espacio de representación fusionada.
+\end{itemize}
+
+\textbf{Nivel de trial (segmento temporal).}
+\begin{itemize}
+    \item[\textbf{T3}] Explorar la evolución temporal de los pesos de atención cross-modal dentro de un trial.
+    \item[\textbf{T4}] Identificar segmentos temporales donde una modalidad domina la representación fusionada.
+    \item[\textbf{T5}] Relacionar picos o cambios abruptos en la atención con eventos visibles en la señal original.
+\end{itemize}
+
+\textbf{Nivel de modalidad / instante.}
+\begin{itemize}
+    \item[\textbf{T6}] Inspeccionar qué modalidad recibe mayor peso de atención cross-modal en un instante dado dentro de un trial.
+    \item[\textbf{T7}] Comparar el patrón de atención cross-modal entre ventanas seleccionadas de un mismo trial.
+    \item[\textbf{T8}] Comparar la señal cruda de una modalidad frente a su peso de atención recibido en un instante dado.
+\end{itemize}
+
+La categoría de cada tarea sigue la tipología de Brehmer y Munzner~\cite{brehmer2013multi}, que distingue, en su nivel intermedio, entre operaciones de \emph{Query} (Identify/Compare/Summarize) y de \emph{Search} (Lookup/Locate/Browse/Explore).
+
+\begin{table}[h]
+\centering
+\caption{Tareas de diseño categorizadas y sus Goals correspondientes.}
+\label{tab:task-goals}
+\begin{tabular}{lll}
+\hline
+\textbf{Categoría} & \textbf{Tarea} & \textbf{Goals} \\
+\hline
+Query: Identify & T1 & G1, G4 \\
+Query: Compare & T2 & G1, G4 \\
+Search: Explore & T3 & G2, G4 \\
+Query: Identify & T4 & G2, G4 \\
+Query: Compare & T5 & G2, G4 \\
+Query: Identify & T6 & G3, G4 \\
+Query: Compare & T7 & G3, G4 \\
+Query: Compare & T8 & G3, G4 \\
+\hline
+\end{tabular}
+\end{table}

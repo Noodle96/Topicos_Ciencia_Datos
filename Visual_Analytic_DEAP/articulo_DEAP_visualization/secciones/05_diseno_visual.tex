@@ -1,0 +1,54 @@
+\section{Diseño Visual}
+\label{sec:visualdesign}
+
+Con base en los objetivos de diseño (G1--G4, Sección~\ref{sec:design-goals}) y el análisis de tareas (T1--T8, Sección~\ref{sec:task-analysis}), se propone un sistema de tres vistas coordinadas, cada una compuesta por sub-paneles vinculados. La estructura de esta sección --Descripción seguida de Justificación por vista, y una subsección final de Interacciones-- sigue el esquema de presentación adoptado en trabajos previos de análisis visual multimodal~\cite{Emoco2019}.
+
+\subsection{Vista A: Espacio de Representaciones Fusionadas}
+\label{sec:vista_a}
+
+\textbf{Descripción.} Esta vista opera sobre las representaciones fusionadas de Husformer (\texttt{last\_hs}) agregadas a nivel de trial. Está compuesta por tres sub-paneles: (A1) una proyección de baja dimensionalidad (PCA, UMAP o t-SNE, seleccionable por el usuario) del espacio de representación; (A2) una capa de agrupamiento algorítmico (K-Means o HDBSCAN) superpuesta sobre la proyección, codificada por color; y (A3) un panel de comparación de perfil, vinculado a la selección múltiple
+realizada en A1: al marcar uno o varios trials de interés, A3 agrupa
+automáticamente sus participantes correspondientes (sin duplicados -- varios
+trials de un mismo participante producen una única fila) y despliega, para
+ese subconjunto, sus atributos de cuestionario (categóricos y numéricos,
+p.\ ej.\ género, lateralidad manual, consumo de alcohol/cafeína, edad, horas
+de sueño) mediante una codificación de barras compactas por atributo,
+inspirada en LineUp~\cite{gratzl2013lineup}.
+
+\textbf{Justificación.} A1 atiende directamente a T1 (identificar agrupamientos o valores atípicos en el espacio de representación), replicando y extendiendo el enfoque exploratorio ya validado en el análisis de características manuales (Tarea 1). A2 se incorpora para atender T2 (comparar trials/participantes de forma estructurada): si bien la proximidad visual en una proyección ya sugiere similitud, una capa de agrupamiento algorítmico explícito reduce la ambigüedad perceptual de "leer" clusters a simple vista, un enfoque con precedente en sistemas de análisis visual interactivo que combinan proyecciones con clustering algorítmico para apoyar tareas de comparación~\cite{evoair}. A3 no compara los trials/participantes seleccionados dentro del espacio de
+representación en sí --esa comparación estructural la habilita A2 mediante
+el agrupamiento algorítmico-- sino que ofrece una vía complementaria a T1:
+una vez identificado un trial o participante cuya representación se aparta
+del resto, A3 permite examinar si ese subconjunto comparte rasgos
+demográficos o de cuestionario, aportando una hipótesis explicativa
+adicional más allá del espacio de representación en sí. La codificación
+visual de A3 sigue el patrón de tablas de comparación multi-atributo de
+LineUp~\cite{gratzl2013lineup} (barras compactas por celda en lugar de texto
+plano).
+
+\subsection{Vista B: Atención Temporal del Trial}
+\label{sec:vista_b}
+
+\textbf{Descripción.} Al seleccionar un trial (desde A1--A3), esta vista despliega su dinámica interna de atención a lo largo del tiempo, mediante tres sub-paneles: (B1) un mapa de calor de atención sobre las ventanas temporales del trial; (B2) una serie temporal agregada por modalidad (línea o glyph); y (B3) un panel coordinado que muestra la señal fisiológica original superpuesta con el patrón de atención a lo largo de todo el trial.
+
+\textbf{Justificación.} B1 atiende a T3 (explorar la dinámica temporal de atención dentro de un trial), ofreciendo una vista de resumen antes del detalle, siguiendo la máxima "overview primero, zoom y filtro, detalles bajo demanda"~\cite{shneiderman1996}. B2 atiende a T4 (identificar patrones temporales por modalidad), separando visualmente la contribución de cada una de las cinco modalidades. B3 atiende a T5 (relacionar picos o cambios abruptos en la atención con eventos visibles en la señal original), mostrando de forma coordinada la señal fisiológica cruda y el patrón de atención a lo largo de todo el trial, evitando que el usuario deba memorizar uno para compararlo mentalmente con el otro.
+
+\subsection{Vista C: Detalle de Atención Cross-Modal por Ventana}
+\label{sec:vista_c}
+
+\textbf{Descripción.} Al seleccionar una ventana específica (desde B1/B2), esta vista muestra el detalle de atención cruzada entre modalidades mediante tres sub-paneles: (C1) la matriz de atención cross-modal $5\times5$ (\texttt{attn\_cross\_summary}) como mapa de calor; (C2) un panel de comparación entre dos o más ventanas seleccionadas; y (C3) un panel vinculado que muestra la señal fisiológica cruda correspondiente a la ventana activa.
+
+\textbf{Justificación.} C1 atiende a T6 (identificar relaciones de atención cross-modal en una ventana puntual). C2 atiende a T7 (comparar atención cross-modal entre ventanas), permitiendo detectar cambios en el patrón de fusión a lo largo del trial. C3 atiende a T8 (comparar la atención asignada con el comportamiento de la señal fisiológica cruda), validando si la atención del modelo coincide con el conocimiento de dominio esperado sobre la relación señal-emoción.
+
+\subsection{Interacciones}
+\label{sec:interacciones}
+
+Las tres vistas están coordinadas mediante los siguientes mecanismos de interacción, en línea con el principio de \textit{multiple linked views} ampliamente adoptado en sistemas de análisis visual multimodal~\cite{Emoco2019}:
+
+\begin{itemize}
+    \item \textbf{Clicking:} seleccionar un punto en A1/A2 carga el trial correspondiente en Vista~B.
+    \item \textbf{Brushing:} seleccionar un rango de ventanas en B1/B2 filtra las ventanas disponibles para inspección en Vista~C.
+    \item \textbf{Linking:} las tres vistas conforman un flujo de exploración progresiva (\textit{drill-down}) de participante/trial (A) a dinámica del trial (B) a detalle de ventana (C).
+    \item \textbf{Filtrado global:} filtros por dimensión afectiva (valencia/activación) persistentes a través de las tres vistas.
+    \item \textbf{Details-on-demand:} información numérica exacta disponible mediante \textit{tooltips} en A1, B1 y C1.
+\end{itemize}

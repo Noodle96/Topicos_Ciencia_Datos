@@ -1,0 +1,92 @@
+% Sample file for AES paper
+\documentclass[fleqn]{jaes}
+
+% Metadata Information
+\jyear{2026}
+\jmonth{April}
+%\jvol{69}
+%\jnum{3}
+\jname{Universidad Nacional de San Agustín de Arequipa}
+\usepackage{amsmath}\setlength{\mathindent}{10pt}
+\usepackage{bm}
+\usepackage[capitalise]{cleveref}
+  \crefformat{section}{\textsc{Sec.~#2#1#3}}
+  \Crefformat{section}{\textsc{Sec.~#2#1#3}}
+  \crefformat{figure}{{Fig.~#2#1#3}}
+  \Crefformat{figure}{{Fig.~#2#1#3}}
+  \crefformat{table}{{Table~#2#1#3}}
+  \Crefformat{table}{{Table~#2#1#3}}
+
+  % Anula la impresión automática de "THE AUTHORS" al final del documento,
+% ya que no estamos usando \biography{}{}{} en este paper.
+\def\printbiography{}
+
+%% Template speific, to remove
+% \usepackage{draftwatermark}
+% \SetWatermarkText{RUSSELL}
+% \SetWatermarkColor[gray]{0.9}
+% \SetWatermarkScale{0.85}
+
+% \usepackage[left]{lineno} % [switch] option for outside two-column not compatibal with JAES template
+% \linenumbers
+
+%\usepackage{citesort}
+
+% Tested successfully with todonotes pkg
+% \usepackage[]{todonotes}
+% \newcommand{\mytodo}[1]{\todo[inline,color=blue!10]{Todo: #1}}
+
+\begin{document}
+
+% Page heads {Authors}{Short title}
+% \markboth{DUPONT AND DOE}{JAES TEMPLATE 2026}
+
+% Title portion
+\title{Visual Analytics de Representaciones Aprendidas en la Fusión Multimodal de Señales EEG y Fisiológicas: un Caso de Estudio sobre DEAP}
+
+%Author Info.
+% \authorgroup{
+% \author{JEAN DUPONT,\textsuperscript{1}\orcidlink{0000-0001-2345-6789}\thanks{To whom correspondence should be addressed, email: journal.editorinchief@aes.org.}}
+% \aesrole{Member}{70748}, % For AES members, provide current membership role (Member, Associate Member, Student Member, or Life Member) and AES membership number
+% AND \author{JANE DOE,\textsuperscript{2}}
+% \aesrole{Fellow}{43549} 
+% \email{(jean.dupont@xyz.edu)\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad (jane\_doe@company.com)}
+% \affil{\textsuperscript{1}Acoustic Research Laboratory, Department of Sound Processing, XYZ University, City, Country \\
+% \textsuperscript{2}Audio Technology Company, City, State, USA}
+% }
+\authorgroup{
+\author{Jorge Tito Ccahuaya\textsuperscript{1}}
+\email{jtitoc@unsa.edu.pe}
+\affil{\textsuperscript{1}Escuela Profesional de Ciencia de la Computación, Universidad Nacional de San Agustín de Arequipa, Arequipa, Perú}
+}
+
+%Abstract
+\abstract{%
+% An informative and self-contained abstract of 100 to 200~words must be provided. The abstract should mention the motivation, problem statement, approach, results, and implications of the work, usually with one or two sentences each. The abstract should be written in a single paragraph without citing any references. The \textit{Journal of the Audio Engineering Society} is a modern scientific journal supporting online publishing with colors and a graphical abstract. It is a hybrid access journal publishing both Open Access and traditional papers, the latter being available for subscribers, such as AES members, or at an individual article access fee. If a paper published in the \textit{Journal of the Audio Engineering Society} has been made Open Access, it will have the OA logo next to it and will be freely downloadable from the AES E-Library by anyone, even if they are not an AES member or E-Library subscriber. This example abstract contains 151~wordss.
+TODO
+}
+\maketitle
+
+% Keywords, provide approximately 3 keywords
+\begin{keywords}
+Affective computing, EXG, Multimodal fusion, Visual analytics
+\end{keywords}
+
+
+
+\input{secciones/01_introduccion}
+\input{secciones/02_trabajos_relacionados}
+\input{secciones/03_datos_y_tareas_analiticas}
+\input{secciones/04_descripcion_sistema}
+\input{secciones/05_diseno_visual}
+\input{secciones/06_escenario_de_uso}
+\input{secciones/07_evaluacion}
+\input{secciones/08_discusion}
+\input{secciones/09_conclusion}
+\input{secciones/10_uso_ia}
+\input{secciones/11_agradecimientos}
+
+\bibliography{jaes}
+\bibliographystyle{jaes}
+
+\end{document}
