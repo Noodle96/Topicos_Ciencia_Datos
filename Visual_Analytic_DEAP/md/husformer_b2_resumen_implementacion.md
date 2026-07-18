@@ -42,9 +42,13 @@ B1 (heatmap) y B2 mostraban el mismo dato en dos idiomas visuales distintos, ocu
 
 **Pendiente identificado (2026-07-17, pregunta de Russell aún sin resolver):** hoy clickear un punto de B2 (o una celda de B1) NO HACE NADA — solo hay hover/mousemove, nunca se implementó un handler de click. Queda como decisión abierta: ¿el click debería, desde ya, dejar una marca persistente de "ventana seleccionada" (mismo patrón que `lastClickedTrial` en Vista A), pensando en que ese sea el trigger de la futura Vista C? Ver la misma nota en `husformer_b1_resumen_implementacion.md`.
 
+### 2.5 Resaltado sincronizado con B3 — 2026-07-17
+
+El hover de B2 (cuando está activo, `currentB1ViewMode === "lines"`) y el hover de B3 ahora se resaltan mutuamente. `renderHusformerB2Chart` ya no retorna `undefined` -- devuelve `{ highlightWindow(windowIndex), clearHighlight() }` (usa `showGuideAtWindow`/`clearGuide`, la misma lógica que ya dibujaba la guía vertical del hover interno, sin reconstruir el SVG). El mousemove interno, además de mostrar su propio tooltip, dispara `onHoverWindowChange(window_index | null)` hacia `husformer_main.js`, que lo conecta con el handle activo de B3. Detalle completo (incluida la distinción respecto al brush hacia Vista C) en `husformer_b3_resumen_implementacion.md`, sección 2.9.
+
 ## 3. Qué NO está resuelto todavía
 
-- **Sin sincronización de hover con B1.** Como ahora B1 y B2 son el MISMO panel (uno u otro modo, no los dos a la vez), esto dejó de ser un problema de sincronización entre dos vistas simultáneas — sigue pendiente, eso sí, sincronizar la posición marcada cuando exista B3 (Vista B completa: heatmap/líneas + señal cruda apuntando siempre al mismo instante).
+- **Sincronización de hover ya implementada con B3** (sección 2.5) — lo que queda pendiente es sincronizar también el ZOOM de B3 con B1/B2 (hoy el zoom de B3 es independiente, ver Share Navigation: Synchronize, Munzner Cap. 12.3.3, en `husformer_b3_resumen_implementacion.md`).
 - **Sin click/selección de ventana** (ver nota en 2.4) — solo hover.
 - **B3 (señal cruda + atención) no implementado** — pendiente.
 
