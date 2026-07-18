@@ -48,6 +48,14 @@ La primera versión de B3 apilaba señal cruda arriba y el panel de atención de
 
 **Aviso de desajuste de granularidad:** se mantiene conceptualmente (la atención sigue siendo por modalidad completa, no por región/hemisferio específico), aunque ya no hay un panel de atención visible directamente al lado dentro de B3 para contrastarlo — el usuario compara mentalmente contra B1/B2, que está en la fila de al lado.
 
+### 2.5 Selector horizontal en vez de vertical — 2026-07-17
+
+Russell notó que el selector consumía demasiado alto: los 6 grupos (EEG Región, EEG Hemisferio, EOG, EMG, GSR, Resp+Plet+Temp) se apilaban de arriba a abajo, una fila por grupo. Se cambió `.husformer-b3-selector` de `flex-direction: column` a `flex-direction: row` + `flex-wrap: wrap` -- los grupos ahora fluyen de izquierda a derecha, cada uno como unidad compacta (label + sus chips, sin separarse entre sí vía `flex-wrap: nowrap` en `.husformer-b3-selector-row`), y solo pasan a una nueva línea cuando ya no entran en el ancho disponible. Cambio puramente de CSS, sin tocar `husformer_main.js` (la estructura DOM que arma `renderB3SelectorUI` no cambió, solo cómo se acomoda visualmente).
+
+### 2.6 Resaltar los labels de grupo — 2026-07-17
+
+Russell pidió que se notara más la diferencia entre los 6 grupos (EEG·Región, EEG·Hemisferio, EOG, EMG, GSR, Resp+Plet+Temp), que quedaban en fila corrida sin separación visual clara. Dos cambios: (1) separador vertical (`border-right`) entre cada grupo; (2) un punto de color junto al label, con el color BASE de la modalidad de ese grupo (mismo share encoding que ya usan los chips activos), más el texto del label agrandado y oscurecido (antes 8px gris casi invisible, ahora 9.5px `#111827`). Así cada grupo se distingue de un vistazo por color + separador, no solo por el texto.
+
 ## 3. Qué NO está resuelto todavía
 
 - **Sin zoom/pan.** Sigue pendiente (Share Navigation: Synchronize, Munzner Cap. 12.3.3, es el mecanismo objetivo si se agrega en el futuro, sincronizado contra B1/B2).

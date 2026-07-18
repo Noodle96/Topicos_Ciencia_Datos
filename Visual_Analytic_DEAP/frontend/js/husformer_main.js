@@ -543,13 +543,23 @@ function renderB3SelectorUI() {
         getSelectedB3GroupsWithColor().map((group) => [group.id, group.color])
     );
 
-    function buildRow(label, groups) {
+    // Punto de color por grupo (2026-07-17, a pedido de Russell -- "que se
+    // note la diferencia"): color BASE de la modalidad (índice 0, sin
+    // importar si hay algo seleccionado todavía), mismo share encoding que
+    // ya usan los chips activos y las líneas de B1/B2.
+    function buildRow(label, groups, modalityKey) {
         const row = document.createElement("div");
         row.className = "husformer-b3-selector-row";
 
         const rowLabel = document.createElement("span");
         rowLabel.className = "husformer-b3-selector-group-label";
-        rowLabel.textContent = label;
+
+        const dot = document.createElement("span");
+        dot.className = "husformer-b3-selector-group-dot";
+        dot.style.background = getSignalColor(modalityKey, 0);
+        rowLabel.appendChild(dot);
+
+        rowLabel.appendChild(document.createTextNode(label));
         row.appendChild(rowLabel);
 
         groups.forEach((group) => {
@@ -572,12 +582,12 @@ function renderB3SelectorUI() {
         container.appendChild(row);
     }
 
-    buildRow("EEG · Región:", EEG_REGION_GROUPS);
-    buildRow("EEG · Hemisferio:", EEG_HEMISPHERE_GROUPS);
-    buildRow("EOG:", EOG_GROUPS);
-    buildRow("EMG:", EMG_GROUPS);
-    buildRow("GSR:", GSR_GROUPS);
-    buildRow("Resp+Plet+Temp:", AUTONOMIC_GROUPS);
+    buildRow("EEG · Región:", EEG_REGION_GROUPS, "modality_1");
+    buildRow("EEG · Hemisferio:", EEG_HEMISPHERE_GROUPS, "modality_1");
+    buildRow("EOG:", EOG_GROUPS, "modality_2");
+    buildRow("EMG:", EMG_GROUPS, "modality_3");
+    buildRow("GSR:", GSR_GROUPS, "modality_4");
+    buildRow("Resp+Plet+Temp:", AUTONOMIC_GROUPS, "modality_5");
 }
 
 function setupB3ChannelControl() {
