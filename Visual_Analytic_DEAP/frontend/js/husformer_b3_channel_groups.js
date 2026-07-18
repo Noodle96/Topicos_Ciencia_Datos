@@ -1,5 +1,3 @@
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
-
 /**
  * Definiciones de "grupos seleccionables" para el selector de B3
  * (2026-07-17, rediseño a pedido de Russell -- reemplaza el selector de
@@ -23,19 +21,6 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
  * sueltos no genera el problema de escala que sí tiene EEG.
  */
 
-// Mismos 5 colores categóricos que ya usa husformer_b2_chart.js para las 5
-// modalidades -- reutilizados a propósito (Munzner Cap. 12.3.1, "share
-// encoding"): una línea azul acá debe poder conectarse visualmente con la
-// línea azul de EEG en el panel de atención de B1/B2, sin necesitar una
-// leyenda nueva que aprender.
-const MODALITY_BASE_COLORS = {
-    modality_1: "#2563eb", // EEG
-    modality_2: "#dc2626", // EOG
-    modality_3: "#16a34a", // EMG
-    modality_4: "#d97706", // GSR
-    modality_5: "#9333ea", // Resp+Plet+Temp
-};
-
 export const EEG_REGION_GROUPS = [
     { id: "eeg_frontal", label: "Frontal", modalityKey: "modality_1", channels: ["Fp1", "Fp2", "AF3", "AF4", "F3", "F4", "F7", "F8", "Fz"] },
     { id: "eeg_central", label: "Central", modalityKey: "modality_1", channels: ["FC5", "FC1", "FC6", "FC2", "C3", "C4", "Cz"] },
@@ -44,10 +29,23 @@ export const EEG_REGION_GROUPS = [
     { id: "eeg_occipital", label: "Occipital", modalityKey: "modality_1", channels: ["PO3", "PO4", "O1", "O2", "Oz"] },
 ];
 
+// Hemisferio usa una MODALITYKEY DISTINTA ("modality_1h", no "modality_1")
+// -- 2026-07-17, corrección a pedido de Russell: al variar solo luminancia
+// dentro de la misma familia azul, Región y Hemisferio se confundían entre
+// sí, sobre todo con la selección por defecto (Frontal + Izquierdo activos
+// a la vez). Se le da a Hemisferio su propia familia de color (cian, no
+// azul) -- distinguible por HUE, no solo por luminancia, que es el canal
+// correcto para distinguir CATEGORÍAS (Munzner Cap. 5, "los categóricos
+// deben mostrarse con canales de identidad" -- Región vs. Hemisferio son
+// dos esquemas de agrupamiento distintos, categóricamente separados, no
+// solo dos variantes de intensidad de lo mismo). El costo es que
+// Hemisferio ya no comparte el azul exacto de la línea de EEG en B1/B2
+// (Región sí lo sigue haciendo) -- trade-off aceptado explícitamente por
+// Russell a cambio de que Región/Hemisferio dejen de confundirse.
 export const EEG_HEMISPHERE_GROUPS = [
-    { id: "eeg_left", label: "Izquierdo", modalityKey: "modality_1", channels: ["Fp1", "AF3", "F3", "F7", "FC5", "FC1", "C3", "T7", "CP5", "CP1", "P3", "P7", "PO3", "O1"] },
-    { id: "eeg_right", label: "Derecho", modalityKey: "modality_1", channels: ["Fp2", "AF4", "F4", "F8", "FC6", "FC2", "C4", "T8", "CP6", "CP2", "P4", "P8", "PO4", "O2"] },
-    { id: "eeg_midline", label: "Línea media", modalityKey: "modality_1", channels: ["Fz", "Cz", "Pz", "Oz"] },
+    { id: "eeg_left", label: "Izquierdo", modalityKey: "modality_1h", channels: ["Fp1", "AF3", "F3", "F7", "FC5", "FC1", "C3", "T7", "CP5", "CP1", "P3", "P7", "PO3", "O1"] },
+    { id: "eeg_right", label: "Derecho", modalityKey: "modality_1h", channels: ["Fp2", "AF4", "F4", "F8", "FC6", "FC2", "C4", "T8", "CP6", "CP2", "P4", "P8", "PO4", "O2"] },
+    { id: "eeg_midline", label: "Línea media", modalityKey: "modality_1h", channels: ["Fz", "Cz", "Pz", "Oz"] },
 ];
 
 export const EOG_GROUPS = [
@@ -97,28 +95,47 @@ export function findB3Group(groupId) {
 // siendo legible.
 export const MAX_SIMULTANEOUS_SIGNALS = 6;
 
+// Selección por defecto al abrir B3 (2026-07-17, a pedido de Russell) --
+// una señal de cada una de las 6 familias de color/modalidad, para que la
+// primera impresión del panel ya muestre una comparación representativa
+// entre TODAS las modalidades a la vez, no solo EEG. Coincide exactamente
+// con MAX_SIMULTANEOUS_SIGNALS (las 6 quedan activas de entrada).
+export const DEFAULT_B3_GROUP_IDS = [
+    "eeg_frontal",
+    "eeg_left",
+    "eog_exg1",
+    "emg_exg5",
+    "gsr_gsr1",
+    "auto_resp",
+];
+
+// Rampas de color explícitas por familia (2026-07-17, reemplaza el cálculo
+// dinámico anterior con d3.color().brighter()/darker()) -- a pedido de
+// Russell: "en alguno no veo la diferencia". El cálculo dinámico anterior
+// podía producir pasos demasiado sutiles (sobre todo yéndose hacia
+// colores muy claros, que pierden contraste contra el fondo blanco del
+// panel). Acá los tonos están elegidos a mano (escala Tailwind 300/400/
+// 600/800/900 de cada hue), con saltos de luminosidad grandes y
+// verificables, no calculados sobre la marcha.
+const COLOR_RAMPS = {
+    modality_1: ["#2563eb", "#1e3a8a", "#60a5fa", "#1e40af", "#93c5fd"],  // EEG Región -- azul
+    modality_1h: ["#0891b2", "#164e63", "#67e8f9", "#155e75", "#a5f3fc"], // EEG Hemisferio -- cian (hue distinto a azul, no solo más claro/oscuro)
+    modality_2: ["#dc2626", "#7f1d1d", "#f87171", "#991b1b", "#fca5a5"], // EOG -- rojo
+    modality_3: ["#16a34a", "#14532d", "#4ade80", "#166534", "#86efac"], // EMG -- verde
+    modality_4: ["#d97706", "#78350f", "#fbbf24", "#92400e", "#fcd34d"], // GSR -- ámbar
+    modality_5: ["#9333ea", "#581c87", "#c084fc", "#6b21a8", "#e9d5ff"], // Resp+Plet+Temp -- púrpura
+};
+
 /**
- * Color de una señal específica dentro de su familia de modalidad -- todas
- * las señales de EEG comparten la base azul, pero se distinguen entre sí
- * variando la luminancia/saturación (d3.color().brighter/darker), no el
- * hue -- así una selección múltiple de sub-grupos de EEG (ej. Frontal +
- * Occipital) se sigue leyendo como "la misma modalidad, dos partes
- * distintas", no como colores arbitrarios sin relación.
+ * Color de una señal específica dentro de su familia de modalidad --
+ * ÍNDICE 0 siempre es el tono "base" de esa familia; los siguientes
+ * índices van tomando los demás tonos de la rampa (definidos a mano para
+ * garantizar contraste real entre pasos, ver COLOR_RAMPS). Si se
+ * selecciona más señales de una modalidad que tonos tiene la rampa
+ * (raro, dado el tope de MAX_SIMULTANEOUS_SIGNALS=6 compartido entre
+ * TODAS las modalidades), se cicla desde el principio.
  */
 export function getSignalColor(modalityKey, indexWithinModality) {
-    const baseColor = d3.color(MODALITY_BASE_COLORS[modalityKey] ?? "#111827");
-
-    if (indexWithinModality === 0) {
-        return baseColor.formatHex();
-    }
-
-    // Alterna oscurecer/aclarar para maximizar la distancia perceptual
-    // entre selecciones consecutivas de la misma modalidad, en vez de ir
-    // siempre en una sola dirección (que agotaría el rango de color rápido).
-    const step = Math.ceil(indexWithinModality / 2) * 0.55;
-    const adjusted = indexWithinModality % 2 === 1
-        ? baseColor.darker(step)
-        : baseColor.brighter(step);
-
-    return adjusted.formatHex();
+    const ramp = COLOR_RAMPS[modalityKey] ?? ["#111827"];
+    return ramp[indexWithinModality % ramp.length];
 }

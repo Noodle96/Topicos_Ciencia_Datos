@@ -620,6 +620,15 @@
                          de UN trial). -->
                     <div class="husformer-b1-trial-label" id="husformer-b3-trial-label"></div>
 
+                    <!-- Reset de zoom (2026-07-17, a pedido de Russell) --
+                         SOLO resetea el zoom/pan del chart (vuelve a
+                         mostrar 0-60s), no la selección de señales -- son
+                         dos estados independientes. El doble-click sobre
+                         el chart hace lo mismo (ver husformer_b3_
+                         chart.js); este botón es la versión descubrible,
+                         visible sin necesidad de saber el atajo. -->
+                    <button type="button" class="husformer-b3-reset-zoom" id="husformer-b3-reset-zoom" title="Volver a ver el trial completo (0-60s)">↺ Reset zoom</button>
+
                     <!-- Layout en flexbox normal (no absolute) -- el
                          selector puede crecer hasta 6 filas de chips según
                          cuántas modalidades tenga abiertas, y con flexbox

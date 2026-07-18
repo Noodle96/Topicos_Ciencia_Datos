@@ -120,7 +120,13 @@ export function buildB3Series(signalResponse, selectedGroups) {
  * husformer_b3_channel_groups.js, getSignalColor) -- misma justificación
  * de "share encoding" ya usada ahí.
  */
-export function renderHusformerB3Chart({ containerId, activeTrial, seriesList }) {
+export function renderHusformerB3Chart({
+    containerId,
+    activeTrial,
+    seriesList,
+    initialZoomTransform,
+    onZoomChange,
+}) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
 
@@ -193,7 +199,7 @@ export function renderHusformerB3Chart({ containerId, activeTrial, seriesList })
         .nice()
         .range([plotHeight, 0]);
 
-    plotGroup
+    const xAxisGroup = plotGroup
         .append("g")
         .attr("transform", `translate(0, ${plotHeight})`)
         .attr("font-size", "8px")
@@ -208,19 +214,33 @@ export function renderHusformerB3Chart({ containerId, activeTrial, seriesList })
         .append("g")
         .attr("clip-path", `url(#${clipId})`);
 
-    const lineGenerator = d3
-        .line()
-        .x((d) => xScale(d.time))
-        .y((d) => yScale(d.value));
-
-    seriesList.forEach((series) => {
+    const linePaths = seriesList.map((series) => (
         linesGroup
             .append("path")
             .attr("fill", "none")
             .attr("stroke", series.color)
             .attr("stroke-width", 1.4)
-            .attr("d", lineGenerator(series.samples));
-    });
+    ));
+
+    // currentXScale es MUTABLE -- arranca igual a xScale, y se reemplaza por
+    // transform.rescaleX(xScale) en cada evento de zoom (ver zoomBehavior
+    // más abajo). El eje Y NUNCA se reescala -- ver docstring del módulo,
+    // Munzner Cap. 11: reescalar Y dinámicamente podría hacer parecer que
+    // una señal "creció" cuando en realidad solo cambió la escala visible.
+    let currentXScale = xScale;
+
+    function drawLines() {
+        const lineGenerator = d3
+            .line()
+            .x((d) => currentXScale(d.time))
+            .y((d) => yScale(d.value));
+
+        seriesList.forEach((series, index) => {
+            linePaths[index].attr("d", lineGenerator(series.samples));
+        });
+    }
+
+    drawLines();
 
     // Guía vertical + tooltip consolidado (mismo patrón que B1/B2, Munzner
     // Cap. 6.5.3 Change Blindness): un solo punto de foco con TODAS las
@@ -243,54 +263,103 @@ export function renderHusformerB3Chart({ containerId, activeTrial, seriesList })
 
     const bisectTime = d3.bisector((d) => d.time).left;
 
-    plotGroup
+    function showTooltip(event, hoveredTime) {
+        const rowsHtml = seriesList
+            .map((series) => {
+                let index = bisectTime(series.samples, hoveredTime);
+                index = Math.max(0, Math.min(series.samples.length - 1, index));
+                const point = series.samples[index];
+
+                return `
+                    <div class="husformer-b1-tooltip-row">
+                        <span style="color:${series.color}">●</span>
+                        <span>${series.label}</span>
+                        <span>${point.value.toFixed(2)}</span>
+                    </div>
+                `;
+            })
+            .join("");
+
+        const referenceTime = seriesList[0].samples[
+            Math.max(0, Math.min(
+                seriesList[0].samples.length - 1,
+                bisectTime(seriesList[0].samples, hoveredTime)
+            ))
+        ].time;
+
+        hoverLine
+            .attr("x1", currentXScale(referenceTime))
+            .attr("x2", currentXScale(referenceTime))
+            .style("opacity", 1);
+
+        tooltip
+            .style("opacity", 1)
+            .html(`
+                <strong>Tiempo: ${referenceTime.toFixed(1)}s (z-score)</strong>
+                ${rowsHtml}
+            `)
+            .style("left", `${event.pageX + 14}px`)
+            .style("top", `${event.pageY - 18}px`);
+    }
+
+    const overlay = plotGroup
         .append("rect")
         .attr("width", plotWidth)
         .attr("height", plotHeight)
         .attr("fill", "transparent")
+        .attr("cursor", "grab")
         .on("mousemove", function (event) {
             const [mouseX] = d3.pointer(event, this);
-            const hoveredTime = xScale.invert(mouseX);
-
-            const rowsHtml = seriesList
-                .map((series) => {
-                    let index = bisectTime(series.samples, hoveredTime);
-                    index = Math.max(0, Math.min(series.samples.length - 1, index));
-                    const point = series.samples[index];
-
-                    return `
-                        <div class="husformer-b1-tooltip-row">
-                            <span style="color:${series.color}">●</span>
-                            <span>${series.label}</span>
-                            <span>${point.value.toFixed(2)}</span>
-                        </div>
-                    `;
-                })
-                .join("");
-
-            const referenceTime = seriesList[0].samples[
-                Math.max(0, Math.min(
-                    seriesList[0].samples.length - 1,
-                    bisectTime(seriesList[0].samples, hoveredTime)
-                ))
-            ].time;
-
-            hoverLine
-                .attr("x1", xScale(referenceTime))
-                .attr("x2", xScale(referenceTime))
-                .style("opacity", 1);
-
-            tooltip
-                .style("opacity", 1)
-                .html(`
-                    <strong>Tiempo: ${referenceTime.toFixed(1)}s (z-score)</strong>
-                    ${rowsHtml}
-                `)
-                .style("left", `${event.pageX + 14}px`)
-                .style("top", `${event.pageY - 18}px`);
+            showTooltip(event, currentXScale.invert(mouseX));
         })
         .on("mouseleave", () => {
             hoverLine.style("opacity", 0);
             tooltip.style("opacity", 0);
         });
+
+    // ZOOM/PAN SOLO EN X (2026-07-17, a pedido de Russell) -- rueda del
+    // mouse para zoom, arrastre para pan, mismo mecanismo que ya usan
+    // A1/A2 (consistencia de interacción en todo el sistema, no un gesto
+    // nuevo por panel). scaleExtent hasta 20x -- suficiente para acercarse
+    // a un tramo de un par de segundos dentro de los ~60s del trial, sin
+    // perder de vista que sigue siendo el mismo trial.
+    const zoomBehavior = d3
+        .zoom()
+        .scaleExtent([1, 20])
+        .translateExtent([[0, 0], [plotWidth, plotHeight]])
+        .extent([[0, 0], [plotWidth, plotHeight]])
+        .on("zoom", (event) => {
+            const transform = event.transform;
+            currentXScale = transform.rescaleX(xScale);
+
+            xAxisGroup.call(
+                d3.axisBottom(currentXScale).ticks(6).tickSize(3).tickFormat((sec) => `${Math.round(sec)}s`)
+            );
+
+            drawLines();
+            hoverLine.style("opacity", 0);
+            tooltip.style("opacity", 0);
+
+            if (onZoomChange) {
+                onZoomChange(transform);
+            }
+        });
+
+    // Doble-click resetea el zoom -- d3.zoom() por defecto usa dblclick
+    // para ACERCAR (2x), hay que desactivar ese comportamiento primero
+    // (".on('dblclick.zoom', null)") antes de poder engancharle nuestro
+    // propio handler de reset.
+    svg.call(zoomBehavior);
+    svg.on("dblclick.zoom", null);
+    overlay.on("dblclick", () => {
+        svg.transition().duration(300).call(zoomBehavior.transform, d3.zoomIdentity);
+    });
+
+    // Reaplica el zoom persistido de una interacción anterior (mismo fix
+    // que ya existe en A1/B1: sin esto, cualquier re-render -- resize,
+    // cambio de selección de señales -- perdería el zoom actual). Se
+    // dispara el mismo handler "zoom" de arriba de forma síncrona.
+    if (initialZoomTransform) {
+        svg.call(zoomBehavior.transform, initialZoomTransform);
+    }
 }

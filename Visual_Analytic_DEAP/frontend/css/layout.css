@@ -1499,6 +1499,29 @@ body {
    implementacion.md sección de corrección).
    ========================= */
 
+/* Botón de reset de zoom -- esquina superior derecha (el chip "B3" ocupa
+   la izquierda, el label de trial el centro -- ver .husformer-b1-trial-
+   label -- así que la derecha está libre, mismo patrón que el selector
+   Heatmap/Líneas de B1/B2). */
+.husformer-b3-reset-zoom {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  border: none;
+  background: rgba(255, 255, 255, 0.88);
+  color: #374151;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.husformer-b3-reset-zoom:hover {
+  background: #e5e7eb;
+}
+
 /* Layout en flexbox normal (no absolute) -- ver nota en index.html: el
    selector puede crecer hasta 6 filas, con flexbox el chart de abajo
    siempre recibe el espacio restante real, sin adivinar un padding fijo. */

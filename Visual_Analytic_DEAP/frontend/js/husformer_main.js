@@ -42,6 +42,7 @@ import {
     AUTONOMIC_GROUPS,
     findB3Group,
     MAX_SIMULTANEOUS_SIGNALS,
+    DEFAULT_B3_GROUP_IDS,
     getSignalColor,
 } from "./husformer_b3_channel_groups.js";
 
@@ -390,7 +391,10 @@ function observeB1Container() {
 // IDs de los grupos actualmente seleccionados, en orden de selección
 // (Set preserva orden de inserción en JS) -- el orden importa para que el
 // color de cada señal sea estable mientras no cambie la selección.
-let selectedB3GroupIds = new Set();
+// Arranca con DEFAULT_B3_GROUP_IDS (2026-07-17, a pedido de Russell: una
+// señal de cada una de las 6 familias, para que la primera impresión del
+// panel ya muestre una comparación representativa entre modalidades).
+let selectedB3GroupIds = new Set(DEFAULT_B3_GROUP_IDS);
 
 // Respuesta cruda de /api/trial-signals -- incluye TODOS los canales que
 // hacen falta para promediar los grupos actualmente seleccionados (un solo
@@ -401,6 +405,12 @@ let b3RequestId = 0;
 let resizeObserverB3 = null;
 let lastObservedWidthB3 = 0;
 let lastObservedHeightB3 = 0;
+
+// Transform de zoom de B3 -- SOLO zoom/pan en X (ver husformer_b3_
+// chart.js). Se persiste acá para sobrevivir a re-renders (resize, cambio
+// de selección de señales), mismo patrón que currentZoomTransform de A1 y
+// el de B1. null = sin zoom (vista completa 0-60s).
+let currentB3ZoomTransform = null;
 
 /**
  * Arma la lista de series (una por grupo seleccionado, promediada y
@@ -433,6 +443,10 @@ function renderB3() {
         containerId: "b3-chart",
         activeTrial: lastClickedTrial,
         seriesList,
+        initialZoomTransform: currentB3ZoomTransform,
+        onZoomChange: (transform) => {
+            currentB3ZoomTransform = transform;
+        },
     });
 
     renderB3SelectorUI();
@@ -583,15 +597,32 @@ function renderB3SelectorUI() {
     }
 
     buildRow("EEG · Región:", EEG_REGION_GROUPS, "modality_1");
-    buildRow("EEG · Hemisferio:", EEG_HEMISPHERE_GROUPS, "modality_1");
+    buildRow("EEG · Hemisferio:", EEG_HEMISPHERE_GROUPS, "modality_1h");
     buildRow("EOG:", EOG_GROUPS, "modality_2");
     buildRow("EMG:", EMG_GROUPS, "modality_3");
     buildRow("GSR:", GSR_GROUPS, "modality_4");
     buildRow("Resp+Plet+Temp:", AUTONOMIC_GROUPS, "modality_5");
 }
 
+/**
+ * Vuelve la vista de B3 al trial completo (0-60s) -- 2026-07-17, a pedido
+ * de Russell. Aclarado explícitamente con él: esto SOLO resetea el zoom,
+ * no la selección de señales (son dos estados independientes) -- ver
+ * husformer_b3_resumen_implementacion.md. El doble-click sobre el chart
+ * hace lo mismo (implementado directo en husformer_b3_chart.js), este
+ * botón es el mecanismo DESCUBRIBLE -- un doble-click no tiene ninguna
+ * pista visual de que existe, a diferencia de un botón.
+ */
+function resetB3Zoom() {
+    currentB3ZoomTransform = null;
+    renderB3();
+}
+
 function setupB3ChannelControl() {
     renderB3SelectorUI();
+
+    const resetButton = document.getElementById("husformer-b3-reset-zoom");
+    resetButton.addEventListener("click", resetB3Zoom);
 }
 
 function observeB3Container() {
