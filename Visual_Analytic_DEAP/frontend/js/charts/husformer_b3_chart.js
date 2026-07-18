@@ -126,6 +126,7 @@ export function renderHusformerB3Chart({
     seriesList,
     initialZoomTransform,
     onZoomChange,
+    onHoverWindowChange,
 }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -134,17 +135,17 @@ export function renderHusformerB3Chart({
 
     if (!activeTrial) {
         container.innerHTML = '<div class="husformer-b1-empty">Selecciona un trial en Vista A</div>';
-        return;
+        return null;
     }
 
     if (!seriesList) {
         container.innerHTML = '<div class="husformer-b1-empty">Cargando...</div>';
-        return;
+        return null;
     }
 
     if (seriesList.length === 0) {
         container.innerHTML = '<div class="husformer-b1-empty">Elegí una o más señales arriba para comparar.</div>';
-        return;
+        return null;
     }
 
     const width = container.clientWidth || 360;
@@ -255,6 +256,22 @@ export function renderHusformerB3Chart({
         .style("opacity", 0)
         .style("pointer-events", "none");
 
+    // Banda de resaltado EXTERNO (2026-07-17, sincronización bidireccional
+    // con B1/B2, a pedido de Russell) -- visualmente DISTINTA de hoverLine
+    // (banda semitransparente ancha, no línea punteada fina) a propósito:
+    // hoverLine = "estoy hovereando ACÁ mismo, con tooltip"; esta banda =
+    // "esta ventana está resaltada porque el mouse está en OTRO panel", sin
+    // tooltip (no hay una posición de mouse real donde anclarlo). Ancho de 1
+    // segundo (ver highlightWindow más abajo -- mismo criterio acordado con
+    // Russell: window_index N cubre aproximadamente [N, N+1) segundos).
+    const externalHighlightBand = plotGroup
+        .append("rect")
+        .attr("y", 0)
+        .attr("height", plotHeight)
+        .attr("fill", "#111827")
+        .attr("opacity", 0)
+        .style("pointer-events", "none");
+
     const tooltip = d3
         .select("body")
         .append("div")
@@ -302,6 +319,26 @@ export function renderHusformerB3Chart({
             .style("top", `${event.pageY - 18}px`);
     }
 
+    // Dibuja/borra la banda de resaltado externo -- se guarda el
+    // windowIndex actual en una variable mutable para poder redibujarla en
+    // la posición correcta si el usuario hace zoom mientras la banda sigue
+    // activa (currentXScale cambia con el zoom, ver zoomBehavior).
+    let externallyHighlightedWindowIndex = null;
+
+    function drawExternalHighlightBand(windowIndex) {
+        const bandStart = currentXScale(windowIndex);
+        const bandEnd = currentXScale(windowIndex + 1);
+
+        externalHighlightBand
+            .attr("x", bandStart)
+            .attr("width", Math.max(bandEnd - bandStart, 0))
+            .attr("opacity", 0.12);
+    }
+
+    function clearExternalHighlightBand() {
+        externalHighlightBand.attr("opacity", 0);
+    }
+
     const overlay = plotGroup
         .append("rect")
         .attr("width", plotWidth)
@@ -310,11 +347,26 @@ export function renderHusformerB3Chart({
         .attr("cursor", "grab")
         .on("mousemove", function (event) {
             const [mouseX] = d3.pointer(event, this);
-            showTooltip(event, currentXScale.invert(mouseX));
+            const hoveredTime = currentXScale.invert(mouseX);
+
+            showTooltip(event, hoveredTime);
+
+            if (onHoverWindowChange) {
+                // Criterio acordado con Russell: la ventana de 1s N cubre
+                // [N, N+1) segundos -- floor(tiempo) da directamente su
+                // window_index, sin necesitar la lista de ventanas de B1/B2
+                // acá (window_start_sec ≈ window_index segundos, confirmado
+                // en windowing.py -- WINDOW_SECONDS=1.0).
+                onHoverWindowChange(Math.floor(hoveredTime));
+            }
         })
         .on("mouseleave", () => {
             hoverLine.style("opacity", 0);
             tooltip.style("opacity", 0);
+
+            if (onHoverWindowChange) {
+                onHoverWindowChange(null);
+            }
         });
 
     // ZOOM/PAN SOLO EN X (2026-07-17, a pedido de Russell) -- rueda del
@@ -340,6 +392,15 @@ export function renderHusformerB3Chart({
             hoverLine.style("opacity", 0);
             tooltip.style("opacity", 0);
 
+            // Si había una banda de resaltado externo activa (viene de
+            // hover en B1/B2), se redibuja en la posición correcta para el
+            // nuevo nivel de zoom -- si no, se quedaría en la posición en
+            // píxeles vieja, desalineada del tiempo real que ahora
+            // corresponde a esa columna.
+            if (externallyHighlightedWindowIndex !== null) {
+                drawExternalHighlightBand(externallyHighlightedWindowIndex);
+            }
+
             if (onZoomChange) {
                 onZoomChange(transform);
             }
@@ -362,4 +423,15 @@ export function renderHusformerB3Chart({
     if (initialZoomTransform) {
         svg.call(zoomBehavior.transform, initialZoomTransform);
     }
+
+    return {
+        highlightWindow(windowIndex) {
+            externallyHighlightedWindowIndex = windowIndex;
+            drawExternalHighlightBand(windowIndex);
+        },
+        clearHighlight() {
+            externallyHighlightedWindowIndex = null;
+            clearExternalHighlightBand();
+        },
+    };
 }

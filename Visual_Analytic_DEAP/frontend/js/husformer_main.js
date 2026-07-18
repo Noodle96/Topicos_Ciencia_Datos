@@ -232,18 +232,38 @@ let lastObservedHeightB1 = 0;
 const DEFAULT_B1_VIEW_MODE = "heatmap";
 let currentB1ViewMode = DEFAULT_B1_VIEW_MODE;
 
+// Handles devueltos por renderHusformerB1Chart/B2Chart/B3Chart (2026-07-17,
+// sincronización bidireccional B1/B2 <-> B3, a pedido de Russell) -- cada
+// chart expone { highlightWindow(windowIndex), clearHighlight() } para que
+// OTRO panel pueda resaltar una ventana en él sin reconstruir su SVG
+// entero. Se reasignan en cada render (el chart viejo ya no existe en el
+// DOM), y pueden ser null si el panel está en estado vacío/cargando (esos
+// casos retornan null en vez de un handle) -- por eso todo acceso usa `?.`.
+let activeB1B2Handle = null;
+let activeB3Handle = null;
+
 function renderB1() {
+    const onHoverWindowChange = (windowIndex) => {
+        if (windowIndex === null) {
+            activeB3Handle?.clearHighlight();
+        } else {
+            activeB3Handle?.highlightWindow(windowIndex);
+        }
+    };
+
     if (currentB1ViewMode === "heatmap") {
-        renderHusformerB1Chart({
+        activeB1B2Handle = renderHusformerB1Chart({
             containerId: "b1-chart",
             activeTrial: lastClickedTrial,
             attentionData: latestB1Data,
+            onHoverWindowChange,
         });
     } else {
-        renderHusformerB2Chart({
+        activeB1B2Handle = renderHusformerB2Chart({
             containerId: "b1-chart",
             activeTrial: lastClickedTrial,
             attentionData: latestB1Data,
+            onHoverWindowChange,
         });
     }
 
@@ -439,13 +459,20 @@ function renderB3() {
         seriesList = buildB3Series(latestB3RawResponse, selectedGroups);
     }
 
-    renderHusformerB3Chart({
+    activeB3Handle = renderHusformerB3Chart({
         containerId: "b3-chart",
         activeTrial: lastClickedTrial,
         seriesList,
         initialZoomTransform: currentB3ZoomTransform,
         onZoomChange: (transform) => {
             currentB3ZoomTransform = transform;
+        },
+        onHoverWindowChange: (windowIndex) => {
+            if (windowIndex === null) {
+                activeB1B2Handle?.clearHighlight();
+            } else {
+                activeB1B2Handle?.highlightWindow(windowIndex);
+            }
         },
     });
 

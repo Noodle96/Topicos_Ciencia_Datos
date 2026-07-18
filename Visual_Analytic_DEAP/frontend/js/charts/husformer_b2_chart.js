@@ -73,7 +73,12 @@ let clipIdCounter = 0;
  * punto de tiempo más cercano al cursor (d3.bisector), se dibuja una línea
  * vertical en esa posición y se listan los 5 valores de esa ventana.
  */
-export function renderHusformerB2Chart({ containerId, activeTrial, attentionData }) {
+export function renderHusformerB2Chart({
+    containerId,
+    activeTrial,
+    attentionData,
+    onHoverWindowChange,
+}) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
 
@@ -81,12 +86,12 @@ export function renderHusformerB2Chart({ containerId, activeTrial, attentionData
 
     if (!activeTrial) {
         container.innerHTML = '<div class="husformer-b1-empty">Selecciona un trial en Vista A</div>';
-        return;
+        return null;
     }
 
     if (!attentionData || !attentionData.windows || attentionData.windows.length === 0) {
         container.innerHTML = '<div class="husformer-b1-empty">Cargando...</div>';
-        return;
+        return null;
     }
 
     const windows = attentionData.windows;
@@ -237,6 +242,40 @@ export function renderHusformerB2Chart({ containerId, activeTrial, attentionData
 
     const bisectStartSec = d3.bisector((w) => w.window_start_sec).left;
 
+    function findNearestWindow(hoveredSec) {
+        let index = bisectStartSec(windows, hoveredSec);
+        index = Math.max(0, Math.min(windows.length - 1, index));
+
+        // Ajusta al vecino más cercano (bisector da el punto de inserción,
+        // no necesariamente el más cercano).
+        if (
+            index > 0
+            && Math.abs(windows[index - 1].window_start_sec - hoveredSec)
+                < Math.abs(windows[index].window_start_sec - hoveredSec)
+        ) {
+            index -= 1;
+        }
+
+        return windows[index];
+    }
+
+    // showGuideAtWindow/clearGuide -- extraídas como funciones reusables
+    // (2026-07-17, sincronización bidireccional con B1/B3, a pedido de
+    // Russell): dibujan SOLO la guía vertical, sin tooltip -- el tooltip
+    // necesita una posición real de mouse para anclarse, que no existe
+    // cuando el resaltado viene de otro panel. El mousemove interno sí
+    // agrega el tooltip por su cuenta, encima de esto.
+    function showGuideAtWindow(activeWindow) {
+        hoverLine
+            .attr("x1", xScale(activeWindow.window_start_sec))
+            .attr("x2", xScale(activeWindow.window_start_sec))
+            .style("opacity", 1);
+    }
+
+    function clearGuide() {
+        hoverLine.style("opacity", 0);
+    }
+
     // Rectángulo transparente que captura mousemove sobre TODO el área de
     // plot -- necesario porque el hover debe funcionar en cualquier punto X,
     // no solo exactamente sobre una línea (a diferencia de hacer hover
@@ -248,27 +287,9 @@ export function renderHusformerB2Chart({ containerId, activeTrial, attentionData
         .attr("fill", "transparent")
         .on("mousemove", function (event) {
             const [mouseX] = d3.pointer(event, this);
-            const hoveredSec = xScale.invert(mouseX);
+            const activeWindow = findNearestWindow(xScale.invert(mouseX));
 
-            let index = bisectStartSec(windows, hoveredSec);
-            index = Math.max(0, Math.min(windows.length - 1, index));
-
-            // Ajusta al vecino más cercano (bisector da el punto de
-            // inserción, no necesariamente el más cercano).
-            if (
-                index > 0
-                && Math.abs(windows[index - 1].window_start_sec - hoveredSec)
-                    < Math.abs(windows[index].window_start_sec - hoveredSec)
-            ) {
-                index -= 1;
-            }
-
-            const activeWindow = windows[index];
-
-            hoverLine
-                .attr("x1", xScale(activeWindow.window_start_sec))
-                .attr("x2", xScale(activeWindow.window_start_sec))
-                .style("opacity", 1);
+            showGuideAtWindow(activeWindow);
 
             const rowsHtml = MODALITY_KEYS
                 .map((modalityKey) => `
@@ -288,9 +309,29 @@ export function renderHusformerB2Chart({ containerId, activeTrial, attentionData
                 `)
                 .style("left", `${event.pageX + 14}px`)
                 .style("top", `${event.pageY - 18}px`);
+
+            if (onHoverWindowChange) {
+                onHoverWindowChange(activeWindow.window_index);
+            }
         })
         .on("mouseleave", () => {
-            hoverLine.style("opacity", 0);
+            clearGuide();
             tooltip.style("opacity", 0);
+
+            if (onHoverWindowChange) {
+                onHoverWindowChange(null);
+            }
         });
+
+    const windowByIndex = new Map(windows.map((w) => [w.window_index, w]));
+
+    return {
+        highlightWindow(windowIndex) {
+            const targetWindow = windowByIndex.get(windowIndex);
+            if (targetWindow) {
+                showGuideAtWindow(targetWindow);
+            }
+        },
+        clearHighlight: clearGuide,
+    };
 }

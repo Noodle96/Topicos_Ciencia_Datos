@@ -85,7 +85,12 @@ let clipIdCounter = 0;
  * trials distintos -- un trade-off aceptable porque T4 es una tarea de
  * comparación LOCAL, no una de lookup de magnitud absoluta.
  */
-export function renderHusformerB1Chart({ containerId, activeTrial, attentionData }) {
+export function renderHusformerB1Chart({
+    containerId,
+    activeTrial,
+    attentionData,
+    onHoverWindowChange,
+}) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
 
@@ -93,12 +98,12 @@ export function renderHusformerB1Chart({ containerId, activeTrial, attentionData
 
     if (!activeTrial) {
         container.innerHTML = '<div class="husformer-b1-empty">Selecciona un trial en Vista A</div>';
-        return;
+        return null;
     }
 
     if (!attentionData || !attentionData.windows || attentionData.windows.length === 0) {
         container.innerHTML = '<div class="husformer-b1-empty">Cargando...</div>';
-        return;
+        return null;
     }
 
     const windows = attentionData.windows;
@@ -256,21 +261,42 @@ export function renderHusformerB1Chart({ containerId, activeTrial, attentionData
     // patrón que "Dynamic Layers" (Munzner Cap. 12.5.3, ejemplo Cerebral):
     // una capa de primer plano saturada/prominente contra un fondo de baja
     // saturación, construida al vuelo sobre el elemento bajo el cursor.
+    // applyColumnHighlight/clearColumnHighlight -- extraídas como funciones
+    // reusables (2026-07-17, sincronización bidireccional con B3, a pedido
+    // de Russell): el mouseover interno de B1 las usa (y además avisa hacia
+    // afuera vía onHoverWindowChange, para que B3 se resalte también), y
+    // TAMBIÉN se exponen en el objeto de retorno para que husformer_main.js
+    // pueda resaltar una ventana desde afuera (cuando el hover ocurre en
+    // B3, no acá) -- sin reconstruir el SVG entero, solo tocando la
+    // opacidad/contorno ya existente (mismo mecanismo, no uno duplicado).
+    function applyColumnHighlight(windowIndex) {
+        cellSelection.attr("opacity", (other) => (
+            other.windowIndex === windowIndex ? 1 : 0.25
+        ));
+
+        cellSelection.attr("stroke", (other) => (
+            other.windowIndex === windowIndex ? "#4b5563" : "none"
+        ));
+
+        cellSelection.attr("stroke-width", (other) => (
+            other.windowIndex === windowIndex ? 0.8 : 0
+        ));
+    }
+
+    function clearColumnHighlight() {
+        cellSelection.attr("opacity", 1).attr("stroke", "none").attr("stroke-width", 0);
+    }
+
     cellSelection
         .on("mouseover", function (event, d) {
-            cellSelection.attr("opacity", (other) => (
-                other.windowIndex === d.windowIndex ? 1 : 0.25
-            ));
+            applyColumnHighlight(d.windowIndex);
 
-            cellSelection.attr("stroke", (other) => {
-                if (other.windowIndex !== d.windowIndex) return "none";
-                return other.modalityKey === d.modalityKey ? "#111827" : "#4b5563";
-            });
-
-            cellSelection.attr("stroke-width", (other) => {
-                if (other.windowIndex !== d.windowIndex) return 0;
-                return other.modalityKey === d.modalityKey ? 1.6 : 0.8;
-            });
+            // La celda exacta bajo el cursor se distingue con un trazo más
+            // grueso que el resto de su columna (mismo detalle que ya
+            // existía) -- se aplica DESPUÉS de applyColumnHighlight porque
+            // solo aplica al hover real, no al resaltado externo desde B3
+            // (ahí no hay "una celda exacta", solo la ventana entera).
+            d3.select(this).attr("stroke", "#111827").attr("stroke-width", 1.6);
 
             const windowCells = cellsByWindow.get(d.windowIndex);
             const rowsHtml = windowCells
@@ -293,9 +319,22 @@ export function renderHusformerB1Chart({ containerId, activeTrial, attentionData
                 `)
                 .style("left", `${event.pageX + 14}px`)
                 .style("top", `${event.pageY - 18}px`);
+
+            if (onHoverWindowChange) {
+                onHoverWindowChange(d.windowIndex);
+            }
         })
         .on("mouseout", function () {
-            cellSelection.attr("opacity", 1).attr("stroke", "none").attr("stroke-width", 0);
+            clearColumnHighlight();
             tooltip.style("opacity", 0);
+
+            if (onHoverWindowChange) {
+                onHoverWindowChange(null);
+            }
         });
+
+    return {
+        highlightWindow: applyColumnHighlight,
+        clearHighlight: clearColumnHighlight,
+    };
 }
