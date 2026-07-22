@@ -30,6 +30,10 @@ Mismo formato del control (Munzner Cap. 5), aplicado a B2. Mismo dato que B1, ma
 - Una marca del tipo línea representa el ítem serie temporal de dominancia de UNA modalidad a lo largo del trial (5 líneas en total).
 - Una marca del tipo punto (en cada muestra real sobre la línea) representa el ítem ventana de 1s individual — deja explícito que la serie es de 60 muestras discretas, no una señal continua interpolada.
 
+### Abstracción de Datos y Coordinación entre vistas (formato "Control Evaluación Continua III")
+
+Mismos tres atributos que B1 (modalidad / ventana de tiempo / % de dominancia) y misma clasificación de coordinación (B1↔B2 → Multiforme, con la salvedad de que se alternan por selector en vez de mostrarse simultáneas) — ver el detalle completo en `husformer_b1_resumen_implementacion.md` para no duplicarlo acá.
+
 ### 2.2 Pipeline de datos — sin fetch propio
 
 B2 reutiliza directamente `latestB1Data` (la respuesta de `/api/husformer/trial-attention` que ya carga B1) — `husformer_main.js` renderiza B2 al final de `renderB1()`, sin un `loadAndRenderB2` independiente. Justificación: sería redundante pedirle al backend el mismo cálculo dos veces solo porque dos paneles distintos lo visualizan de forma distinta.

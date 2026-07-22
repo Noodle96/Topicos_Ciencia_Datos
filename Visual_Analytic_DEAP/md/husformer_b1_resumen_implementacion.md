@@ -34,6 +34,20 @@ Mismo formato del control (Munzner Cap. 5), aplicado a B1 — estructura de matr
 ¿Qué marcas se utilizan?
 - Una marca del tipo área (celda rectangular de la matriz) representa el ítem (modalidad, ventana) — la combinación de una modalidad y una ventana de 1s específicas dentro del trial activo.
 
+### Abstracción de Datos (formato "Control Evaluación Continua III", Paso 3)
+
+Estos tres atributos son los que consume TANTO B1 como B2 (mismo dato agregado, ver `husformer_b2_resumen_implementacion.md`):
+
+- **Attribute 1** — Name: modalidad. Type: categórico. Cardinality: 5 (EEG/EOG/EMG/GSR/Resp+Plet+Temp). Range: N/A.
+- **Attribute 2** — Name: ventana de tiempo. Type: ordenado (ordinal/temporal). Cardinality: ~60 por trial (29 para S28/trial 40). Range: 0 a ~60s (`window_start_sec`).
+- **Attribute 3** — Name: % de dominancia de modalidad. Type: cuantitativo, derivado (Cap. 3, "Derive" — se deriva de `attn_final_summary` promediando sobre el eje query y renormalizando a porcentaje, no es un valor crudo). Cardinality: continuo. Range: 0-100% (las 5 modalidades de una misma ventana suman exactamente 100%).
+
+### Coordinación entre vistas (formato "Control Evaluación Continua III")
+
+**Vista A → Vista B (drill-down) → E) Vista general/detalle — Multiforme.** B1 muestra solo el último trial clickeado en A1/A2 (subconjunto de los 1280 elementos de la vista general), con una codificación completamente distinta (matriz/heatmap, no scatter) — misma clasificación que A1/A2↔A3, continuando la cadena de vistas general/detalle del sistema (participante/trial → dinámica temporal del trial).
+
+**B1 ↔ B2 → D) Multiforme, con una salvedad.** Mismos elementos de datos (los tres atributos de arriba), codificaciones distintas (matriz+color vs. posición+color de línea) — encaja en Multiforme. La salvedad: a diferencia del caso típico de Multiforme (vistas simultáneamente visibles lado a lado, como A1↔A2), B1 y B2 NUNCA están visibles al mismo tiempo — se alternan mediante un selector (Munzner Cap. 11, "Manipulate View: Change"), ocupando el mismo espacio de pantalla en vez de dos espacios distintos. Es una variante deliberada de Multiforme, no una vista coordinada en el sentido de "facetar" (Cap. 12) — más bien un cambio de codificación bajo demanda sobre el mismo panel.
+
 ### 2.2 Pipeline de datos
 
 `backend/services/husformer_attention_service.py` → `load_husformer_trial_attention(participant_id, trial)`: carga el manifest, filtra y ordena las ventanas del trial por `window_index`, indexa `attn_final_summary` (matriz 5×5 por ventana: fila=modalidad query, columna=modalidad key) del split correspondiente vía `local_id`, y promedia sobre el eje QUERY (filas) para obtener un vector de 5 valores por ventana — "cuánta atención recibe en promedio cada modalidad de TODAS las que preguntan" (confirmado con Russell con ejemplo numérico: promediar por columna = "quién es atendido", no por fila = "quién pregunta"). Se calcula al vuelo por request, igual que el clustering de A2 — sin precómputo ni caché en disco.

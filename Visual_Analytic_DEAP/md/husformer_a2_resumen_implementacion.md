@@ -33,6 +33,16 @@ Mismo formato de descomposición del control (Munzner Cap. 5), aplicado a A2 —
 ¿Qué marcas se utilizan?
 - Una marca del tipo punto representa el ítem trial — el mismo ítem, con las mismas posiciones, que en A1 (comparten los 1280 elementos de datos; solo cambia el canal de color).
 
+### Abstracción de Datos (formato "Control Evaluación Continua III", Paso 3)
+
+Reutiliza `trial` y `coordenada de proyección` (ver `husformer_a1_resumen_implementacion.md`) — el único atributo NUEVO que agrega A2 es:
+
+- **Attribute** — Name: cluster asignado. Type: categórico, derivado (Cap. 3, "Derive" — no existe en el dataset crudo, se calcula al vuelo sobre `last_hs` estandarizado). Cardinality: 3, 4, 6 o 12 (presets fijos de KMeans) o variable (HDBSCAN, además puede incluir la etiqueta "ruido" = -1). Range: N/A (identidad de cluster, sin orden entre clusters).
+
+### Coordinación entre vistas (formato "Control Evaluación Continua III")
+
+**A1 ↔ A2 → D) Multiforme.** Ambas muestran los mismos 1280 elementos de datos (mismo trial, misma posición x/y — comparten literalmente el mismo layout de proyección) con codificaciones de color DISTINTAS (Valencia continua en A1 vs. identidad categórica de cluster en A2) — encaja exactamente en la definición de Munzner Cap. 12.3.1 ("Share Encoding: Different" + "Share Data: All"). Se sincronizan explícitamente ("share navigation", 12.3.3): cambiar el método de proyección en cualquiera de las dos mueve a la otra también, porque tiene que seguir siendo la MISMA proyección para que comparar posiciones entre A1 y A2 tenga sentido.
+
 ### 2.2 Pipeline de datos
 
 No hay pipeline offline propio — a diferencia de A1 (que sí precomputa proyecciones a archivo), A2 clusteriza **por request**: `backend/services/husformer_trial_service.py` → `load_husformer_trial_clusters(method, param_value)` carga `trial_last_hs_standardized.npy` (el mismo array de 1280×40 que ya usa A1 antes de proyectar) y corre `sklearn.cluster.KMeans` o `HDBSCAN` directamente sobre ese vector de 40 dimensiones. Confirmado con Russell (2026-07-15): sobre 1280×40 floats, tanto KMeans como HDBSCAN son prácticamente instantáneos — no se justifica precomputar ni cachear en disco.

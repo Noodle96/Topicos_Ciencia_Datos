@@ -31,6 +31,15 @@ Mismo formato del control (Munzner Cap. 5), aplicado a A3. A diferencia de A1/A2
 ¿Qué marcas se utilizan?
 - Una marca del tipo área (barra rectangular compacta por celda, estilo LineUp) representa el ítem valor de un atributo de cuestionario para un participante.
 
+### Abstracción de Datos (formato "Control Evaluación Continua III", Paso 3)
+
+- **Attribute 1** — Name: participante. Type: categórico (clave). Cardinality: hasta 32, deduplicado de los trials presentes en `selectedTrials`. Range: N/A.
+- **Attribute 2** — Name: atributo de cuestionario (género, lateralidad manual, consumo de alcohol/cafeína, edad, horas de sueño, etc.). Type: MIXTO — cada atributo específico es categórico O cuantitativo según corresponda (a diferencia de A1/A2/B1/B2, acá una misma "columna genérica" cubre distintos tipos reales). Cardinality: variable según el atributo. Range: variable según el atributo (ej. edad: rango numérico; género: pocas categorías fijas).
+
+### Coordinación entre vistas (formato "Control Evaluación Continua III")
+
+**A1/A2 ↔ A3 → E) Vista general/detalle — Multiforme.** A3 muestra SOLO el subconjunto de participantes presentes en `selectedTrials` (subconjunto de los 1280 elementos de A1/A2, deduplicado), con una codificación completamente distinta (tabla de barras estilo LineUp, no un scatter de proyección) — encaja en Munzner Cap. 12.3.2 ("Share Data: Subset" -- overview/detail) combinado con "Share Encoding: Different" (Multiforme). Es distinto del caso A1↔A2 (que SÍ comparten el 100% de los elementos, Fully-shared) precisamente porque acá el conjunto de datos mostrado es más chico que el de la vista de origen.
+
 ### 2.2 Pipeline de datos — sin backend nuevo
 
 A3 reutiliza directamente `fetchH2ParticipantProfiles` / `backend/services/h2_participant_profile_service.py`, el mismo endpoint que ya usaba la vista H2 — **cero backend nuevo escrito para A3.** Justificación: el perfil de cuestionario por participante ya existía como concepto de datos en el sistema (H2 ya lo servía para otro propósito); duplicar esa lógica de agregación en un servicio paralelo solo para Vista A habría sido redundante.

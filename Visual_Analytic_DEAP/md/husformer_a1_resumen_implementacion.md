@@ -36,6 +36,18 @@ A pedido explícito de la profesora ("alimentar el trabajo con esas actividades"
 ¿Qué marcas se utilizan?
 - Una marca del tipo punto representa el ítem trial (participante × trial, 1280 en total).
 
+### Abstracción de Datos (formato "Control Evaluación Continua III", Paso 3)
+
+Munzner Cap. 2 — atributos que A1 visualiza directamente (no todos los atributos de DEAP, solo los que este panel codifica):
+
+- **Attribute 1** — Name: trial. Type: categórico (clave). Cardinality: 1280 (32 participantes × 40 trials). Range: N/A (identidad, sin orden).
+- **Attribute 2** — Name: coordenada de proyección (x, y). Type: cuantitativo, derivado (Cap. 3, "Derive" — no es un dato crudo de DEAP, se deriva vía PCA/UMAP/t-SNE del vector `last_hs`). Cardinality: continuo. Range: variable según el método activo, sin límites fijos a priori.
+- **Attribute 3** — Name: valencia autorreportada. Type: cuantitativo ordinal. Cardinality: continuo (rating decimal). Range: 1-9 (escala DEAP).
+
+### Coordinación entre vistas (formato "Control Evaluación Continua III")
+
+A1 participa de varias relaciones de coordinación (Munzner Cap. 12) documentadas en detalle en los `.md` de los paneles "dependientes", para no duplicar el análisis: A1↔A2 en `husformer_a2_resumen_implementacion.md` (Multiforme), A1/A2↔A3 en `husformer_a3_resumen_implementacion.md` (Vista general/detalle — Multiforme), y A→B en `husformer_b1_resumen_implementacion.md` (misma clasificación, drill-down hacia Vista B).
+
 ### 2.3 Visualización — decisiones de diseño y su justificación
 
 **Codificación de color — Valencia, no participante.** A diferencia de Tarea1 (que colorea por participante para un propósito de filtrado distinto), A1 colorea cada punto por su valencia autorreportada (escala DEAP 1-9). Justificación: es exactamente lo que pide G1 — contrastar la posición de un trial en el espacio de representación contra su autorreporte subjetivo.

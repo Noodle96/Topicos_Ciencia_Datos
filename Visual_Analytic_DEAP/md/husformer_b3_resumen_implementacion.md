@@ -30,6 +30,18 @@ Mismo formato del control (Munzner Cap. 5), aplicado a B3.
 
 **Nota:** la banda de resaltado externo (sincronización con B1/B2, sección 2.9) y la guía vertical de hover NO son marcas de codificación de datos — son énfasis interactivo (mismo criterio que excluye hover-highlight/pop-ups en el formato del control).
 
+### Abstracción de Datos (formato "Control Evaluación Continua III", Paso 3)
+
+- **Attribute 1** — Name: grupo/canal seleccionado. Type: categórico. Cardinality: hasta 20 opciones definidas (5 región EEG + 3 hemisferio EEG + 4 EOG + 4 EMG + 1 GSR + 3 autonómicas), máximo 6 activas simultáneamente (`MAX_SIMULTANEOUS_SIGNALS`). Range: N/A.
+- **Attribute 2** — Name: tiempo (fase During). Type: ordenado/temporal, continuo. Cardinality: hasta 1200 puntos por canal (downsampling del backend). Range: 0 a ~60s.
+- **Attribute 3** — Name: valor normalizado de la señal (z-score). Type: cuantitativo, derivado (Cap. 3, "Derive" — normalización calculada en el frontend, no un valor crudo del sensor). Cardinality: continuo. Range: sin límite fijo (z-score), en la práctica típicamente entre -3 y 3.
+
+### Coordinación entre vistas (formato "Control Evaluación Continua III")
+
+**B1/B2 ↔ B3 — no encaja limpio en ninguna de las 6 categorías A-F, y preferimos decirlo así en vez de forzar una letra.** Comparten el mismo TRIAL (mismo contexto/selección activa), pero los ÍTEMS que muestran son genuinamente distintos: B1/B2 son (modalidad, ventana) de un dato derivado (% de dominancia de atención); B3 son muestras de tiempo de la señal fisiológica cruda de canales elegidos por el usuario. La taxonomía A-F (Munzner 12.3.1/12.3.2) asume que las vistas comparadas extraen de una tabla de datos comparable ("Share Data: All/Subset/None" sobre los MISMOS elementos) — acá no hay una tabla común de elementos, solo un contexto/selección compartido. La descripción más precisa es **coordinación por "Share Navigation"** (Munzner Cap. 12.3.3: la selección de trial se sincroniza entre ambos) con codificaciones Multiforme sobre datasets relacionados pero distintos — más el resaltado bidireccional de ventana (sección 2.9), que sí es un caso limpio de *linked highlighting* (Becker & Cleveland 1987).
+
+**Vista B → Vista C (futuro, no implementado):** el brush de selección de rango en B1/B2 hacia C encajaría en **E) Vista general/detalle — Multiforme** (C mostraría un subconjunto — una ventana puntual — con codificación distinta, la matriz 5×5 completa) — pendiente hasta que Vista C exista.
+
 ### 2.2 Pipeline de datos
 
 **Backend: ninguno nuevo.** La señal cruda reutiliza `GET /api/trial-signals?participant=X&trial=Y&channels=Y` (`backend/services/signal_service.py`), el mismo endpoint que ya usan H1/Tarea1 — ya lee el `.bdf` real, con `sfreq` y downsampling incluidos (máx. 1200 puntos por canal). La atención reutiliza el fetch que ya hace B1 (`fetchHusformerTrialAttention`) — cero requests nuevos para eso.
