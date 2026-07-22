@@ -655,6 +655,13 @@
             <section class="cmv-vista" data-vista="C" aria-label="Vista C: Detalle de Atención Cross-Modal por Ventana">
                 <section class="cmv-panel" id="panel-c1" data-panel="C1">
                     <span class="cmv-panel-chip">C1</span>
+
+                    <!-- Mismo tipo de indicador de contexto que B1 (trial
+                         activo), + la ventana seleccionada -- sin esto no
+                         habría forma de saber a qué click en B1/B2
+                         corresponde la matriz mostrada. -->
+                    <div class="husformer-b1-trial-label" id="husformer-c1-context-label"></div>
+
                     <div class="cmv-panel-body" id="c1-chart"></div>
                 </section>
 

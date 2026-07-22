@@ -78,6 +78,8 @@ export function renderHusformerB2Chart({
     activeTrial,
     attentionData,
     onHoverWindowChange,
+    onWindowSelect,
+    selectedWindowIndex,
 }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -134,6 +136,8 @@ export function renderHusformerB2Chart({
         .scaleLinear()
         .domain(d3.extent(windows, (w) => w.window_start_sec))
         .range([0, plotWidth]);
+
+    const windowByIndex = new Map(windows.map((w) => [w.window_index, w]));
 
     // Dominio Y dinámico (mismo principio que el dominio de color de B1,
     // Aigner Cap. 4 -- expansión del rango de valores): los 5 valores rondan
@@ -234,6 +238,35 @@ export function renderHusformerB2Chart({
         .style("opacity", 0)
         .style("pointer-events", "none");
 
+    // Línea de SELECCIÓN (click) -- persistente, distinta de la guía de
+    // hover (gris punteada, hoverLine arriba). Mismo razonamiento y mismo
+    // color (teal #0d9488) que el marco de selección de B1 -- ver ese
+    // archivo para la justificación completa (Munzner 11.4.2: el idiom de
+    // selección debe distinguirse visualmente del de hover, y debe
+    // persistir aunque el usuario haga hover sobre otro punto).
+    const selectionLine = plotGroup
+        .append("line")
+        .attr("y1", 0)
+        .attr("y2", plotHeight)
+        .attr("stroke", "#0d9488")
+        .attr("stroke-width", 2)
+        .style("opacity", 0)
+        .style("pointer-events", "none");
+
+    function drawSelectionLine(windowIndex) {
+        const targetWindow = windowByIndex.get(windowIndex);
+
+        if (!targetWindow) {
+            selectionLine.style("opacity", 0);
+            return;
+        }
+
+        selectionLine
+            .attr("x1", xScale(targetWindow.window_start_sec))
+            .attr("x2", xScale(targetWindow.window_start_sec))
+            .style("opacity", 1);
+    }
+
     const tooltip = d3
         .select("body")
         .append("div")
@@ -285,6 +318,15 @@ export function renderHusformerB2Chart({
         .attr("width", plotWidth)
         .attr("height", plotHeight)
         .attr("fill", "transparent")
+        .attr("cursor", "pointer")
+        .on("click", function (event) {
+            const [mouseX] = d3.pointer(event, this);
+            const activeWindow = findNearestWindow(xScale.invert(mouseX));
+
+            if (onWindowSelect) {
+                onWindowSelect(activeWindow.window_index);
+            }
+        })
         .on("mousemove", function (event) {
             const [mouseX] = d3.pointer(event, this);
             const activeWindow = findNearestWindow(xScale.invert(mouseX));
@@ -323,7 +365,9 @@ export function renderHusformerB2Chart({
             }
         });
 
-    const windowByIndex = new Map(windows.map((w) => [w.window_index, w]));
+    if (selectedWindowIndex !== null && selectedWindowIndex !== undefined) {
+        drawSelectionLine(selectedWindowIndex);
+    }
 
     return {
         highlightWindow(windowIndex) {
@@ -333,5 +377,6 @@ export function renderHusformerB2Chart({
             }
         },
         clearHighlight: clearGuide,
+        updateSelection: drawSelectionLine,
     };
 }

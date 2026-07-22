@@ -74,6 +74,28 @@ def _load_split_attn_final_summary(split_name: str) -> np.ndarray:
         return data["attn_final_summary"]
 
 
+def _load_split_attn_cross_summary(split_name: str) -> np.ndarray:
+    """
+    Carga attn_cross_summary (N_ventanas_del_split, 5, 5) de un split.
+
+    A diferencia de attn_final_summary (auto-atención del transformer de
+    fusión final, usado en B1/B2), attn_cross_summary resume los 5 módulos
+    de atención cruzada `trans_m{i}_all` -- fila = módulo/modalidad que
+    "pregunta", columna = modalidad fuente de la que atiende. Ver docstring
+    de compute_cross_modal_summary en extract_representations.py.
+    """
+    npz_path: Path = REPRESENTATIONS_DIR / f"{split_name}_representations.npz"
+
+    if not npz_path.exists():
+        raise FileNotFoundError(
+            f"No existe: {npz_path}. Ejecuta "
+            "backend/scripts/husformer/extract_representations.py primero."
+        )
+
+    with np.load(npz_path) as data:
+        return data["attn_cross_summary"]
+
+
 def load_husformer_trial_attention(participant_id: int, trial: int) -> dict[str, Any]:
     """
     Serie temporal de dominancia de modalidad para un trial (Vista B, B1/B2).
@@ -164,4 +186,64 @@ def load_husformer_trial_attention(participant_id: int, trial: int) -> dict[str,
         "num_windows": len(windows),
         "modality_labels": MODALITY_LABELS,
         "windows": windows,
+    }
+
+
+def load_husformer_window_cross_attention(
+    participant_id: int, trial: int, window_index: int
+) -> dict[str, Any]:
+    """
+    Matriz 5x5 CRUDA de atención cross-modal (attn_cross_summary) de UNA
+    ventana puntual (Vista C, C1).
+
+    A diferencia de load_husformer_trial_attention (B1/B2), que reduce las
+    60 ventanas de un trial a un vector de 5 valores por ventana promediando
+    sobre el eje query, acá se devuelve la matriz 5x5 completa de UNA sola
+    ventana, sin promediar ni reescalar -- C1 muestra el detalle de "quién
+    le presta atención a quién" en ese instante puntual, que es justamente
+    lo que B1/B2 esconden al promediar sobre el eje query.
+
+    fila = módulo/modalidad que "pregunta" (trans_m{i}_all), columna =
+    modalidad fuente atendida. No son porcentajes de dominancia como en
+    B1/B2 (ese reescalado se justifica ahí porque se compara relativa entre
+    5 modalidades DENTRO de una ventana ya promediada); acá se devuelve el
+    peso de atención promedio tal cual, ya que C1 no compara entre
+    modalidades sino que expone la matriz completa fila x columna.
+    """
+    manifest: pd.DataFrame = _load_manifest()
+
+    window_rows: pd.DataFrame = manifest[
+        (manifest["participant_id"] == participant_id)
+        & (manifest["trial"] == trial)
+        & (manifest["window_index"] == window_index)
+    ]
+
+    if window_rows.empty:
+        raise ValueError(
+            f"No se encontró la ventana window_index={window_index} para "
+            f"participant_id={participant_id}, trial={trial} en el manifest."
+        )
+
+    if len(window_rows) > 1:
+        raise ValueError(
+            f"Se encontró más de una fila para participant_id={participant_id}, "
+            f"trial={trial}, window_index={window_index} -- el manifest "
+            "debería tener una fila única por (participante, trial, ventana)."
+        )
+
+    window_row: pd.Series = window_rows.iloc[0]
+    split_name: str = str(window_row["split"])
+    local_id: int = int(window_row["local_id"])
+
+    attn_cross_summary: np.ndarray = _load_split_attn_cross_summary(split_name)
+    window_matrix: np.ndarray = attn_cross_summary[local_id]  # (5, 5)
+
+    return {
+        "participant_id": participant_id,
+        "trial": trial,
+        "window_index": window_index,
+        "window_start_sec": float(window_row["window_start_sec"]),
+        "split": split_name,
+        "modality_labels": MODALITY_LABELS,
+        "matrix": window_matrix.astype(float).tolist(),
     }

@@ -2,6 +2,7 @@ import {
     fetchHusformerTrialProjection,
     fetchHusformerTrialClusters,
     fetchHusformerTrialAttention,
+    fetchHusformerWindowCrossAttention,
     fetchH2ParticipantProfiles,
     fetchTrialSignals,
 } from "./api.js";
@@ -32,6 +33,10 @@ import {
     renderHusformerB3Chart,
     buildB3Series,
 } from "./charts/husformer_b3_chart.js";
+
+import {
+    renderHusformerC1Chart,
+} from "./charts/husformer_c1_chart.js";
 
 import {
     EEG_REGION_GROUPS,
@@ -243,12 +248,25 @@ let activeB1B2Handle = null;
 let activeB3Handle = null;
 
 function renderB1() {
+    // El hover ahora TAMBIÉN maneja C1 (2026-07-22, a pedido de Russell):
+    // las matrices cross-modal varían poco entre ventanas consecutivas, y
+    // click obligaba a un click por ventana para comparar -- demasiado
+    // lento para "barrer" varias ventanas seguidas y notar la diferencia.
+    // Con hover, mover el mouse por B1/B2 actualiza C1 en tiempo real, sin
+    // clicks. handleWindowSelect ya tiene el guard de "no hacer nada si es
+    // la misma ventana o si es null" (ver esa función) -- null pasa cuando
+    // el mouse SALE del panel, y ahí C1 se queda mostrando la última
+    // ventana (sticky), no vuelve a estado vacío -- si volviera a vacío
+    // cada vez que el mouse sale de B1/B2, sería imposible siquiera mirar
+    // C1 con calma sin que desaparezca.
     const onHoverWindowChange = (windowIndex) => {
         if (windowIndex === null) {
             activeB3Handle?.clearHighlight();
         } else {
             activeB3Handle?.highlightWindow(windowIndex);
         }
+
+        handleWindowSelect(windowIndex);
     };
 
     if (currentB1ViewMode === "heatmap") {
@@ -257,6 +275,8 @@ function renderB1() {
             activeTrial: lastClickedTrial,
             attentionData: latestB1Data,
             onHoverWindowChange,
+            onWindowSelect: handleWindowSelect,
+            selectedWindowIndex,
         });
     } else {
         activeB1B2Handle = renderHusformerB2Chart({
@@ -264,6 +284,8 @@ function renderB1() {
             activeTrial: lastClickedTrial,
             attentionData: latestB1Data,
             onHoverWindowChange,
+            onWindowSelect: handleWindowSelect,
+            selectedWindowIndex,
         });
     }
 
@@ -324,6 +346,14 @@ function renderB1Context() {
  */
 async function loadAndRenderB1(trialPoint) {
     lastClickedTrial = trialPoint;
+
+    // La ventana seleccionada (si había una) pertenece al trial ANTERIOR --
+    // un window_index de otro trial no tiene ningún significado acá, así
+    // que se limpia junto con el cambio de trial (mismo momento en que B1/B2
+    // se recargan). C1 vuelve a su estado vacío hasta el próximo click.
+    selectedWindowIndex = null;
+    latestC1Data = null;
+    renderC1();
 
     b1RequestId += 1;
     const requestId = b1RequestId;
@@ -398,6 +428,129 @@ function observeB1Container() {
     });
 
     resizeObserverB1.observe(container);
+}
+
+// ============================================================
+// Vista C -- C1 (matriz 5x5 de atención cross-modal de UNA ventana puntual).
+// Drill-down de B1/B2: a diferencia de A->B (que se dispara por CLICK en un
+// punto, pero sin necesidad de recordar cuál -- B1 solo necesita "el último
+// trial"), B->C necesita saber EXACTAMENTE qué ventana, y esa selección debe
+// sobrevivir a que el usuario siga haciendo hover en B1/B2/B3 -- por eso es
+// un estado nuevo (selectedWindowIndex), separado de lastClickedTrial y del
+// mecanismo de hover ya existente. Decisión de diseño confirmada con Russell
+// (2026-07-22): selección por CLICK simple de una ventana (no brushing de un
+// rango, que es lo que decía el paper hasta ahora -- Sección 5 actualizada
+// para reflejar esto).
+// ============================================================
+let selectedWindowIndex = null;
+
+// Última respuesta de /window-cross-attention -- { participant_id, trial,
+// window_index, window_start_sec, split, modality_labels, matrix: 5x5 }.
+let latestC1Data = null;
+let c1RequestId = 0;
+
+let resizeObserverC1 = null;
+let lastObservedWidthC1 = 0;
+let lastObservedHeightC1 = 0;
+
+function renderC1() {
+    const label = document.getElementById("husformer-c1-context-label");
+
+    if (!lastClickedTrial || selectedWindowIndex === null) {
+        label.textContent = "";
+    } else if (latestC1Data) {
+        label.textContent = (
+            `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial} `
+            + `· ${latestC1Data.window_start_sec.toFixed(1)}s`
+        );
+    } else {
+        label.textContent = `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`;
+    }
+
+    renderHusformerC1Chart({
+        containerId: "c1-chart",
+        activeTrial: lastClickedTrial,
+        selectedWindowIndex,
+        crossAttentionData: latestC1Data,
+    });
+}
+
+/**
+ * Pide al backend la matriz cross-modal de la ventana seleccionada y
+ * renderiza C1 -- mismo patrón que loadAndRenderB1 (fetch al vuelo, guard de
+ * condición de carrera con requestId, estado "Cargando..." inmediato).
+ */
+async function loadAndRenderC1() {
+    c1RequestId += 1;
+    const requestId = c1RequestId;
+
+    latestC1Data = null;
+    renderC1();
+
+    const data = await fetchHusformerWindowCrossAttention({
+        participantId: lastClickedTrial.Participant_id,
+        trial: lastClickedTrial.Trial,
+        windowIndex: selectedWindowIndex,
+    });
+
+    if (requestId !== c1RequestId) {
+        return;
+    }
+
+    latestC1Data = data;
+    renderC1();
+}
+
+/**
+ * Ventana activa para C1 -- disparada por HOVER en B1/B2 (principal, desde
+ * 2026-07-22) y también por click (se deja funcionando igual, no molesta,
+ * útil en touch donde no hay hover real). Dos guards importantes:
+ *
+ * 1. `windowIndex === null` (el mouse salió de B1/B2, evento de mouseout) --
+ *    no hace nada. C1 se queda mostrando la última ventana marcada (sticky),
+ *    a propósito: si limpiara la selección cada vez que el mouse sale del
+ *    panel, sería imposible mover el mouse hacia C1 para mirarlo de cerca
+ *    sin que se vaciara antes de llegar.
+ * 2. `windowIndex === selectedWindowIndex` (ya es la ventana mostrada) --
+ *    evita un fetch de red redundante. Importante sobre todo para B2, cuyo
+ *    hover dispara en cada `mousemove` (muchos eventos por segundo mientras
+ *    el mouse se mueve dentro de la MISMA ventana) -- sin este guard,
+ *    hacer hover lento dentro de una sola ventana dispararía decenas de
+ *    requests idénticos.
+ */
+function handleWindowSelect(windowIndex) {
+    if (windowIndex === null || windowIndex === selectedWindowIndex) {
+        return;
+    }
+
+    selectedWindowIndex = windowIndex;
+    activeB1B2Handle?.updateSelection(windowIndex);
+    loadAndRenderC1();
+}
+
+function observeC1Container() {
+    const container = document.getElementById("c1-chart");
+
+    if (!container || resizeObserverC1) {
+        return;
+    }
+
+    resizeObserverC1 = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthC1 && height === lastObservedHeightC1) {
+            return;
+        }
+
+        lastObservedWidthC1 = width;
+        lastObservedHeightC1 = height;
+
+        if (width > 0 && height > 0) {
+            renderC1();
+        }
+    });
+
+    resizeObserverC1.observe(container);
 }
 
 // ============================================================
@@ -1093,6 +1246,7 @@ export function initializeHusformerView() {
     observeA1Container();
     observeA2Container();
     observeB1Container();
+    observeC1Container();
     observeB3Container();
 
     // A1/A2 dependen de fetches asíncronos independientes (proyección y
@@ -1110,6 +1264,10 @@ export function initializeHusformerView() {
     // muestra el estado vacío ("Selecciona un trial en Vista A"), sin
     // fetch, hasta el primer click en A1/A2 (ver loadAndRenderB1).
     renderB1();
+
+    // C1 arranca sin ventana seleccionada -- estado vacío hasta el primer
+    // click en B1/B2 (ver handleWindowSelect).
+    renderC1();
 
     // B3 igual -- estado vacío hasta el primer click (ver loadAndRenderB3).
     renderB3();

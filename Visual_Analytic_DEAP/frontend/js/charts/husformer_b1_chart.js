@@ -90,6 +90,8 @@ export function renderHusformerB1Chart({
     activeTrial,
     attentionData,
     onHoverWindowChange,
+    onWindowSelect,
+    selectedWindowIndex,
 }) {
     const container = document.getElementById(containerId);
     container.innerHTML = "";
@@ -245,7 +247,7 @@ export function renderHusformerB1Chart({
         .attr("width", xScale.bandwidth())
         .attr("height", yScale.bandwidth())
         .attr("fill", (d) => colorScale(d.valuePct))
-        .attr("cursor", "default");
+        .attr("cursor", "pointer");
 
     // HOVER -- resalta la ventana (columna) completa de las 5 modalidades,
     // atenuando el resto. Decisión de diseño (Russell, 2026-07-17):
@@ -286,6 +288,58 @@ export function renderHusformerB1Chart({
     function clearColumnHighlight() {
         cellSelection.attr("opacity", 1).attr("stroke", "none").attr("stroke-width", 0);
     }
+
+    // SELECCIÓN (click) -- distinta del hover: hover es transitorio (solo
+    // mientras el mouse está encima), selección es PERSISTENTE (alimenta
+    // Vista C, que necesita saber "qué ventana" incluso sin el mouse
+    // encima). Decisión de diseño confirmada con Russell (2026-07-22):
+    // click simple sobre UNA ventana, no brushing de un rango -- más simple
+    // de implementar ahora, y C2 puede sumar varias ventanas más adelante
+    // con otro mecanismo (shift+click o checkboxes) sin rehacer esto.
+    //
+    // Se dibuja como un MARCO independiente del mecanismo de hover (no
+    // reutiliza applyColumnHighlight/clearColumnHighlight) para que la
+    // ventana seleccionada siga marcada incluso mientras se hace hover
+    // sobre OTRA columna -- si compartiera el mismo stroke que el hover, el
+    // marcador de selección desaparecería cada vez que el usuario explora
+    // otras ventanas con el mouse. Color teal (#0d9488), distinto de los
+    // grises de hover (#111827/#4b5563) y de los 5 colores categóricos de
+    // B2 -- ver Munzner Cap. 11 (11.4.2): el idiom de codificación de
+    // selección debe ser visualmente distinguible del de hover, no el mismo.
+    const selectionGroup = plotGroup.append("g").attr("pointer-events", "none");
+
+    const selectionMarker = selectionGroup
+        .append("rect")
+        .attr("fill", "none")
+        .attr("stroke", "#0d9488")
+        .attr("stroke-width", 2)
+        .attr("y", 0)
+        .attr("height", Math.max(plotHeight, 0))
+        .style("opacity", 0);
+
+    function drawSelectionMarker(windowIndex) {
+        const x = xScale(windowIndex);
+
+        if (x === undefined) {
+            selectionMarker.style("opacity", 0);
+            return;
+        }
+
+        selectionMarker
+            .attr("x", x)
+            .attr("width", xScale.bandwidth())
+            .style("opacity", 1);
+    }
+
+    if (selectedWindowIndex !== null && selectedWindowIndex !== undefined) {
+        drawSelectionMarker(selectedWindowIndex);
+    }
+
+    cellSelection.on("click", function (event, d) {
+        if (onWindowSelect) {
+            onWindowSelect(d.windowIndex);
+        }
+    });
 
     cellSelection
         .on("mouseover", function (event, d) {
@@ -336,5 +390,6 @@ export function renderHusformerB1Chart({
     return {
         highlightWindow: applyColumnHighlight,
         clearHighlight: clearColumnHighlight,
+        updateSelection: drawSelectionMarker,
     };
 }

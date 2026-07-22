@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.services.husformer_attention_service import (
     load_husformer_trial_attention,
+    load_husformer_window_cross_attention,
 )
 
 
@@ -36,6 +37,38 @@ def get_husformer_trial_attention() -> Any:
         data: dict[str, Any] = load_husformer_trial_attention(
             participant_id=int(participant_id_raw),
             trial=int(trial_raw),
+        )
+
+        return jsonify(data)
+
+    except Exception as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@husformer_attention_bp.route("/window-cross-attention", methods=["GET"])
+def get_husformer_window_cross_attention() -> Any:
+    """
+    Uso:
+    /api/husformer/window-cross-attention?participant_id=1&trial=1&window_index=10
+
+    Retorna la matriz 5x5 cruda de atención cross-modal (attn_cross_summary)
+    de UNA ventana puntual (Vista C, C1) -- ver husformer_attention_service.py
+    para la diferencia con attn_final_summary (B1/B2).
+    """
+    participant_id_raw: str | None = request.args.get("participant_id")
+    trial_raw: str | None = request.args.get("trial")
+    window_index_raw: str | None = request.args.get("window_index")
+
+    try:
+        if participant_id_raw is None or trial_raw is None or window_index_raw is None:
+            raise ValueError(
+                "Faltan los parámetros 'participant_id', 'trial' y/o 'window_index'."
+            )
+
+        data: dict[str, Any] = load_husformer_window_cross_attention(
+            participant_id=int(participant_id_raw),
+            trial=int(trial_raw),
+            window_index=int(window_index_raw),
         )
 
         return jsonify(data)

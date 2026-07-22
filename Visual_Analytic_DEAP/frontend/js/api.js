@@ -216,6 +216,24 @@ export async function fetchHusformerTrialAttention({ participantId, trial }) {
     return await response.json();
 }
 
+/**
+ * Obtiene la matriz 5x5 cruda de atención cross-modal (attn_cross_summary)
+ * de UNA ventana puntual (Vista C, C1) -- distinta de attn_final_summary
+ * (B1/B2): ver husformer_attention_service.py.
+ */
+export async function fetchHusformerWindowCrossAttention({ participantId, trial, windowIndex }) {
+    const response = await fetch(
+        `${API_BASE_URL}/husformer/window-cross-attention`
+        + `?participant_id=${participantId}&trial=${trial}&window_index=${windowIndex}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Husformer window cross-attention");
+    }
+
+    return await response.json();
+}
+
 export async function fetchTarea1TrialSignals({
     participant,
     trial,
