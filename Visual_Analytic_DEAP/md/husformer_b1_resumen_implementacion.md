@@ -111,7 +111,7 @@ B1 (heatmap) y B2 (líneas superpuestas) mostraban el mismo dato con dos idiomas
 
 **Decisión de alcance para B3 (implementada, ver `husformer_b3_resumen_implementacion.md` para el detalle completo, incluida su evolución de diseño):** B3 muestra siempre TODO el trial (no un segundo aislado) — hover en una ventana puntual de B1/B2 marca esa posición dentro de la vista completa de B3 (y viceversa, sincronización bidireccional agregada después), no cambia a una vista de 1 segundo solo. Ver un único segundo con el máximo detalle queda reservado para la futura Vista C (instante puntual, matriz 5×5 completa) — cada vista mantiene su escala propia: A = trial completo, B = serie temporal del trial, C = una ventana puntual.
 
-**Pendiente identificado (2026-07-17, pregunta de Russell aún sin resolver):** hoy clickear una celda de B1 (o un punto de B2) NO HACE NADA — solo hay hover, nunca se implementó un handler de click. Queda como decisión abierta: ¿el click debería, desde ya, dejar una marca persistente de "ventana seleccionada" (mismo patrón que `lastClickedTrial` en Vista A), pensando en que ese sea el trigger de Vista C más adelante? Ver la misma nota en `husformer_b2_resumen_implementacion.md`.
+**✅ Resuelto (2026-07-22):** clickear una celda de B1 (o un punto de B2) ahora fija esa ventana como "seleccionada" (`selectedWindowIndex` en `husformer_main.js`), marcada con un marco/línea color teal — persistente, independiente del hover. Es el trigger de Vista C (C1), implementado el mismo día. Ver `husformer_c1_resumen_implementacion.md` para el detalle completo de la decisión (click simple vs. brushing) y `husformer_b2_resumen_implementacion.md` para la misma nota del lado de B2.
 
 ### 2.7 Resaltado sincronizado con B3 — 2026-07-17
 
