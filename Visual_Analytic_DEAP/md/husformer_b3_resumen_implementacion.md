@@ -16,6 +16,20 @@ B3 es el tercer y último sub-panel de Vista B — a diferencia de B1 (T3, overv
 
 Comparación de **varias señales fisiológicas crudas normalizadas, superpuestas**, del trial activo (mismo `lastClickedTrial` que B1/B2). El usuario elige de un selector agrupado por modalidad (con EEG desglosado en dos esquemas: región anatómica y hemisferio, no sus 32 canales sueltos) hasta 6 señales a la vez; cada una se promedia (si el grupo tiene más de un canal), se corrige al eje temporal de "During", y se normaliza (z-score) antes de graficarse. Ya NO muestra el panel de atención de B1/B2 duplicado — ver la corrección en 2.4.
 
+### Marks and Channels (formato "Control Evaluación Continua III")
+
+Mismo formato del control (Munzner Cap. 5), aplicado a B3.
+
+¿Qué canales visuales se utilizan?
+- El canal posición horizontal codifica el atributo tiempo dentro de la fase "During" del trial (continuo, 0 a ~60s).
+- El canal posición vertical codifica el atributo valor normalizado (z-score) de la señal fisiológica de ese grupo/canal en ese instante (cuantitativo).
+- El canal color (hue por familia de modalidad + luminancia/saturación por grupo específico dentro de esa modalidad) codifica el atributo identidad del grupo de canal seleccionado (ej. "EEG-Frontal", "EEG-Izquierdo", "GSR1") — mismos hues base que usan B1/B2 para la misma modalidad (share encoding, Munzner Cap. 12.3.1).
+
+¿Qué marcas se utilizan?
+- Una marca del tipo línea representa el ítem serie temporal normalizada de UNA señal (canal individual o grupo promediado) a lo largo del trial — hasta 6 líneas simultáneas.
+
+**Nota:** la banda de resaltado externo (sincronización con B1/B2, sección 2.9) y la guía vertical de hover NO son marcas de codificación de datos — son énfasis interactivo (mismo criterio que excluye hover-highlight/pop-ups en el formato del control).
+
 ### 2.2 Pipeline de datos
 
 **Backend: ninguno nuevo.** La señal cruda reutiliza `GET /api/trial-signals?participant=X&trial=Y&channels=Y` (`backend/services/signal_service.py`), el mismo endpoint que ya usan H1/Tarea1 — ya lee el `.bdf` real, con `sfreq` y downsampling incluidos (máx. 1200 puntos por canal). La atención reutiliza el fetch que ya hace B1 (`fetchHusformerTrialAttention`) — cero requests nuevos para eso.

@@ -16,6 +16,20 @@ Vista B ("Atención Temporal del Trial") atiende T3, T4 y T5 con sus tres sub-pa
 
 Series superpuestas: 5 líneas (una por modalidad, color categórico fijo), eje X = tiempo del trial (segundos), eje Y = % de dominancia. Mismo trial que B1 (drill-down desde el último trial clickeado en Vista A) y **mismo dato exacto que B1** — no se pide nada nuevo al backend.
 
+### Marks and Channels (formato "Control Evaluación Continua III")
+
+Mismo formato del control (Munzner Cap. 5), aplicado a B2. Mismo dato que B1, mapeo de canales INVERTIDO (ver justificación completa más abajo, "principio de expresividad").
+
+¿Qué canales visuales se utilizan?
+- El canal posición horizontal codifica el atributo tiempo dentro del trial (`window_start_sec`, continuo).
+- El canal posición vertical codifica el atributo % de dominancia de la modalidad correspondiente en esa ventana (cuantitativo).
+- El canal color hue (categórico, 5 colores nombrables) codifica el atributo identidad de la modalidad.
+- El canal patrón de trazo (dash pattern) codifica REDUNDANTEMENTE el mismo atributo que el color (identidad de la modalidad) — canal de refuerzo para daltonismo, no un atributo nuevo.
+
+¿Qué marcas se utilizan?
+- Una marca del tipo línea representa el ítem serie temporal de dominancia de UNA modalidad a lo largo del trial (5 líneas en total).
+- Una marca del tipo punto (en cada muestra real sobre la línea) representa el ítem ventana de 1s individual — deja explícito que la serie es de 60 muestras discretas, no una señal continua interpolada.
+
 ### 2.2 Pipeline de datos — sin fetch propio
 
 B2 reutiliza directamente `latestB1Data` (la respuesta de `/api/husformer/trial-attention` que ya carga B1) — `husformer_main.js` renderiza B2 al final de `renderB1()`, sin un `loadAndRenderB2` independiente. Justificación: sería redundante pedirle al backend el mismo cálculo dos veces solo porque dos paneles distintos lo visualizan de forma distinta.

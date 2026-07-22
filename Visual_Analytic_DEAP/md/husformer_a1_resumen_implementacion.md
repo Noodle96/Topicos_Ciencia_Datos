@@ -24,7 +24,19 @@ T1 está atendida casi por completo por A1 sola — A2 (clustering) y A3 (compar
 
 **Nota (2026-07-17):** este pipeline se re-corrió completo tras el reentrenamiento del modelo (40 épocas, `attn_mask=False` — ver `husformer_b1_resumen_implementacion.md` para el detalle completo de por qué), así que A1 hoy refleja el checkpoint entrenado más reciente (mejor `valid_loss`, época 3 de 40), no el modelo original de 1 época.
 
-### 2.2 Visualización — decisiones de diseño y su justificación
+### 2.2 Marks and Channels (formato "Control Evaluación Continua III")
+
+A pedido explícito de la profesora ("alimentar el trabajo con esas actividades"), se aplica acá el mismo formato de descomposición practicado en el control sobre visualizaciones externas — Munzner Cap. 5 — pero sobre A1 mismo. Describe la codificación de DATOS en la imagen estática (no los estados de interacción como selección/atenuado, que son énfasis interactivo, no codificación base — misma distinción que pedía el control).
+
+¿Qué canales visuales se utilizan?
+- El canal posición horizontal codifica el atributo primera dimensión de la proyección (PC1 / UMAP1 / t-SNE1, según el método activo) del vector `last_hs` de 40-dim agregado por trial.
+- El canal posición vertical codifica el atributo segunda dimensión de la proyección (PC2 / UMAP2 / t-SNE2).
+- El canal color (hue + luminancia, escala divergente azul-naranja) codifica el atributo valencia autorreportada del trial (escala DEAP 1-9).
+
+¿Qué marcas se utilizan?
+- Una marca del tipo punto representa el ítem trial (participante × trial, 1280 en total).
+
+### 2.3 Visualización — decisiones de diseño y su justificación
 
 **Codificación de color — Valencia, no participante.** A diferencia de Tarea1 (que colorea por participante para un propósito de filtrado distinto), A1 colorea cada punto por su valencia autorreportada (escala DEAP 1-9). Justificación: es exactamente lo que pide G1 — contrastar la posición de un trial en el espacio de representación contra su autorreporte subjetivo.
 
@@ -42,7 +54,7 @@ T1 está atendida casi por completo por A1 sola — A2 (clustering) y A3 (compar
 
 **Sin títulos de panel.** Decisión general de todo el CMV: pantalla completa, solo un chip corto ("A1") en la esquina. La leyenda de color es la única excepción consciente.
 
-### 2.3 Bugs encontrados y corregidos
+### 2.4 Bugs encontrados y corregidos
 
 1. **Render inicial en tamaño chico.** El chart se renderizaba antes de que su vista dejara de estar oculta (`display:none`, mide 0×0). Corregido con `ResizeObserver` sobre el contenedor.
 2. **Ejes fijos durante el zoom.** Corregido re-escalando los ejes en cada evento de zoom con el mismo transform que mueve los puntos.

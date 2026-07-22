@@ -18,6 +18,19 @@ A1 atiende T1 directamente (ver su documento). **A3 lo atiende de forma compleme
 
 Comparación del **perfil de cuestionario** de los participantes actualmente presentes en `selectedTrials` (el mismo conjunto de selección múltiple que comparten A1/A2), deduplicado a nivel participante (varios trials seleccionados del mismo participante cuentan una sola vez, con un contador de cuántos trials tiene seleccionados). Estilo **LineUp** (Gratzl et al. 2013, *LineUp: Visual Analysis of Multi-Attribute Rankings*, IEEE TVCG 19(12):2277–2286): cada fila = 1 participante, cada columna = 1 atributo del cuestionario. Atributos categóricos se codifican como barra de color (mismo color = misma categoría, dentro de esa columna); atributos numéricos como barra horizontal, con el largo normalizado al RANGO DE LA SELECCIÓN ACTUAL (no al rango global de los 32 participantes) — así la comparación resalta diferencias relevantes entre los participantes efectivamente seleccionados, no diluidas contra el rango completo del dataset.
 
+### Marks and Channels (formato "Control Evaluación Continua III")
+
+Mismo formato del control (Munzner Cap. 5), aplicado a A3. A diferencia de A1/A2 (un mark por trial), acá la tabla tiene una estructura de MATRIZ (Munzner Cap. 7, arreglo por filas/columnas) — el ítem de cada mark es "el valor de un atributo de cuestionario para un participante", no el participante entero.
+
+¿Qué canales visuales se utilizan?
+- El canal posición vertical (fila) codifica el atributo identidad del participante (categórico, deduplicado de `selectedTrials`).
+- El canal posición horizontal (columna) codifica el atributo identidad del atributo de cuestionario mostrado (categórico — género, lateralidad, edad, etc.).
+- Dentro de una columna NUMÉRICA: el canal longitud (length, 1D size) codifica el atributo valor de ese atributo para ese participante, normalizado al rango de la selección actual.
+- Dentro de una columna CATEGÓRICA: el canal color hue codifica el atributo categoría de ese participante para ese atributo — la escala de color es propia de cada columna (mismo color en columnas distintas NO significa la misma categoría).
+
+¿Qué marcas se utilizan?
+- Una marca del tipo área (barra rectangular compacta por celda, estilo LineUp) representa el ítem valor de un atributo de cuestionario para un participante.
+
 ### 2.2 Pipeline de datos — sin backend nuevo
 
 A3 reutiliza directamente `fetchH2ParticipantProfiles` / `backend/services/h2_participant_profile_service.py`, el mismo endpoint que ya usaba la vista H2 — **cero backend nuevo escrito para A3.** Justificación: el perfil de cuestionario por participante ya existía como concepto de datos en el sistema (H2 ya lo servía para otro propósito); duplicar esa lógica de agregación en un servicio paralelo solo para Vista A habría sido redundante.

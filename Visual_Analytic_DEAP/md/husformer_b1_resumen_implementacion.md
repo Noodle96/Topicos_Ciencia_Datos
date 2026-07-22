@@ -22,6 +22,18 @@ Vista B ("Atención Temporal del Trial") atiende T3, T4 y T5 con tres sub-panele
 
 Heatmap: 5 filas fijas (modalidad) × ~60 columnas (ventanas de 1s del trial activo), color = % de dominancia de esa modalidad en esa ventana. Es un **drill-down de UN trial a la vez** — el último trial clickeado en A1/A2 (independiente de la selección múltiple que usa A3; no se resetea al limpiar esa selección — decisión confirmada con Russell, 2026-07-15).
 
+### Marks and Channels (formato "Control Evaluación Continua III")
+
+Mismo formato del control (Munzner Cap. 5), aplicado a B1 — estructura de matriz (Cap. 7.5.2), igual que A3 pero con ejes distintos.
+
+¿Qué canales visuales se utilizan?
+- El canal posición vertical (fila) codifica el atributo identidad de la modalidad (categórico, 5 valores fijos: EEG/EOG/EMG/GSR/Resp+Plet+Temp).
+- El canal posición horizontal (columna) codifica el atributo ventana de tiempo dentro del trial (ordinal, `window_index`/`window_start_sec`).
+- El canal color (escala secuencial Plasma) codifica el atributo % de dominancia de esa modalidad en esa ventana (cuantitativo, dominio ajustado al mín/máx real del trial activo).
+
+¿Qué marcas se utilizan?
+- Una marca del tipo área (celda rectangular de la matriz) representa el ítem (modalidad, ventana) — la combinación de una modalidad y una ventana de 1s específicas dentro del trial activo.
+
 ### 2.2 Pipeline de datos
 
 `backend/services/husformer_attention_service.py` → `load_husformer_trial_attention(participant_id, trial)`: carga el manifest, filtra y ordena las ventanas del trial por `window_index`, indexa `attn_final_summary` (matriz 5×5 por ventana: fila=modalidad query, columna=modalidad key) del split correspondiente vía `local_id`, y promedia sobre el eje QUERY (filas) para obtener un vector de 5 valores por ventana — "cuánta atención recibe en promedio cada modalidad de TODAS las que preguntan" (confirmado con Russell con ejemplo numérico: promediar por columna = "quién es atendido", no por fila = "quién pregunta"). Se calcula al vuelo por request, igual que el clustering de A2 — sin precómputo ni caché en disco.

@@ -21,6 +21,18 @@ A diferencia de T1 (que A1 sola resuelve, mostrando TODA la nube de puntos para 
 
 Clustering (KMeans o HDBSCAN, elegible) calculado **al vuelo** sobre el mismo espacio de 1280 trials que usa A1, coloreando cada punto por su etiqueta de cluster en vez de por Valencia. Reutiliza el layout de puntos de A1 (misma proyección 2D activa), así que A1 y A2 son literalmente la misma nube de puntos vista con dos codificaciones de color distintas.
 
+### Marks and Channels (formato "Control Evaluación Continua III")
+
+Mismo formato de descomposición del control (Munzner Cap. 5), aplicado a A2 — codificación de datos en la imagen estática, sin contar estados de interacción.
+
+¿Qué canales visuales se utilizan?
+- El canal posición horizontal codifica el atributo primera dimensión de la proyección (misma que A1, comparten layout).
+- El canal posición vertical codifica el atributo segunda dimensión de la proyección (misma que A1).
+- El canal color (hue categórico, `d3.schemeSet3`) codifica el atributo identidad del cluster asignado al trial (KMeans o HDBSCAN, según el método/preset activo) — un atributo DERIVADO (Munzner Cap. 3, "Derive"), no un dato crudo del dataset.
+
+¿Qué marcas se utilizan?
+- Una marca del tipo punto representa el ítem trial — el mismo ítem, con las mismas posiciones, que en A1 (comparten los 1280 elementos de datos; solo cambia el canal de color).
+
 ### 2.2 Pipeline de datos
 
 No hay pipeline offline propio — a diferencia de A1 (que sí precomputa proyecciones a archivo), A2 clusteriza **por request**: `backend/services/husformer_trial_service.py` → `load_husformer_trial_clusters(method, param_value)` carga `trial_last_hs_standardized.npy` (el mismo array de 1280×40 que ya usa A1 antes de proyectar) y corre `sklearn.cluster.KMeans` o `HDBSCAN` directamente sobre ese vector de 40 dimensiones. Confirmado con Russell (2026-07-15): sobre 1280×40 floats, tanto KMeans como HDBSCAN son prácticamente instantáneos — no se justifica precomputar ni cachear en disco.
