@@ -47,7 +47,7 @@ Las tres vistas están coordinadas mediante los siguientes mecanismos de interac
 
 \begin{itemize}
     \item \textbf{Clicking:} seleccionar un punto en A1/A2 carga el trial correspondiente en Vista~B.
-    \item \textbf{Brushing:} seleccionar un rango de ventanas en B1/B2 filtra las ventanas disponibles para inspección en Vista~C.
+    \item \textbf{Hovering:} pasar el cursor sobre una ventana puntual en B1/B2 actualiza en tiempo real la ventana mostrada en detalle en C1, permitiendo recorrer varias ventanas consecutivas sin una acción discreta por cada una -- relevante porque las matrices de atención cross-modal cambian de forma sutil entre ventanas vecinas. C1 conserva la última ventana mostrada al retirar el cursor (no vuelve a un estado vacío), de modo que la vista permanece disponible mientras el usuario la examina.
     \item \textbf{Linking:} las tres vistas conforman un flujo de exploración progresiva (\textit{drill-down}) de participante/trial (A) a dinámica del trial (B) a detalle de ventana (C).
     \item \textbf{Filtrado global:} filtros por dimensión afectiva (valencia/activación) persistentes a través de las tres vistas.
     \item \textbf{Details-on-demand:} información numérica exacta disponible mediante \textit{tooltips} en A1, B1 y C1.
