@@ -234,6 +234,21 @@ export async function fetchHusformerWindowCrossAttention({ participantId, trial,
     return await response.json();
 }
 
+/**
+ * Obtiene el mapa de patrones de fusión cross-modal entre los 1280 trials
+ * (Vista A, A3 rediseñada) -- nodos + aristas, sin parámetros (es del
+ * dataset completo).
+ */
+export async function fetchHusformerTrialPatternNetwork() {
+    const response = await fetch(`${API_BASE_URL}/husformer/trial-pattern-network`);
+
+    if (!response.ok) {
+        throw new Error("Error loading Husformer trial pattern network");
+    }
+
+    return await response.json();
+}
+
 export async function fetchTarea1TrialSignals({
     participant,
     trial,

@@ -897,6 +897,12 @@ body {
   width: 100%;
   display: grid;
   grid-template-rows: var(--row-a) var(--row-b) var(--row-c);
+  /* ⚠️ TEMPORAL (2026-07-22): columnas explícitas a nivel de la grilla
+     externa, necesarias para poder ubicar el panel fusionado A3+B3 (ver
+     #panel-a3b3-merged más abajo) abarcando 2 filas en la 3ra columna.
+     REVERTIR sacando esta línea junto con el resto de las reglas
+     TEMPORAL de este archivo. */
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
   background: #cbd5e1;
   padding: 6px;
@@ -931,6 +937,46 @@ body {
 .cmv-vista[data-vista="B"] {
   grid-template-columns: 1.1fr 2.5fr;
 }
+
+/* ⚠️ BLOQUE TEMPORAL COMPLETO (2026-07-22) -- fusión de A3+B3 en un solo
+   panel grande para probar la legibilidad del grafo de A3 (1280 nodos).
+   REVERTIR todo este bloque + la línea grid-template-columns de
+   .system-cmv-grid de más arriba + devolver panel-a3/panel-b3 a su lugar
+   original en index.html (dentro de data-vista="A" y data-vista="B"
+   respectivamente) cuando se termine de probar. */
+.cmv-vista[data-vista="A"] {
+  /* Ahora solo A1+A2 (A3 se mudó fuera de acá) -- 2 columnas, no 3. */
+  grid-template-columns: 1fr 1fr;
+  grid-column: 1 / 3;
+}
+
+.cmv-vista[data-vista="B"] {
+  /* Ahora solo el panel B1/B2 fusionado (B3 se mudó fuera de acá) -- 1
+     columna, no 2. Pisa el override de arriba a propósito (viene después
+     en el archivo). */
+  grid-template-columns: 1fr;
+  grid-column: 1 / 3;
+}
+
+.cmv-vista[data-vista="C"] {
+  /* Sin cambios de contenido, pero ahora la grilla externa tiene 3
+     columnas explícitas -- hay que decirle que ocupe las 3, si no
+     quedaría solo en la primera. */
+  grid-column: 1 / 4;
+}
+
+.cmv-panel-a3b3-merged {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.cmv-panel-a3b3-merged .cmv-panel-body {
+  flex: 1;
+  min-height: 0;
+}
+/* ⚠️ FIN DEL BLOQUE TEMPORAL */
 
 .cmv-panel {
   position: relative;
@@ -1093,6 +1139,24 @@ body {
   width: 56px;
   font-size: 8px;
   color: #6b7280;
+}
+
+/* Contador de selección de A3 (mapa de patrones, 2026-07-22) -- misma
+   esquina que el chip "A3" pero desplazado para no superponerse, mismo
+   fondo semi-transparente que la leyenda de A1 para legibilidad sobre el
+   grafo. */
+.husformer-a3-selection-count {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  font-size: 9px;
+  font-weight: 700;
+  color: #111827;
+  background: rgba(255, 255, 255, 0.88);
+  padding: 3px 6px;
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 /* Tooltip propio de A1 -- NO reutiliza .emotion-tooltip a propósito, para

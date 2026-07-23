@@ -247,3 +247,161 @@ def load_husformer_window_cross_attention(
         "modality_labels": MODALITY_LABELS,
         "matrix": window_matrix.astype(float).tolist(),
     }
+
+
+# Vecinos más parecidos por trial en el mapa de patrones de A3 -- si
+# conectáramos todos los pares posibles de los 1280 trials serían ~800 mil
+# aristas, ilegible. k=4 sigue el mismo espíritu que el mapa de enfermedades
+# de la NYT (Goh et al.) que inspiró este diseño: solo las conexiones reales
+# más fuertes, no un grafo completo.
+TRIAL_NETWORK_TOP_K_NEIGHBORS: int = 4
+
+VALENCE_NEUTRAL_MIDPOINT: float = 5.0  # escala DEAP 1-9, centro = 5
+
+# Caché en memoria (2026-07-22) -- compute_trial_pattern_network() no
+# recibe parámetros (es del dataset completo, siempre el mismo resultado)
+# y es el cálculo más pesado de todo el sistema (matriz de similitud
+# 1280x1280 + carga de los 3 .npz de attn_cross_summary). Sin caché, se
+# recalculaba de cero en CADA carga de página, al mismo tiempo que el
+# clustering de A2 -- dos cálculos numpy pesados en paralelo (threaded=True)
+# es justo el escenario más propenso a choques de BLAS/deadlocks que
+# venimos viendo. Cachear acá reduce cuántas veces ese cálculo pesado corre
+# de verdad, no solo acelera la carga.
+_trial_pattern_network_cache: dict[str, Any] | None = None
+
+
+def compute_trial_pattern_network() -> dict[str, Any]:
+    """
+    Mapa de patrones de fusión cross-modal entre TRIALS (Vista A, A3
+    rediseñada -- 2026-07-22, reemplaza el panel de perfil de cuestionario).
+
+    A diferencia de load_husformer_window_cross_attention (C1, una ventana
+    puntual) o load_husformer_trial_attention (B1/B2, serie temporal DENTRO
+    de un trial), acá se colapsa cada trial a UNA sola "firma": su
+    attn_cross_summary promediado sobre las ~60 ventanas, aplanado a 25
+    valores (5x5). Justificado empíricamente (diagnostico_attn_cross.py,
+    2026-07-22): la variación DENTRO de un trial es ~120x menor que la
+    variación ENTRE trials -- promediar las ventanas de un trial no borra
+    señal real, porque esa señal ya es casi constante ventana a ventana.
+
+    Para cada trial, se calcula similitud coseno de su firma de 25 valores
+    contra la de TODOS los demás trials (cruzando splits -- el split es un
+    artefacto de entrenamiento, no una agrupación real del dato), y se
+    conserva solo sus TRIAL_NETWORK_TOP_K_NEIGHBORS vecinos más parecidos
+    como aristas del grafo -- mismo principio que el mapa de enfermedades
+    de Goh et al. (NYT, 2008) que inspiró este diseño: nodo = ítem (trial,
+    antes enfermedad), arista = relación real y fuerte (similitud de firma,
+    antes gen compartido), NO todos los pares posibles.
+
+    Cada nodo lleva además la valencia reportada (para el canal de color,
+    reusando la misma escala divergente azul-naranja de A1) y su grado en
+    esta red (para el canal de tamaño -- ver nota completa junto al cálculo
+    de degree_by_index más abajo). valence_distance se sigue devolviendo
+    por compatibilidad/uso en tooltips, pero ya NO es lo que codifica el
+    tamaño del nodo (2026-07-22: resultaba redundante con el color, que ya
+    muestra "qué tan extremo" vía saturación).
+    """
+    global _trial_pattern_network_cache
+
+    if _trial_pattern_network_cache is not None:
+        return _trial_pattern_network_cache
+
+    manifest: pd.DataFrame = _load_manifest()
+
+    signatures: list[np.ndarray] = []
+    trial_keys: list[tuple[int, int]] = []
+    valences: list[float] = []
+
+    for split_name in manifest["split"].unique():
+        split_rows: pd.DataFrame = manifest[manifest["split"] == split_name]
+        attn_cross_summary: np.ndarray = _load_split_attn_cross_summary(str(split_name))
+
+        for (participant_id, trial), group in split_rows.groupby(["participant_id", "trial"]):
+            local_ids: np.ndarray = group["local_id"].to_numpy()
+            trial_matrices: np.ndarray = attn_cross_summary[local_ids]  # (n_windows, 5, 5)
+
+            signature: np.ndarray = trial_matrices.mean(axis=0).flatten()  # (25,)
+            signatures.append(signature)
+            trial_keys.append((int(participant_id), int(trial)))
+
+            # La valencia es constante dentro de un trial (un solo
+            # autorreporte por trial, repetido en cada fila de ventana del
+            # manifest) -- tomamos el primer valor, no un promedio.
+            valences.append(float(group["valence"].iloc[0]))
+
+    signature_matrix: np.ndarray = np.stack(signatures, axis=0)  # (1280, 25)
+
+    # Similitud coseno vectorizada: normalizar cada fila a norma 1, después
+    # el producto punto entre filas ES la similitud coseno.
+    norms: np.ndarray = np.linalg.norm(signature_matrix, axis=1, keepdims=True)
+    normalized: np.ndarray = signature_matrix / np.clip(norms, a_min=1e-12, a_max=None)
+    similarity_matrix: np.ndarray = normalized @ normalized.T  # (1280, 1280)
+
+    n_trials: int = len(trial_keys)
+    np.fill_diagonal(similarity_matrix, -np.inf)  # excluir auto-similitud
+
+    edges: list[dict[str, Any]] = []
+    seen_pairs: set[tuple[int, int]] = set()
+
+    for row_index in range(n_trials):
+        neighbor_indices: np.ndarray = np.argpartition(
+            similarity_matrix[row_index], -TRIAL_NETWORK_TOP_K_NEIGHBORS
+        )[-TRIAL_NETWORK_TOP_K_NEIGHBORS:]
+
+        for neighbor_index in neighbor_indices:
+            pair: tuple[int, int] = (
+                min(row_index, int(neighbor_index)),
+                max(row_index, int(neighbor_index)),
+            )
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+
+            edges.append({
+                "source": pair[0],
+                "target": pair[1],
+                "similarity": float(similarity_matrix[pair[0], pair[1]]),
+            })
+
+    # Grado de cada nodo (2026-07-22, canal de TAMAÑO -- reemplaza la
+    # distancia a la valencia neutra, que resultaba redundante con el color:
+    # el propio color divergente ya muestra "qué tan extremo" es un trial
+    # vía cuán saturado se ve, ver husformer_a3_resumen_implementacion.md).
+    # Adaptación fiel del mapa de enfermedades de Goh et al. (NYT 2008) que
+    # inspiró este diseño: ahí el tamaño = cantidad de genes asociados a la
+    # enfermedad, que en la práctica determina cuántas conexiones
+    # POTENCIALES tiene con las demás. Acá, el tamaño = grado real en ESTA
+    # red -- cada trial tiene, como mínimo, sus propios
+    # TRIAL_NETWORK_TOP_K_NEIGHBORS vecinos (los que ÉL eligió como más
+    # parecidos), más cuantos otros trials, de forma independiente, lo
+    # hayan elegido A ÉL como uno de los suyos. Un nodo grande = firma de
+    # fusión "típica" (muchos otros la reconocen como parecida a la propia);
+    # un nodo en el mínimo (exactamente TRIAL_NETWORK_TOP_K_NEIGHBORS) =
+    # firma "rara", que nadie más eligió de vuelta -- candidato interesante
+    # para investigar como caso atípico del mecanismo de fusión (no de la
+    # representación final, que es lo que ya cubre el outlier-detection de
+    # A1/T1).
+    degree_by_index: dict[int, int] = {index: 0 for index in range(n_trials)}
+    for edge in edges:
+        degree_by_index[edge["source"]] += 1
+        degree_by_index[edge["target"]] += 1
+
+    nodes: list[dict[str, Any]] = [
+        {
+            "index": index,
+            "participant_id": participant_id,
+            "trial": trial,
+            "valence": valence,
+            "valence_distance": abs(valence - VALENCE_NEUTRAL_MIDPOINT),
+            "degree": degree_by_index[index],
+        }
+        for index, ((participant_id, trial), valence) in enumerate(zip(trial_keys, valences))
+    ]
+
+    _trial_pattern_network_cache = {
+        "num_trials": n_trials,
+        "top_k_neighbors": TRIAL_NETWORK_TOP_K_NEIGHBORS,
+        "nodes": nodes,
+        "edges": edges,
+    }
+    return _trial_pattern_network_cache

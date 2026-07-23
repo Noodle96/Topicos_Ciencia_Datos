@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, request
 from backend.services.husformer_attention_service import (
     load_husformer_trial_attention,
     load_husformer_window_cross_attention,
+    compute_trial_pattern_network,
 )
 
 
@@ -71,6 +72,28 @@ def get_husformer_window_cross_attention() -> Any:
             window_index=int(window_index_raw),
         )
 
+        return jsonify(data)
+
+    except Exception as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@husformer_attention_bp.route("/trial-pattern-network", methods=["GET"])
+def get_husformer_trial_pattern_network() -> Any:
+    """
+    Uso:
+    /api/husformer/trial-pattern-network
+
+    Retorna el mapa de patrones de fusión cross-modal entre los 1280 trials
+    (Vista A, A3 rediseñada -- reemplaza el panel de perfil de
+    cuestionario): un nodo por trial (con su valencia y distancia al punto
+    neutro) + aristas hacia sus vecinos más parecidos en firma de atención
+    cross-modal. Sin parámetros -- es un mapa del dataset completo, no de un
+    trial puntual. Ver husformer_attention_service.py (compute_trial_
+    pattern_network) para la justificación completa.
+    """
+    try:
+        data: dict[str, Any] = compute_trial_pattern_network()
         return jsonify(data)
 
     except Exception as error:

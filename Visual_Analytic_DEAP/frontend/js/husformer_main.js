@@ -3,7 +3,7 @@ import {
     fetchHusformerTrialClusters,
     fetchHusformerTrialAttention,
     fetchHusformerWindowCrossAttention,
-    fetchH2ParticipantProfiles,
+    fetchHusformerTrialPatternNetwork,
     fetchTrialSignals,
 } from "./api.js";
 
@@ -18,8 +18,8 @@ import {
 } from "./charts/husformer_a2_chart.js";
 
 import {
-    renderHusformerA3Panel,
-} from "./charts/husformer_a3_panel.js";
+    renderHusformerA3NetworkChart,
+} from "./charts/husformer_a3_network_chart.js";
 
 import {
     renderHusformerB1Chart,
@@ -139,63 +139,117 @@ let resizeObserverA2 = null;
 let lastObservedWidthA2 = 0;
 let lastObservedHeightA2 = 0;
 
-// A3 -- perfil de cuestionario del participante (ver notas extensas en
-// versiones anteriores de este archivo / estado_proyecto.md). A1 y A2
-// seleccionan TRIALS, el perfil es por PARTICIPANTE -- se deduplica.
-function getSelectedParticipantTrialCounts() {
-    const counts = new Map();
+// A3 -- mapa de patrones de fusión cross-modal entre trials (rediseño
+// 2026-07-22, reemplaza el panel de perfil de cuestionario -- ver
+// husformer_a3_resumen_implementacion.md para la justificación completa).
+//
+// Es un mapa del DATASET COMPLETO (1280 trials), independiente del trial
+// activo en B/C -- se pide UNA sola vez al cargar la vista, no en cada
+// click como A1/A2.
+//
+// Selección PROPIA, separada de `selectedTrials` (la de A1/A2) -- decisión
+// deliberada: el propósito acá es distinto (elegir 2-4 trials CONTRASTANTES
+// para un estudio de caso en Vista C, no marcar puntos de interés general
+// en el espacio de representación), y necesita su propio tope
+// (MAX_SELECTED_COMPARISON_TRIALS) que no tendría sentido imponerle a la
+// selección de A1/A2.
+const MAX_SELECTED_COMPARISON_TRIALS = 4;
 
-    selectedTrials.forEach((point) => {
-        const label = point.Participant_label;
-        counts.set(label, (counts.get(label) ?? 0) + 1);
-    });
+let latestA3NetworkData = null;
+let selectedComparisonTrials = new Set(); // claves "participantId_trial"
 
-    return counts;
+function getComparisonTrialKey(node) {
+    return `${node.participant_id}_${node.trial}`;
 }
 
-let a3RequestId = 0;
+// ⚠️ BLOQUE TEMPORAL (2026-07-22, a pedido de Russell): A3 ocupa un panel
+// fusionado más grande (#panel-a3b3-merged en index.html, spans 2 filas de
+// la grilla -- antes eran los espacios separados de A3 y B3). SOLO el grafo
+// de A3 se muestra ahí -- B3 (señales crudas) no se renderiza en ningún
+// lado mientras dure esta prueba de legibilidad (1280 nodos). Sin selector
+// -- decisión directa, no un toggle (primer intento tenía uno, Russell pidió
+// sacarlo). REVERTIR: volver panel-a3/panel-b3 a sus lugares originales en
+// index.html, volver renderA3() a su containerId original ("a3-chart"), y
+// volver a habilitar renderB3()/setupB3ChannelControl()/observeB3Container().
+const A3B3_MERGED_CONTAINER_ID = "a3b3-merged-chart";
 
-async function renderA3() {
-    const trialCounts = getSelectedParticipantTrialCounts();
-    const participantLabels = Array.from(trialCounts.keys());
+function renderA3() {
+    const counter = document.getElementById("husformer-a3-selection-count");
+    counter.textContent = `Seleccionados: ${selectedComparisonTrials.size}/${MAX_SELECTED_COMPARISON_TRIALS}`;
 
-    a3RequestId += 1;
-    const requestId = a3RequestId;
-
-    function removeParticipant(participantLabel) {
-        Array.from(selectedTrials.entries()).forEach(([key, point]) => {
-            if (point.Participant_label === participantLabel) {
-                selectedTrials.delete(key);
-            }
-        });
-
-        renderA1();
-        renderA2();
-        renderA3();
-    }
-
-    if (participantLabels.length === 0) {
-        renderHusformerA3Panel({
-            containerId: "a3-chart",
-            profileData: null,
-            participantTrialCounts: trialCounts,
-            onRemoveParticipant: removeParticipant,
-        });
-        return;
-    }
-
-    const profileData = await fetchH2ParticipantProfiles(participantLabels);
-
-    if (requestId !== a3RequestId) {
-        return;
-    }
-
-    renderHusformerA3Panel({
-        containerId: "a3-chart",
-        profileData,
-        participantTrialCounts: trialCounts,
-        onRemoveParticipant: removeParticipant,
+    renderHusformerA3NetworkChart({
+        containerId: A3B3_MERGED_CONTAINER_ID,
+        networkData: latestA3NetworkData,
+        selectedTrials: selectedComparisonTrials,
+        onNodeToggle: handleA3NodeToggle,
+        onBackgroundClick: handleA3BackgroundClick,
     });
+}
+
+function handleA3NodeToggle(node) {
+    const key = getComparisonTrialKey(node);
+
+    if (selectedComparisonTrials.has(key)) {
+        selectedComparisonTrials.delete(key);
+    } else {
+        if (selectedComparisonTrials.size >= MAX_SELECTED_COMPARISON_TRIALS) {
+            return;
+        }
+        selectedComparisonTrials.add(key);
+    }
+
+    renderA3();
+}
+
+function handleA3BackgroundClick() {
+    if (selectedComparisonTrials.size === 0) {
+        return;
+    }
+
+    selectedComparisonTrials.clear();
+    renderA3();
+}
+
+/**
+ * Pide el mapa de patrones UNA sola vez (no depende de ningún trial activo
+ * ni de la selección de A1/A2) -- mismo patrón que loadAndRenderProjection,
+ * pero sin argumentos ni re-fetch en cada render.
+ */
+async function loadAndRenderA3Network() {
+    const data = await fetchHusformerTrialPatternNetwork();
+    latestA3NetworkData = data;
+    renderA3();
+}
+
+let resizeObserverA3 = null;
+let lastObservedWidthA3 = 0;
+let lastObservedHeightA3 = 0;
+
+function observeA3Container() {
+    // ⚠️ TEMPORAL: observa el contenedor fusionado (A3B3_MERGED_CONTAINER_ID),
+    // compartido con B3 -- ver bloque TEMPORAL más arriba.
+    const container = document.getElementById(A3B3_MERGED_CONTAINER_ID);
+
+    if (!container || resizeObserverA3) {
+        return;
+    }
+
+    resizeObserverA3 = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthA3 && height === lastObservedHeightA3) {
+            return;
+        }
+
+        lastObservedWidthA3 = width;
+        lastObservedHeightA3 = height;
+
+        if (width > 0 && height > 0 && latestA3NetworkData) {
+            renderA3();
+        }
+    });
+
+    resizeObserverA3.observe(container);
 }
 
 // ============================================================
@@ -593,7 +647,15 @@ let currentB3ZoomTransform = null;
  * reconstruir las series con el mismo dato ya en memoria.
  */
 function renderB3() {
+    // ⚠️ TEMPORAL (2026-07-22): B3 no tiene dónde renderizarse -- sus
+    // elementos (#husformer-b3-trial-label, #husformer-b3-selector,
+    // #b3-chart, etc.) se sacaron del DOM mientras A3 usa el panel
+    // fusionado (ver bloque TEMPORAL en index.html). REVERTIR sacando este
+    // `return` cuando B3 vuelva a su panel propio.
     const label = document.getElementById("husformer-b3-trial-label");
+    if (!label) {
+        return;
+    }
     label.textContent = lastClickedTrial
         ? `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`
         : "";
@@ -612,8 +674,10 @@ function renderB3() {
         seriesList = buildB3Series(latestB3RawResponse, selectedGroups);
     }
 
+    // ⚠️ TEMPORAL (2026-07-22): renderiza en el contenedor fusionado con
+    // A3 (ver bloque TEMPORAL más arriba) -- REVERTIR a "b3-chart".
     activeB3Handle = renderHusformerB3Chart({
-        containerId: "b3-chart",
+        containerId: A3B3_MERGED_CONTAINER_ID,
         activeTrial: lastClickedTrial,
         seriesList,
         initialZoomTransform: currentB3ZoomTransform,
@@ -831,9 +895,11 @@ function observeB3Container() {
 }
 
 // Handlers de selección/fondo COMPARTIDOS entre A1 y A2 -- clickear un punto
-// (o el fondo) en cualquiera de los dos paneles re-renderiza los TRES
-// paneles de Vista A (compound brushing/linked highlighting entre vistas
-// coordinadas, Cap. 12 de Munzner / Cap. 5 de Aigner).
+// (o el fondo) en cualquiera de los dos paneles re-renderiza AMBOS paneles
+// (compound brushing/linked highlighting entre vistas coordinadas, Cap. 12
+// de Munzner / Cap. 5 de Aigner). A3 YA NO depende de selectedTrials
+// (rediseño 2026-07-22 -- tiene su propia selección, ver más arriba), así
+// que no se re-renderiza acá.
 function handlePointToggle(point) {
     const key = getTrialKey(point);
 
@@ -845,7 +911,6 @@ function handlePointToggle(point) {
 
     renderA1();
     renderA2();
-    renderA3();
 
     // Drill-down a Vista B -- ver nota extensa arriba de lastClickedTrial.
     // Se dispara SIEMPRE que se clickea un punto (agregar o quitar de la
@@ -866,7 +931,6 @@ function handleBackgroundClick() {
     selectedTrials.clear();
     renderA1();
     renderA2();
-    renderA3();
 }
 
 function renderA1() {
@@ -1242,12 +1306,16 @@ export function initializeHusformerView() {
     setupFilterControls();
     setupA2Controls();
     setupB1ViewToggle();
-    setupB3ChannelControl();
+    // ⚠️ TEMPORAL (2026-07-22): setupB3ChannelControl()/observeB3Container()
+    // deshabilitados -- B3 no se renderiza en ningún lado mientras A3 usa el
+    // panel fusionado (ver bloque TEMPORAL más arriba). REVERTIR
+    // descomentando la línea de setupB3ChannelControl() y observeB3Container().
+    // setupB3ChannelControl();
     observeA1Container();
     observeA2Container();
+    observeA3Container();
     observeB1Container();
     observeC1Container();
-    observeB3Container();
 
     // A1/A2 dependen de fetches asíncronos independientes (proyección y
     // clustering respectivamente) -- se piden en paralelo; cada uno
@@ -1256,9 +1324,9 @@ export function initializeHusformerView() {
     loadAndRenderProjection();
     loadAndRenderClusters();
 
-    // A3 no depende de ningún fetch (solo de selectedTrials, que arranca
-    // vacío) -- se puede renderizar de una vez.
-    renderA3();
+    // A3 (rediseño 2026-07-22, mapa de patrones) pide el grafo completo UNA
+    // sola vez -- no depende de ningún trial activo ni de selectedTrials.
+    loadAndRenderA3Network();
 
     // B1 arranca sin trial activo (nadie ha clickeado nada todavía) -- solo
     // muestra el estado vacío ("Selecciona un trial en Vista A"), sin

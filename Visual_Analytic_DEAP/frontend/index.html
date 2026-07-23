@@ -561,10 +561,6 @@
                     <div class="cmv-panel-body" id="a2-chart"></div>
                 </section>
 
-                <section class="cmv-panel" id="panel-a3" data-panel="A3">
-                    <span class="cmv-panel-chip">A3</span>
-                    <div class="cmv-panel-body" id="a3-chart"></div>
-                </section>
             </section>
 
             <section class="cmv-vista" data-vista="B" aria-label="Vista B: Atención Temporal del Trial">
@@ -612,44 +608,36 @@
 
                     <div class="cmv-panel-body" id="b1-chart"></div>
                 </section>
+            </section>
 
-                <section class="cmv-panel" id="panel-b3" data-panel="B3">
-                    <span class="cmv-panel-chip">B3</span>
+            <!-- ⚠️ TEMPORAL (2026-07-22, a pedido de Russell, solo para
+                 pruebas de legibilidad del grafo de A3 con 1280 nodos):
+                 A3 y B3 fusionados en UN SOLO panel grande que abarca las
+                 filas de Vista A y Vista B (grid-row: span 2). Ahí va
+                 SOLO el grafo de A3 -- B3 (señales crudas) no se muestra
+                 mientras dure esta prueba (sin selector, decisión directa,
+                 no un toggle). Sacado de adentro de Vista A/Vista B (donde
+                 vivían panel-a3/panel-b3 originalmente) y puesto acá como
+                 hijo directo de .system-cmv-grid para poder ocupar las dos
+                 filas. REVERTIR: mover panel-a3 de vuelta adentro de
+                 data-vista="A" (después de panel-a2) y panel-b3 de vuelta
+                 adentro de data-vista="B" (después de panel-b1), sacar
+                 este bloque, y sacar las reglas CSS marcadas TEMPORAL en
+                 layout.css. -->
+            <section class="cmv-panel cmv-panel-a3b3-merged" id="panel-a3b3-merged">
+                <span class="cmv-panel-chip">A3</span>
 
-                    <!-- Mismo indicador de contexto que B1/B2 (drill-down
-                         de UN trial). -->
-                    <div class="husformer-b1-trial-label" id="husformer-b3-trial-label"></div>
-
-                    <!-- Reset de zoom (2026-07-17, a pedido de Russell) --
-                         SOLO resetea el zoom/pan del chart (vuelve a
-                         mostrar 0-60s), no la selección de señales -- son
-                         dos estados independientes. El doble-click sobre
-                         el chart hace lo mismo (ver husformer_b3_
-                         chart.js); este botón es la versión descubrible,
-                         visible sin necesidad de saber el atajo. -->
-                    <button type="button" class="husformer-b3-reset-zoom" id="husformer-b3-reset-zoom" title="Volver a ver el trial completo (0-60s)">↺ Reset zoom</button>
-
-                    <!-- Layout en flexbox normal (no absolute) -- el
-                         selector puede crecer hasta 6 filas de chips según
-                         cuántas modalidades tenga abiertas, y con flexbox
-                         el chart de abajo siempre recibe el espacio
-                         restante real, sin necesidad de adivinar un
-                         padding fijo en píxeles. -->
-                    <div class="husformer-b3-layout">
-                        <!-- Selector de señales (2026-07-17, rediseño --
-                             reemplaza el <select> de 44 canales sueltos).
-                             Agrupado por modalidad; EEG con dos esquemas
-                             (Región anatómica / Hemisferio) en vez de sus
-                             32 canales individuales -- ver husformer_b3_
-                             channel_groups.js para la justificación
-                             completa y el mapeo canal->grupo. Contenido
-                             generado por JS (setupB3ChannelControl), no
-                             hardcodeado acá. -->
-                        <div class="husformer-b3-selector" id="husformer-b3-selector"></div>
-
-                        <div class="cmv-panel-body husformer-b3-chart-body" id="b3-chart"></div>
+                <div class="husformer-a1-legend" id="husformer-a3-legend">
+                    <span class="husformer-a1-legend-label">Valencia</span>
+                    <div class="husformer-a1-legend-bar"></div>
+                    <div class="husformer-a1-legend-ticks">
+                        <span>1</span>
+                        <span>9</span>
                     </div>
-                </section>
+                </div>
+                <div class="husformer-a3-selection-count" id="husformer-a3-selection-count"></div>
+
+                <div class="cmv-panel-body" id="a3b3-merged-chart"></div>
             </section>
 
             <section class="cmv-vista" data-vista="C" aria-label="Vista C: Detalle de Atención Cross-Modal por Ventana">
