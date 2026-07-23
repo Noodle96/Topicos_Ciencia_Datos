@@ -1,71 +1,66 @@
-# Resumen de implementación — T1 (Vista A / sub-panel A3)
+# Resumen de implementación — Vista A / sub-panel A3 (mapa de patrones de fusión cross-modal)
 
-Documento vivo, creado 2026-07-17, corregido el mismo día (ver nota de corrección abajo). Objetivo: documentar en el momento (no al final) qué hace el sistema respecto a cada tarea, con las decisiones de diseño y su justificación, como insumo directo para la exposición y la redacción del paper.
+Documento vivo, reescrito por completo el 2026-07-22 -- reemplaza la versión anterior de A3 (comparación de perfil de cuestionario, estilo LineUp), que Russell decidió descartar en la misma sesión: no aportaba lo suficiente al objetivo del trabajo. Contenido anterior disponible en el historial de git si hace falta consultarlo.
 
-**⚠️ Corrección (2026-07-17):** este documento decía originalmente que A3 servía a T2, igual que A2. Al cruzar contra el `.tex` real de Russell (Sección 5), la justificación oficial de A3 dice explícitamente que **NO** hace la comparación estructural de T2 (esa la hace A2) sino que sirve a **T1**, como vía complementaria de explicación. Corregido acá.
+## 1. Por qué existe esta A3 nueva
 
-## 1. Qué es T1 y por qué importa (ver también `husformer_a1_resumen_implementacion.md`)
+El pivote surgió de dos hilos que confluyeron el mismo día:
 
-**T1:** *"Identificar participantes o trials cuya representación latente se aparta del resto."* — Categoría: Query — Identify. Goals: G1, G4.
+1. **Vista C** se estaba rediseñando de "detalle de una ventana puntual dentro de un trial" a "comparación de patrones de fusión cross-modal entre trials contrastantes" (motor del Estudio de Casos pedido explícitamente por la profesora: *"mostrar en la herramienta los patrones encontrados"*). Ese rediseño necesita, en algún lugar del sistema, una forma de **elegir QUÉ trials comparar**.
+2. Analizando en profundidad el paper *"A visual analytics framework for time-series feature representation and exploration"* (Yang et al. 2025, `md/paper_time_series_visual_analytics_framework_resumen.md`) y, sobre todo, revisando de nuevo la actividad de clase sobre Marks and Channels (mapa de enfermedades y genes compartidos del NYT, 2008, basado en el "diseasome" de Goh et al.), surgió la idea de adaptar ese mismo idiom -- red de nodos conectados por una relación real -- a nuestro propio dato.
 
-A1 atiende T1 directamente (ver su documento). **A3 lo atiende de forma complementaria**, no comparando posiciones dentro del espacio de representación (esa comparación estructural la habilita **A2**, para **T2**) sino ofreciendo una vía explicativa: una vez identificado un trial o participante cuya representación se aparta del resto (T1, vía A1), A3 permite examinar si ese subconjunto comparte rasgos demográficos o de cuestionario — una hipótesis explicativa adicional, más allá del espacio de representación en sí. Es una distinción deliberada, no accidental: A2 y A3 NO hacen "lo mismo con otra forma" — A2 sirve T2 (comparación estructural algorítmica), A3 sirve T1 (explicación de outliers/casos identificados).
+Al decidir dónde debía vivir ese "selector de trials para comparar", se descartó Vista C (que ya tiene el rol de mostrar el DETALLE de trials ya elegidos, no de elegirlos entre los 1280) y se optó por Vista A -- es un mapa de **overview de todo el dataset**, el mismo tipo de tarea que ya hace A1, solo que mirando otro dato. Justo en ese momento A3 (perfil de cuestionario) había quedado libre, al decidirse que no aportaba lo suficiente -- coincidencia útil, no causalidad forzada.
 
-**Nota de diseño (Vista D → A3):** A3 nació como una "Vista D" independiente propuesta durante el diseño, pero se decidió fusionarla dentro de Vista A (2026-07-07). El diseño final quedó en 3 vistas (A/B/C), 3 sub-paneles cada una.
+### Layout — DECISIÓN DEFINITIVA (2026-07-22)
 
-## 2. Cómo el sistema atiende T1 hoy — Vista A, sub-panel A3
+Al probar A3 en su espacio original (1/9 de la pantalla, un tercio de la fila de Vista A), 1280 nodos resultaban ilegibles sin hacer zoom/arrastre constante. Se probó temporalmente fusionar el espacio de A3 con el de B3 (2 filas de la grilla combinadas en un solo panel) -- **Russell confirmó que este arreglo se queda como diseño PERMANENTE, no era solo para pruebas.** A3 ocupa **2/9 del layout total** (el espacio que antes eran A3 + B3 por separado, apiladas una debajo de la otra en la misma columna). Esto implica, como consecuencia directa: B3 se quedó sin espacio propio -- su destino (fusionarse como una tercera opción dentro del selector de B1/B2, o quedar absorbido de otra forma en el rediseño de Vista C) es una decisión pendiente, todavía sin resolver con Russell (ver Sección 3).
 
-### 2.1 Qué hace A3
+## 2. Qué hace la A3 nueva
 
-Comparación del **perfil de cuestionario** de los participantes actualmente presentes en `selectedTrials` (el mismo conjunto de selección múltiple que comparten A1/A2), deduplicado a nivel participante (varios trials seleccionados del mismo participante cuentan una sola vez, con un contador de cuántos trials tiene seleccionados). Estilo **LineUp** (Gratzl et al. 2013, *LineUp: Visual Analysis of Multi-Attribute Rankings*, IEEE TVCG 19(12):2277–2286): cada fila = 1 participante, cada columna = 1 atributo del cuestionario. Atributos categóricos se codifican como barra de color (mismo color = misma categoría, dentro de esa columna); atributos numéricos como barra horizontal, con el largo normalizado al RANGO DE LA SELECCIÓN ACTUAL (no al rango global de los 32 participantes) — así la comparación resalta diferencias relevantes entre los participantes efectivamente seleccionados, no diluidas contra el rango completo del dataset.
+Un **mapa de patrones de fusión cross-modal entre trials**: cada uno de los 1280 trials es un nodo; dos trials se conectan si su "firma" de atención cross-modal (`attn_cross_summary` promediado sobre sus ~60 ventanas, aplanado a 25 valores) es de las más parecidas entre sí (top-4 vecinos por trial, no todos los pares posibles). El layout es de fuerza (d3-force, force-directed) -- si el patrón de fusión realmente se relaciona con el estado afectivo, el mapa debería partirse visualmente en continentes por valencia, sin que nadie se lo diga explícitamente al sistema.
+
+**Inspiración explícita y adaptación:** mapa de enfermedades y genes compartidos del NYT (2008, http://www.nytimes.com/interactive/2008/05/05/science/20080506_DISEASE.html, basado en Goh et al., "diseasome") -- visto en la actividad de clase de Marks and Channels. Ahí: nodo = enfermedad, arista = gen causante compartido, tamaño = cantidad de genes asociados (que en la práctica determina cuántas conexiones POTENCIALES tiene esa enfermedad con las demás), color = categoría médica. Acá: nodo = trial, arista = firma de atención cross-modal parecida, tamaño = **grado real del nodo en esta red**, color = valencia.
+
+**⚠️ Corrección de diseño (2026-07-22, mismo día):** la primera versión usaba el tamaño para `|valencia - 5|` (qué tan extrema es la valencia reportada). Russell notó, con una pregunta directa, que esto era **redundante con el color**: la escala divergente azul-naranja ya muestra "qué tan extremo" es un trial a través de cuán saturado se ve (cerca de 5 = pálido/grisáceo, cerca de 1 o 9 = vívido) -- el tamaño estaba repitiendo la misma información dos veces por dos canales distintos. Se cambió a **grado de conexión en la red** (cuántos vecinos tiene ese nodo, contando tanto sus propios `top_k_neighbors` elegidos como cuántos otros trials lo eligieron a él de vuelta) -- además de no ser redundante con el color, es la adaptación MÁS FIEL al propio ejemplo del mapa de enfermedades que inspiró el diseño (ahí el tamaño también estaba ligado a la estructura de conexiones, no a un atributo externo sin relación con la red).
 
 ### Marks and Channels (formato "Control Evaluación Continua III")
 
-Mismo formato del control (Munzner Cap. 5), aplicado a A3. A diferencia de A1/A2 (un mark por trial), acá la tabla tiene una estructura de MATRIZ (Munzner Cap. 7, arreglo por filas/columnas) — el ítem de cada mark es "el valor de un atributo de cuestionario para un participante", no el participante entero.
-
 ¿Qué canales visuales se utilizan?
-- El canal posición vertical (fila) codifica el atributo identidad del participante (categórico, deduplicado de `selectedTrials`).
-- El canal posición horizontal (columna) codifica el atributo identidad del atributo de cuestionario mostrado (categórico — género, lateralidad, edad, etc.).
-- Dentro de una columna NUMÉRICA: el canal longitud (length, 1D size) codifica el atributo valor de ese atributo para ese participante, normalizado al rango de la selección actual.
-- Dentro de una columna CATEGÓRICA: el canal color hue codifica el atributo categoría de ese participante para ese atributo — la escala de color es propia de cada columna (mismo color en columnas distintas NO significa la misma categoría).
+- El canal color (hue, escala divergente azul-naranja) codifica el atributo valencia reportada del trial -- **reutiliza exactamente la misma escala que A1** (`VALENCE_COLOR_SCALE`, exportada de `husformer_a1_chart.js`, pensada para esto desde el 2026-07-07), Share Encoding (Munzner Cap. 12.3.1): mismo lenguaje visual en todo el sistema para el mismo atributo.
+- El canal área (tamaño del nodo) codifica el atributo grado del nodo (cantidad de conexiones) en la red de similitud -- cuántos otros trials tienen una firma de fusión cross-modal parecida a la de este, contando tanto sus propias conexiones elegidas como las que otros trials le asignaron a él. Dominio dinámico, ajustado al mín/máx real de grado presente en el grafo (mismo criterio de "expansión del rango de valores" que ya usa la escala de color de B1, Aigner Cap. 4).
+- La posición de cada nodo **no codifica ningún atributo elegido** -- es resultado de una simulación de fuerza (atrae nodos conectados, repele el resto). Es la misma "trampa" de los node-link diagrams que ya identificamos en la actividad de clase sobre el mapa de enfermedades: agrupa visualmente lo conectado, pero no es una decisión de codificación real y hay que decirlo explícitamente, no dejar que se lea como si lo fuera.
 
 ¿Qué marcas se utilizan?
-- Una marca del tipo área (barra rectangular compacta por celda, estilo LineUp) representa el ítem valor de un atributo de cuestionario para un participante.
+- Una marca del tipo punto representa el ítem trial.
+- Una marca del tipo línea (de conexión) representa el ítem relación de similitud de firma de atención cross-modal entre dos trials.
 
 ### Abstracción de Datos (formato "Control Evaluación Continua III", Paso 3)
 
-- **Attribute 1** — Name: participante. Type: categórico (clave). Cardinality: hasta 32, deduplicado de los trials presentes en `selectedTrials`. Range: N/A.
-- **Attribute 2** — Name: atributo de cuestionario (género, lateralidad manual, consumo de alcohol/cafeína, edad, horas de sueño, etc.). Type: MIXTO — cada atributo específico es categórico O cuantitativo según corresponda (a diferencia de A1/A2/B1/B2, acá una misma "columna genérica" cubre distintos tipos reales). Cardinality: variable según el atributo. Range: variable según el atributo (ej. edad: rango numérico; género: pocas categorías fijas).
+- **Attribute 1** — Name: firma de atención cross-modal del trial. Type: cuantitativo, derivado (Cap. 3, "Derive" -- `attn_cross_summary` promediado sobre las ventanas de un trial, aplanado). Cardinality: continuo, vector de 25 dimensiones. Range: variable, sin reescalar (mismo criterio que C1 -- no hay un total compartido que justifique normalizar a porcentaje, a diferencia de B1/B2).
+- **Attribute 2** — Name: valencia reportada del trial. Type: cuantitativo. Cardinality: continuo. Range: 1-9 (escala DEAP).
+- **Attribute 3** — Name: similitud de firma entre dos trials. Type: cuantitativo, derivado (similitud coseno entre los vectores de 25 dimensiones de dos trials). Cardinality: continuo, [-1, 1] en teoría, en la práctica siempre positivo dado que los valores de atención son no negativos. Range: se conserva solo el top-4 más alto por trial, no el rango completo.
+- **Attribute 4** — Name: grado del trial en la red. Type: cuantitativo, derivado dos veces (Cap. 3, "Derive" -- primero la similitud de Attribute 3, después contar cuántas aristas tocan a cada nodo). Cardinality: entero, mínimo `top_k_neighbors` (4, sus propias conexiones elegidas), sin techo teórico fijo (depende de cuántos otros trials lo eligieron de vuelta). Range: variable según el grafo real, dominio dinámico ajustado en el frontend al mín/máx observado.
 
 ### Coordinación entre vistas (formato "Control Evaluación Continua III")
 
-**A1/A2 ↔ A3 → E) Vista general/detalle — Multiforme.** A3 muestra SOLO el subconjunto de participantes presentes en `selectedTrials` (subconjunto de los 1280 elementos de A1/A2, deduplicado), con una codificación completamente distinta (tabla de barras estilo LineUp, no un scatter de proyección) — encaja en Munzner Cap. 12.3.2 ("Share Data: Subset" -- overview/detail) combinado con "Share Encoding: Different" (Multiforme). Es distinto del caso A1↔A2 (que SÍ comparten el 100% de los elementos, Fully-shared) precisamente porque acá el conjunto de datos mostrado es más chico que el de la vista de origen.
+**A1 ↔ A3 → comparten canal de color, pero NO comparten selección.** Decisión deliberada (2026-07-22): A1/A2 comparten el mismo `Map` de selección (`selectedTrials`) desde el principio del proyecto; A3 tiene su **propio** conjunto de selección (`selectedComparisonTrials`, tope de 4), porque su propósito es distinto -- elegir CASOS CONTRASTANTES para Vista C, no marcar puntos de interés general en el espacio de representación. Forzar la misma selección hubiera mezclado dos intenciones distintas del usuario. Si en algún momento se decide unificarlas, hay que revisar el tope de selección primero.
 
-### 2.2 Pipeline de datos — sin backend nuevo
-
-A3 reutiliza directamente `fetchH2ParticipantProfiles` / `backend/services/h2_participant_profile_service.py`, el mismo endpoint que ya usaba la vista H2 — **cero backend nuevo escrito para A3.** Justificación: el perfil de cuestionario por participante ya existía como concepto de datos en el sistema (H2 ya lo servía para otro propósito); duplicar esa lógica de agregación en un servicio paralelo solo para Vista A habría sido redundante.
-
-### 2.3 Historia de diseño — la primera versión fue rechazada
-
-Vale la pena documentar esto explícitamente porque es un caso real de iteración de diseño, útil para la exposición. La PRIMERA versión de A3 era una tabla HTML de texto plano con Valencia/Arousal/Dominance/Liking (VAD) de los trials seleccionados. Russell la rechazó por dos razones concretas:
-
-1. **Redundancia de información.** VAD de cada trial YA está disponible en el tooltip de A1 (al pasar el cursor sobre un punto) — la tabla no aportaba nada que el usuario no pudiera ya ver, solo lo repetía en otro formato. En palabras de Russell: rompía "lo que es visual analytic" (no basta con mostrar datos de otra forma; hay que aportar algo que la vista anterior no daba).
-2. **Duda legítima sobre la utilidad de comparar VAD en sí.** ¿Es realmente lo más útil comparar Valencia/Arousal/Dominance/Liking entre participantes, si ya está codificado por color en A1? Cuestionamiento válido dado que A1 ya resuelve esa lectura visualmente.
-
-**Rediseño:** en vez de VAD (atributo del TRIAL, ya cubierto por A1), A3 pasó a comparar el **perfil de cuestionario del PARTICIPANTE** (atributos demográficos/psicométricos) — información genuinamente nueva que A1 no muestra en ningún lado, y que sí tiene sentido comparar entre participantes (no entre trials).
-
-### 2.4 Decisiones de diseño adicionales
-
-**`onRemoveParticipant` quita TODOS los trials de ese participante, no uno.** Consistente con que A3 opera a nivel PARTICIPANTE (deduplicado), mientras A1/A2 operan a nivel TRIAL — quitar una fila de A3 debe reflejarse quitando cada trial de ese participante de `selectedTrials`, y por lo tanto re-renderizando A1 también (coordinación entre vistas, Munzner Cap. 12).
-
-**Por qué LineUp como referencia.** Gratzl et al. (2013) diseñaron específicamente para el problema de comparar/rankear ítems con MÚLTIPLES atributos simultáneamente — exactamente el problema de A3 (comparar participantes por varios atributos de cuestionario a la vez, no uno solo).
+**A3 → Vista C (pendiente de implementar):** los trials seleccionados en A3 (hasta 4) son el insumo que va a alimentar la Vista C rediseñada (comparación de casos). Todavía no está conectado -- Vista C sigue pendiente de reconstruirse.
 
 ## 3. Qué NO está resuelto todavía
 
-- **Sin capacidad de RANKEAR (ordenar) participantes por un atributo** — a diferencia de LineUp original, que sí permite ordenar filas por columna. A3 solo compara visualmente, no reordena.
-- **Sin selección/deselección de qué columnas (atributos) mostrar** — todas las columnas del cuestionario se muestran siempre.
+- **Destino de B3, decisión pendiente con Russell** -- ver nota de layout en la Sección 1. B3 (comparación de señales fisiológicas crudas) se quedó sin panel propio al fusionarse A3 con su espacio. Opciones sobre la mesa, ninguna decidida: (a) tercera opción dentro del selector de B1/B2 (mismo patrón de botones excluyentes), (b) absorbido de otra forma dentro del rediseño de Vista C.
+- **Legibilidad con 1280 nodos, parcialmente resuelta.** Ya implementado: encuadre automático al cargar (calcula el rectángulo que ocupan todos los nodos tras asentarse la simulación de fuerza, y ajusta el zoom/pan inicial para que entren todos sin arrastrar el mouse), zoom/pan manual libre desde ese punto de partida. Pendiente, a pedido de Russell: mecanismos para inspeccionar el detalle de un círculo puntual sin perder el contexto general (algo más que el zoom libre actual) -- todavía sin diseñar.
+- **Conexión/coordinación con A1 y A2** -- pendiente de diseñar. Hoy A3 comparte el canal de color con A1 (Share Encoding) pero NO hay vínculo interactivo real (clickear un punto en A1/A2 no resalta nada en A3, ni viceversa). Explícitamente dejado para después de que el layout y el contenido de Vista C estén asentados (evitar rehacer interacciones si el diseño de las vistas todavía cambia).
+- **Conexión con Vista C** -- pendiente, pieza siguiente del pivote grande (ver `estado_proyecto.md`, memoria del proyecto).
+- **Arrastrar nodos a mano** -- no implementado; si el zoom no alcanza para desenredar zonas densas, considerar sumarlo.
 
 ## 4. Mapa técnico rápido
 
-**Backend (reutilizado, sin cambios):** `backend/services/h2_participant_profile_service.py`, `backend/routes/h2_participant_profile_routes.py`.
+**Backend:** `backend/services/husformer_attention_service.py` (`compute_trial_pattern_network`, agregación por trial + similitud coseno + top-k vecinos + grado por nodo, con caché en memoria -- `_trial_pattern_network_cache`, ver nota de rendimiento más abajo), `backend/routes/husformer_attention_routes.py` (`GET /api/husformer/trial-pattern-network`, sin parámetros -- mapa del dataset completo), mismo blueprint que B1/B2/C1 (`/api/husformer`).
 
-**Frontend:** `frontend/js/charts/husformer_a3_panel.js` (render), `frontend/js/husformer_main.js` (`renderA3`, `getSelectedParticipantTrialCounts`, `a3RequestId` contra condición de carrera), `frontend/css/layout.css` (`.husformer-a3-*`: `sticky-col`, `attr-col`, `attr-label`, `common-col`, `cat-bar`, `num-track/-fill`).
+**Frontend:** `frontend/js/charts/husformer_a3_network_chart.js` (d3-force, simulación corrida de una vez con 300 ticks síncronos antes de dibujar, encuadre automático post-simulación -- no animada tick a tick, por rendimiento con 1280 nodos), `frontend/js/husformer_main.js` (`selectedComparisonTrials`, `MAX_SELECTED_COMPARISON_TRIALS`, `A3B3_MERGED_CONTAINER_ID`, `loadAndRenderA3Network`, `renderA3`, `handleA3NodeToggle`, `handleA3BackgroundClick`), `frontend/js/api.js` (`fetchHusformerTrialPatternNetwork`), `frontend/index.html` (`#panel-a3b3-merged`, `#a3b3-merged-chart` -- panel fusionado con lo que antes era B3, spans 2 filas de la grilla; reutiliza `.husformer-a1-legend` para la leyenda de color), `frontend/css/layout.css` (`.cmv-panel-a3b3-merged`, `.husformer-a3-selection-count`, y el ajuste de `grid-template-columns`/`grid-column` en `.system-cmv-grid`/`.cmv-vista[data-vista="A"]`/`.cmv-vista[data-vista="B"]` para el spanning de 2 filas -- **quedan marcados `⚠️ TEMPORAL` en el código todavía, pendiente pasarlos a permanentes ahora que el layout está confirmado**).
+
+**Backend viejo de A3 (perfil de cuestionario) -- NO se borró.** `h2_participant_profile_service.py`/rutas se siguen usando desde la vista H2 (pestaña separada, confirmado revisando `h2_main.js`/`tarea1_main.js` antes de tocar nada) -- solo se dejó de llamar desde `husformer_main.js`.
+
+**Nota de rendimiento/estabilidad (2026-07-22):** `compute_trial_pattern_network` es el cálculo más pesado del sistema (matriz de similitud 1280x1280 + carga de 3 `.npz`). Se agregó caché en memoria (se calcula una sola vez por sesión del servidor) tras una sesión larga de debugging de cuelgues del servidor Flask -- la causa raíz real terminó siendo que **scikit-learn/joblib (usado por el clustering de A2, no por A3 en sí) no es seguro corriendo en un hilo secundario creado por el servidor de desarrollo con `threaded=True`**; el arreglo definitivo fue cambiar a `threaded=False` en `backend/app.py` (ver `estado_proyecto.md` para el diagnóstico completo). La caché de A3 se queda igual, es una buena práctica por separado (evita recalcular en cada carga de página), no era la causa del cuelgue.
