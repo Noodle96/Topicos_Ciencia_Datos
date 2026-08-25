@@ -72,15 +72,13 @@ DEAP (*Database for Emotion Analysis using Physiological Signals*) es un dataset
 - **Señales periféricas:** EOG (2 canales derivados en 4 señales hEOG/vEOG), EMG (zigomático mayor + trapecio, 4 señales), respuesta galvánica de la piel (GSR), respiración, fotopletismografía (Plet) y temperatura de la piel — 48 canales en total por archivo `.bdf` (49 para los participantes S29-S32, que incluyen un canal adicional).
 - **Autoevaluación subjetiva** tras cada trial mediante escalas SAM (*Self-Assessment Manikin*): Valencia, Activación, Dominancia, Agrado (Liking) y Familiaridad.
 
-![Sistema internacional de EEG 10-20 con 32 electrodos](docs/img/deap_eeg_10_20_montage.png)
-*(Reusar la Figura 4 del informe de Data Wrangling, `pdf/partial1/JorgeTito_Informe_DataWrangling_AED.pdf`, o regenerarla — ver Sección 8.)*
+![Sistema internacional de EEG 10-20 con 32 electrodos](docs/img/10_20_montage.png)
 
 ### 2.2 Protocolo experimental
 
 Cada trial sigue una estructura temporal fija: un período de **baseline** (línea base, sin estímulo), la **reproducción del estímulo** audiovisual (~60s) y una etapa posterior de **autoevaluación** mediante las escalas SAM. Estos eventos quedan marcados en el canal `Status` de cada archivo `.bdf` (eventos 3→4→5 por trial), lo que permite alinear temporalmente cualquier señal fisiológica con la fase exacta del experimento en la que fue registrada — esta alineación es, más adelante, uno de los pasos técnicos más delicados de todo el pipeline (ver [4.1](#41-preprocesamiento-de-señal)).
 
 ![Imágenes SAM usadas para la autoevaluación](docs/img/deap_sam_scales.png)
-*(Reusar la Figura 1 del informe de Data Wrangling — valence/arousal/dominance/liking SAM.)*
 
 ### 2.3 Estructura de los archivos `.bdf`
 
@@ -92,12 +90,12 @@ El dataset RAW completo suma **61,348,864 registros** (muestras × canal × part
 
 Además de los 32 (o 34, según el conteo) archivos `.bdf`, el dataset incluye 4 archivos de metadata:
 
-| Archivo | Contenido | Registros |
-|---|---|---|
-| `online_ratings` | Evaluaciones de la fase de selección online de los 40 videos (valencia/activación/dominancia + rueda emocional) | 1,778 |
-| `participant_ratings` | Evaluación de cada participante para cada uno de sus 40 trials (valencia/activación/dominancia/agrado/familiaridad) | 1,280 |
-| `participant_questionnaire` | Datos demográficos y de cuestionario por participante (edad, género, lateralidad manual, consumo de alcohol/cafeína/tabaco, horas de sueño, medidas antropométricas de cabeza) | 32 |
-| `video_list` | Metadata de cada video (artista, título, enlace de YouTube, estadísticas agregadas de valencia/activación) | 40 |
+| Archivo                       | Contenido                                                                                                                                                                           | Registros |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `online_ratings`            | Evaluaciones de la fase de selección online de los 40 videos (valencia/activación/dominancia + rueda emocional)                                                                   | 1,778     |
+| `participant_ratings`       | Evaluación de cada participante para cada uno de sus 40 trials (valencia/activación/dominancia/agrado/familiaridad)                                                               | 1,280     |
+| `participant_questionnaire` | Datos demográficos y de cuestionario por participante (edad, género, lateralidad manual, consumo de alcohol/cafeína/tabaco, horas de sueño, medidas antropométricas de cabeza) | 32        |
+| `video_list`                | Metadata de cada video (artista, título, enlace de YouTube, estadísticas agregadas de valencia/activación)                                                                       | 40        |
 
 ### 2.5 Comportamiento de los datos (hallazgos del EDA)
 
@@ -281,14 +279,14 @@ La mayoría de los modelos multimodales de reconocimiento afectivo operan como c
 
 Siguiendo la tipología de tareas de Brehmer y Munzner (2013), las tareas se organizan en 3 niveles de granularidad (participante → trial → modalidad/instante):
 
-| Tarea | Descripción | Categoría | Goals |
-|---|---|---|---|
-| **T1** | Identificar participantes o trials cuya representación latente se aparta del resto | Query: Identify | G1, G4 |
-| **T2** | Comparar trials o participantes en el espacio de representación fusionada | Query: Compare | G1, G4 |
-| **T3** | Explorar la evolución temporal de los pesos de atención cross-modal dentro de un trial | Search: Explore | G2, G4 |
-| **T4** | Identificar segmentos temporales donde una modalidad domina la representación fusionada | Query: Identify | G2, G4 |
-| **T5** | Relacionar picos o cambios abruptos en la atención con eventos visibles en la señal original | Query: Compare | G2, G4 |
-| T6-T8 (formulación original) | Inspeccionar/comparar atención cross-modal a nivel de ventana puntual | Query: Identify/Compare | G3, G4 |
+| Tarea                         | Descripción                                                                                   | Categoría              | Goals  |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- | ------ |
+| **T1**                  | Identificar participantes o trials cuya representación latente se aparta del resto            | Query: Identify         | G1, G4 |
+| **T2**                  | Comparar trials o participantes en el espacio de representación fusionada                     | Query: Compare          | G1, G4 |
+| **T3**                  | Explorar la evolución temporal de los pesos de atención cross-modal dentro de un trial       | Search: Explore         | G2, G4 |
+| **T4**                  | Identificar segmentos temporales donde una modalidad domina la representación fusionada       | Query: Identify         | G2, G4 |
+| **T5**                  | Relacionar picos o cambios abruptos en la atención con eventos visibles en la señal original | Query: Compare          | G2, G4 |
+| T6-T8 (formulación original) | Inspeccionar/comparar atención cross-modal a nivel de ventana puntual                         | Query: Identify/Compare | G3, G4 |
 
 > **⚠️ Nota de honestidad metodológica:** T6-T8, tal como están redactadas en el paper (`articulo_DEAP_visualization/secciones/03_datos_y_tareas_analiticas.tex`), describen la formulación **original** de Vista C (drill-down desde una ventana seleccionada en Vista B). La implementación actual de C1/C2 (ver 5.6) evolucionó de esa formulación durante el desarrollo — sigue sirviendo a G3, pero el mecanismo de interacción cambió. **Reescribir T6-T8 y la Sección 5 del paper para reflejar el diseño vigente es trabajo pendiente**, no un error no declarado.
 
@@ -349,15 +347,15 @@ El sistema sigue una arquitectura de **vistas múltiples coordinadas** (CMV, *Co
 
 ### 5.7 Interacciones y coordinación entre vistas
 
-| Mecanismo | Dónde | Descripción |
-|---|---|---|
-| **Clicking** | A1/A2 → B1/B2 | Seleccionar un punto carga ese trial en Vista B (drill-down) |
-| **Selección múltiple** | A1/A2 → A3 | Click agrega/quita un trial de la selección compartida; A3 se actualiza con los participantes correspondientes |
-| **Hovering (linked highlighting)** | B1 ↔ B2 | Pasar el cursor sobre una ventana en cualquiera de los dos resalta la misma ventana en el otro, sin reconstruir el SVG |
-| **Hovering (drill-down)** | B2 → C1/C2 | Pasar el cursor sobre la señal cruda en B2 actualiza en tiempo real la matriz (C1) y el detalle señal+atención (C2) |
-| **Filtros de resaltado** | A1 | Por participante y por trial, combinables (AND), atenúan sin ocultar |
-| **Details-on-demand** | A1, B1, C1, C2 | Tooltips con valores numéricos exactos |
-| **Sincronización de proyección** | A1 ↔ A2 | Cambiar el método de proyección en cualquiera de los dos mueve al otro (deben mostrar siempre el mismo espacio 2D) |
+| Mecanismo                                | Dónde         | Descripción                                                                                                           |
+| ---------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **Clicking**                       | A1/A2 → B1/B2 | Seleccionar un punto carga ese trial en Vista B (drill-down)                                                           |
+| **Selección múltiple**           | A1/A2 → A3    | Click agrega/quita un trial de la selección compartida; A3 se actualiza con los participantes correspondientes        |
+| **Hovering (linked highlighting)** | B1 ↔ B2       | Pasar el cursor sobre una ventana en cualquiera de los dos resalta la misma ventana en el otro, sin reconstruir el SVG |
+| **Hovering (drill-down)**          | B2 → C1/C2    | Pasar el cursor sobre la señal cruda en B2 actualiza en tiempo real la matriz (C1) y el detalle señal+atención (C2) |
+| **Filtros de resaltado**           | A1             | Por participante y por trial, combinables (AND), atenúan sin ocultar                                                  |
+| **Details-on-demand**              | A1, B1, C1, C2 | Tooltips con valores numéricos exactos                                                                                |
+| **Sincronización de proyección** | A1 ↔ A2       | Cambiar el método de proyección en cualquiera de los dos mueve al otro (deben mostrar siempre el mismo espacio 2D)   |
 
 Se prefirió **hover sobre click** para las conexiones B→C, decisión tomada tras observar que las matrices de atención cambian de forma sutil entre ventanas vecinas — exigir un click por ventana resultaba demasiado lento para "recorrer" varias ventanas seguidas comparando. El estado se mantiene *sticky* (no vuelve a vacío al retirar el cursor), para que la vista siga disponible mientras se examina.
 
@@ -425,6 +423,7 @@ Para cada diagrama decidí qué herramienta conviene según qué tan preciso/té
 ### 8.1 Estructura de un archivo `.bdf` — REUSAR, no generar de nuevo
 
 Este diagrama **ya existe**, hecho a mano en el informe de Data Wrangling. No hace falta generarlo de nuevo — solo recortar las figuras del PDF como PNG:
+
 - Figura 2 (`JorgeTito_Informe_DataWrangling_AED.pdf`, página 3): estructura general del archivo `.bdf` (header fijo → header por canal → data records).
 - Figura 3 (página 4): estructura de un data record (canales × 512 muestras × 3 bytes).
 - Figura 4 (página 5): montaje EEG 10-20 con 32 electrodos.
@@ -461,6 +460,7 @@ Ya está hecho (SVG a mano, embebido en la Sección 4.4): `docs/img/diagram_husf
 **Herramienta:** IA de imagen (Napkin, DALL-E, Midjourney o similar) — buscamos un diagrama pulido, tipo figura de paper académico.
 
 **Prompt:**
+
 > "Diagrama técnico de arquitectura de red neuronal, estilo figura de paper académico (limpio, minimalista, fondo blanco, paleta de azules y grises). Muestra un pipeline de fusión multimodal con 5 modalidades de entrada en paralelo, etiquetadas 'EEG', 'EOG', 'EMG', 'GSR', 'Resp+Plet+Temp', cada una entrando a su propia caja de 'Proyección lineal'. Debajo, 5 módulos idénticos etiquetados 'Atención Cross-Modal' (uno por modalidad), cada uno recibiendo flechas desde TODAS las 5 proyecciones (conexiones cruzadas visibles, tipo grafo completo pequeño). Las salidas de los 5 módulos de atención cross-modal se concatenan (una caja 'Concatenación'), y esa concatenación entra a un único bloque 'Transformer de Auto-Atención Final'. De ahí sale una flecha a una caja 'Convolución + Pooling', que termina en un vector final etiquetado 'last_hs (40-dim)'. Estilo diagrama de flujo horizontal, de izquierda a derecha, con cajas redondeadas y flechas finas. Sin texto adicional, sin logos."
 
 ### 8.4 CMV del sistema — vistas coordinadas y drill-down (Mermaid)
@@ -498,6 +498,7 @@ flowchart LR
 **Herramienta:** IA de imagen — diagrama explicativo/educativo.
 
 **Prompt:**
+
 > "Ilustración técnica educativa, estilo pizarra/diagrama explicativo, fondo blanco. Muestra dos matrices cuadradas de 5x5 celdas lado a lado, tituladas 'CON máscara causal' y 'SIN máscara causal'. En la matriz izquierda, la mitad triangular superior está coloreada de gris claro/vacío con una gran 'X' o candado sobre esas celdas (indicando que esos valores son cero/bloqueados), mientras la diagonal y el triángulo inferior están coloreados en tonos de azul variados (valores reales). En la matriz derecha, las 25 celdas están coloreadas en distintos tonos de azul/naranja sin ningún patrón triangular (todas con valores reales). Debajo de cada matriz, un pequeño ícono de 5 bloques en fila etiquetados 'EEG, EOG, EMG, GSR, Resp' representando el orden de concatenación de modalidades. Estilo limpio, minimalista, colores azul y naranja, apto para una diapositiva o figura de paper."
 
 ### 8.6 Protocolo experimental de un trial DEAP (imagen)
@@ -505,6 +506,7 @@ flowchart LR
 **Herramienta:** IA de imagen — línea de tiempo ilustrativa.
 
 **Prompt:**
+
 > "Diagrama de línea de tiempo horizontal, estilo infografía limpia y minimalista, fondo blanco. Muestra 3 segmentos consecutivos en una barra horizontal: 'Baseline' (gris claro, corto), 'Estímulo audiovisual (~60s)' (azul, el segmento más largo, con un pequeño ícono de nota musical o pantalla), y 'Autoevaluación (SAM)' (naranja claro, con pequeños íconos de escalas de valencia/activación tipo 'maniquí'). Debajo de la barra, una flecha indica 'Tiempo →'. Encima de la barra, pequeñas etiquetas de eventos: 'Evento 3' al inicio del baseline, 'Evento 4' al inicio del estímulo, 'Evento 5' al final del estímulo. Estilo académico, colores azul/naranja/gris, sin texto adicional."
 
 ---
@@ -513,18 +515,18 @@ flowchart LR
 
 La carpeta `docs/img/` ya está creada, con un archivo guía (`docs/img/README.md`) que repite esta misma lista. Guardá cada captura con el nombre EXACTO indicado (mismo nombre, extensión `.png`) y va a aparecer sola en este documento, sin tocar nada más.
 
-| Archivo esperado | Qué capturar |
-|---|---|
-| `system_full_overview.png` | **La más importante — va al inicio del documento.** Captura de pantalla completa de la pestaña **System Overview**, con las 3 vistas pobladas (algo seleccionado en A1/A2, un trial cargado en B1/B2, mouse sobre B2 para que C1/C2 muestren contenido) — la "postal" del proyecto |
-| `deap_eeg_10_20_montage.png` | Recorte de la Figura 4 del informe de Data Wrangling (montaje EEG 10-20) — o una captura equivalente si preferís rehacerla |
-| `deap_sam_scales.png` | Recorte de la Figura 1 del informe (imágenes SAM de valencia/activación/dominancia/agrado) |
-| `h1_overview.png` | Pestaña **H1** del sistema, con algún participante/experimento cargado — que se vean los 3 paneles (Espacio Emocional, Métricas de Resumen, Exploración de Señal) |
-| `h2_overview.png` | Pestaña **H2**, sub-vista "Multimodal Relationships" (Participant Profiles activo), con una celda de la matriz seleccionada para que se vea el explorador temporal cross-modal poblado |
-| `h3_eeg_spatial.png` | Pestaña **H2**, sub-vista "EEG Spatial Explorer" (la otra pestaña interna), con una celda seleccionada para que se vea el mapa topográfico coloreado |
-| `tarea1_latent_space.png` | Pestaña **Tarea 1**, con un trial seleccionado (que se vea la proyección, la tarjeta de detalle y la señal cruda) |
-| `system_vista_a.png` | Pestaña **System Overview**, con algo seleccionado en A1/A2 para que A3 muestre contenido real (no el estado vacío) |
-| `system_vista_b.png` | Mismo momento o uno similar, con Vista B poblada (un trial cargado en B1 y B2 con varias señales activas) |
-| `system_vista_c.png` | Mismo momento, con el mouse sobre B2 (hover activo) para que C1 y C2 muestren contenido real, no el mensaje "pasá el mouse sobre B2" |
+| Archivo esperado               | Qué capturar                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `system_full_overview.png`   | **La más importante — va al inicio del documento.** Captura de pantalla completa de la pestaña **System Overview**, con las 3 vistas pobladas (algo seleccionado en A1/A2, un trial cargado en B1/B2, mouse sobre B2 para que C1/C2 muestren contenido) — la "postal" del proyecto |
+| `deap_eeg_10_20_montage.png` | Recorte de la Figura 4 del informe de Data Wrangling (montaje EEG 10-20) — o una captura equivalente si preferís rehacerla                                                                                                                                                                       |
+| `deap_sam_scales.png`        | Recorte de la Figura 1 del informe (imágenes SAM de valencia/activación/dominancia/agrado)                                                                                                                                                                                                       |
+| `h1_overview.png`            | Pestaña**H1** del sistema, con algún participante/experimento cargado — que se vean los 3 paneles (Espacio Emocional, Métricas de Resumen, Exploración de Señal)                                                                                                                       |
+| `h2_overview.png`            | Pestaña**H2**, sub-vista "Multimodal Relationships" (Participant Profiles activo), con una celda de la matriz seleccionada para que se vea el explorador temporal cross-modal poblado                                                                                                       |
+| `h3_eeg_spatial.png`         | Pestaña**H2**, sub-vista "EEG Spatial Explorer" (la otra pestaña interna), con una celda seleccionada para que se vea el mapa topográfico coloreado                                                                                                                                       |
+| `tarea1_latent_space.png`    | Pestaña**Tarea 1**, con un trial seleccionado (que se vea la proyección, la tarjeta de detalle y la señal cruda)                                                                                                                                                                          |
+| `system_vista_a.png`         | Pestaña**System Overview**, con algo seleccionado en A1/A2 para que A3 muestre contenido real (no el estado vacío)                                                                                                                                                                         |
+| `system_vista_b.png`         | Mismo momento o uno similar, con Vista B poblada (un trial cargado en B1 y B2 con varias señales activas)                                                                                                                                                                                         |
+| `system_vista_c.png`         | Mismo momento, con el mouse sobre B2 (hover activo) para que C1 y C2 muestren contenido real, no el mensaje "pasá el mouse sobre B2"                                                                                                                                                              |
 
 Si preferís, una sola captura de pantalla completa (las 3 vistas a la vez, que es como se ve normalmente el sistema) sirve para `system_vista_a/b/c.png` -- podés usar la MISMA imagen para los 3 nombres, o recortarla en 3 partes.
 
@@ -553,4 +555,3 @@ Si preferís, una sola captura de pantalla completa (las 3 vistas a la vez, que 
 - Gratzl, S., Lex, A., Gehlenborg, N., Pfister, H., y Streit, M. (2013). "LineUp: Visual Analysis of Multi-Attribute Rankings". *IEEE TVCG*, 19(12), 2277-2286.
 - Scherer, K. R. (2005). "What are Emotions? And How Can They be Measured?". *Social Science Information*, 44(4), 695-729.
 - Sistemas de VA relacionados citados en el paper (`articulo_DEAP_visualization/jaes.bib`): EmoCo, E-ffective, V-Awake, TSSeer — ver Sección 2 del paper para el detalle comparativo.
-

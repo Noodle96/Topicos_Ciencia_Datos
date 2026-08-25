@@ -1,0 +1,112 @@
+<svg viewBox="0 0 820 1180" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#374151"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="820" height="1180" fill="#ffffff"/>
+
+  <text x="410" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#111827">Pipeline: de .bdf crudo a representaciones de Husformer</text>
+
+  <!-- 1. bdf crudo -->
+  <rect x="130" y="55" width="560" height="60" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="410" y="80" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">.bdf crudo</text>
+  <text x="410" y="100" text-anchor="middle" font-size="11" fill="#4b5563">32 participantes · 512 Hz · 48 canales</text>
+
+  <line x1="410" y1="115" x2="410" y2="150" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 2. preprocess -->
+  <rect x="90" y="150" width="640" height="75" rx="8" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="410" y="175" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">preprocess_trials.py + preprocess_representation_inputs.py</text>
+  <text x="410" y="194" text-anchor="middle" font-size="11" fill="#1e40af">ICA (remoción artefactos oculares) · filtro EEG 4-45 Hz</text>
+  <text x="410" y="210" text-anchor="middle" font-size="11" fill="#1e40af">resample a 128 Hz · selección 44 canales · extracción fase "During"</text>
+
+  <line x1="410" y1="225" x2="410" y2="260" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 3. npz -->
+  <rect x="130" y="260" width="560" height="60" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="410" y="285" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">trial_XX_input.npz</text>
+  <text x="410" y="305" text-anchor="middle" font-size="11" fill="#4b5563">44 canales × 7680 muestras (60s) — por trial</text>
+
+  <line x1="410" y1="320" x2="410" y2="355" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 4. build dataset -->
+  <rect x="90" y="355" width="640" height="95" rx="8" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="410" y="378" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">build_husformer_dataset.py</text>
+  <text x="410" y="397" text-anchor="middle" font-size="11" fill="#1e40af">ventaneo 1s (60 ventanas/trial → 76,800 ventanas totales)</text>
+  <text x="410" y="414" text-anchor="middle" font-size="11" fill="#1e40af">separación en 5 modalidades · etiqueta (valencia, 3 clases)</text>
+  <text x="410" y="431" text-anchor="middle" font-size="11" fill="#1e40af">split train/valid/test POR PARTICIPANTE (26/3/3)</text>
+
+  <line x1="410" y1="450" x2="410" y2="485" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 5. pkl -->
+  <rect x="130" y="485" width="560" height="55" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="410" y="518" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">husformer.pkl</text>
+
+  <line x1="410" y1="540" x2="410" y2="575" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 6. training -->
+  <rect x="130" y="575" width="560" height="65" rx="8" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="410" y="601" text-anchor="middle" font-size="13" font-weight="700" fill="#7c2d12">main.py — entrenamiento</text>
+  <text x="410" y="620" text-anchor="middle" font-size="11" fill="#9a3412">NVIDIA GTX 1660 Ti · 40 épocas · ~15h</text>
+
+  <line x1="410" y1="640" x2="410" y2="675" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 7. checkpoint -->
+  <rect x="130" y="675" width="560" height="55" rx="8" fill="#f3f4f6" stroke="#9ca3af" stroke-width="1.5"/>
+  <text x="410" y="708" text-anchor="middle" font-size="14" font-weight="700" fill="#111827">hus.pt (checkpoint entrenado)</text>
+
+  <line x1="410" y1="730" x2="410" y2="765" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 8. extract representations -->
+  <rect x="130" y="765" width="560" height="65" rx="8" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+  <text x="410" y="791" text-anchor="middle" font-size="13" font-weight="700" fill="#1e3a8a">extract_representations.py</text>
+  <text x="410" y="810" text-anchor="middle" font-size="11" fill="#1e40af">inferencia sobre las 76,800 ventanas del dataset completo</text>
+
+  <!-- fan out to 3 outputs -->
+  <line x1="410" y1="830" x2="410" y2="855" stroke="#374151" stroke-width="1.5"/>
+  <line x1="180" y1="855" x2="640" y2="855" stroke="#374151" stroke-width="1.5"/>
+  <line x1="180" y1="855" x2="180" y2="880" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="410" y1="855" x2="410" y2="880" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="640" y1="855" x2="640" y2="880" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- 9. three outputs -->
+  <rect x="90" y="880" width="180" height="65" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="180" y="908" text-anchor="middle" font-size="12" font-weight="700" fill="#111827">last_hs</text>
+  <text x="180" y="925" text-anchor="middle" font-size="10" fill="#4b5563">40-dim, por ventana</text>
+
+  <rect x="320" y="880" width="180" height="65" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="410" y="908" text-anchor="middle" font-size="12" font-weight="700" fill="#111827">attn_final_summary</text>
+  <text x="410" y="925" text-anchor="middle" font-size="10" fill="#4b5563">matriz 5×5, por ventana</text>
+
+  <rect x="550" y="880" width="180" height="65" rx="8" fill="#f3f4f6" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="640" y="908" text-anchor="middle" font-size="12" font-weight="700" fill="#111827">attn_cross_summary</text>
+  <text x="640" y="925" text-anchor="middle" font-size="10" fill="#4b5563">matriz 5×5, por ventana</text>
+
+  <!-- generate_trial_projections note under last_hs -->
+  <line x1="180" y1="945" x2="180" y2="975" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="410" y1="945" x2="410" y2="1000" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="640" y1="945" x2="640" y2="1000" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="90" y="975" width="180" height="55" rx="6" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.2"/>
+  <text x="180" y="998" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e3a8a">generate_trial_</text>
+  <text x="180" y="1012" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1e3a8a">projections.py</text>
+
+  <line x1="180" y1="1030" x2="180" y2="1060" stroke="#374151" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- final Vista boxes -->
+  <rect x="90" y="1060" width="180" height="60" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="180" y="1085" text-anchor="middle" font-size="12" font-weight="700" fill="#7c2d12">Vista A</text>
+  <text x="180" y="1102" text-anchor="middle" font-size="10" fill="#9a3412">Espacio de Representaciones</text>
+
+  <rect x="320" y="1060" width="180" height="60" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="410" y="1085" text-anchor="middle" font-size="12" font-weight="700" fill="#7c2d12">Vista B</text>
+  <text x="410" y="1102" text-anchor="middle" font-size="10" fill="#9a3412">Atención Temporal del Trial</text>
+
+  <rect x="550" y="1060" width="180" height="60" rx="8" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5"/>
+  <text x="640" y="1085" text-anchor="middle" font-size="12" font-weight="700" fill="#7c2d12">Vista C</text>
+  <text x="640" y="1102" text-anchor="middle" font-size="10" fill="#9a3412">Detalle Anclado a la Señal</text>
+
+  <text x="410" y="1155" text-anchor="middle" font-size="10.5" fill="#9ca3af">Visual Analytics sobre DEAP · Jorge Tito Ccahuaya · CO-1234 Tópicos en Ciencia de Datos</text>
+</svg>

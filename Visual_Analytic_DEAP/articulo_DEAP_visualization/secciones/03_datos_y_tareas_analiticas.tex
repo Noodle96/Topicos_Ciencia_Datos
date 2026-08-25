@@ -67,9 +67,10 @@ El dataset DEAP \cite{koelstra2012deap} contiene, para 32 participantes, registr
 \textbf{Nivel de modalidad / instante.}
 \begin{itemize}
     \item[\textbf{T6}] Inspeccionar qué modalidad recibe mayor peso de atención cross-modal en un instante dado dentro de un trial.
-    \item[\textbf{T7}] Comparar el patrón de atención cross-modal entre ventanas seleccionadas de un mismo trial.
     \item[\textbf{T8}] Comparar la señal cruda de una modalidad frente a su peso de atención recibido en un instante dado.
 \end{itemize}
+
+\textbf{Nota sobre T7 (retirada).} La formulación original de esta tarea --``comparar el patrón de atención cross-modal entre ventanas seleccionadas de un mismo trial''-- fue atendida durante el desarrollo por un diseño intermedio de Vista~C (Small Multiples de la matriz de atención sobre los trials seleccionados en Vista~A), implementado por completo y luego descartado en favor del diseño vigente, anclado a una acción sobre Vista~B (\cref{sec:vista_c}). T7 no tiene, por lo tanto, un panel dedicado en la versión actual del sistema. Se conserva la numeración original de T6 y T8 sin renumerar, por consistencia con la documentación técnica del proyecto y con el código, que ya referencian ambas tareas por estos números.
 
 La categoría de cada tarea sigue la tipología de Brehmer y Munzner~\cite{brehmer2013multi}, que distingue, en su nivel intermedio, entre operaciones de \emph{Query} (Identify/Compare/Summarize) y de \emph{Search} (Lookup/Locate/Browse/Explore).
 
@@ -87,7 +88,6 @@ Search: Explore & T3 & G2, G4 \\
 Query: Identify & T4 & G2, G4 \\
 Query: Compare & T5 & G2, G4 \\
 Query: Identify & T6 & G3, G4 \\
-Query: Compare & T7 & G3, G4 \\
 Query: Compare & T8 & G3, G4 \\
 \hline
 \end{tabular}
