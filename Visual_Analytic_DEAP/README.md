@@ -43,9 +43,8 @@ Este documento reconstruye, de principio a fin, todo el trabajo hecho a lo largo
 6. [Arquitectura técnica del software](#6-arquitectura-técnica-del-software)
 7. [Cómo correr el sistema](#7-cómo-correr-el-sistema)
 8. [Diagramas — prompts para generarlos](#8-diagramas--prompts-para-generarlos)
-9. [Checklist de capturas de pantalla pendientes](#9-checklist-de-capturas-de-pantalla-pendientes)
-10. [Limitaciones y trabajo futuro](#10-limitaciones-y-trabajo-futuro)
-11. [Referencias](#11-referencias)
+9. [Limitaciones y trabajo futuro](#9-limitaciones-y-trabajo-futuro)
+10. [Referencias](#10-referencias)
 
 ---
 
@@ -238,11 +237,13 @@ El hallazgo metodológico más importante de todo el proyecto, documentado en de
 
 **Diagnóstico** (script standalone independiente de Flask, `diagnostico_attn_final.py`): la matriz de desviación estándar por celda, calculada sobre todas las ventanas, resultó exactamente **triangular inferior** — el triángulo superior era cero exacto en absolutamente todas las ventanas.
 
+![Hallazgo del sesgo de la máscara causal](docs/img/diagram_causal_mask_finding.svg)
+
 **Causa raíz:** el repositorio Husformer (heredado de MulT, su arquitectura base) aplica por *default* una **máscara causal** (`attn_mask=True`) sobre las posiciones concatenadas de las 5 modalidades. Con máscara causal, el primer bloque de la concatenación (EEG) solo puede atenderse a sí mismo, mientras que el último bloque (Resp+Plet+Temp) puede atender a los 5 — un sesgo puramente **estructural**, determinado por el orden arbitrario de concatenación de las modalidades, no por ningún patrón aprendido. Esto explica por sí solo el patrón "EEG domina siempre".
 
 **Decisión y corrección:** se reentrenó el modelo completo (40 épocas) con la máscara causal **desactivada** (`--attn_mask` pasado explícitamente) — justificado porque las 5 modalidades fisiológicas concatenadas no tienen ninguna relación de orden temporal real entre sí (a diferencia de texto/audio alineados temporalmente, para lo que MulT fue diseñado originalmente). Es una desviación explícita y documentada del *default* del repositorio, no un bug de nuestra adaptación. Tras el reentrenamiento y una nueva extracción, la matriz de atención ya no tiene ceros estructurales, y el ranking de "qué modalidad domina" deja de ser fijo — varía según el trial (verificado con `diagnostico_attn_final.py` corrido de nuevo sobre las representaciones nuevas).
 
-**Caveat honesto:** el desempeño de clasificación del checkpoint entrenado es modesto (accuracy de validación cerca del azar en el mejor caso) — la variación de atención observada es real pero sutil, algo que se declara explícitamente como limitación (ver Sección 10), no se oculta.
+**Caveat honesto:** el desempeño de clasificación del checkpoint entrenado es modesto (accuracy de validación cerca del azar en el mejor caso) — la variación de atención observada es real pero sutil, algo que se declara explícitamente como limitación (ver Sección 9), no se oculta.
 
 ### 4.6 Extracción de representaciones para el sistema VA
 
