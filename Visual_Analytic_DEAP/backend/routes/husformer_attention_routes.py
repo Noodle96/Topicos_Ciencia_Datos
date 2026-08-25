@@ -8,6 +8,7 @@ from backend.services.husformer_attention_service import (
     load_husformer_trial_attention,
     load_husformer_window_cross_attention,
     compute_trial_pattern_network,
+    compute_selected_trials_cross_attention,
 )
 
 
@@ -94,6 +95,39 @@ def get_husformer_trial_pattern_network() -> Any:
     """
     try:
         data: dict[str, Any] = compute_trial_pattern_network()
+        return jsonify(data)
+
+    except Exception as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@husformer_attention_bp.route("/selected-trials-cross-attention", methods=["GET"])
+def get_husformer_selected_trials_cross_attention() -> Any:
+    """
+    Uso:
+    /api/husformer/selected-trials-cross-attention?trials=1_5,2_10,7_3
+
+    Cada elemento de 'trials' es "participant_id_trial" (separados por
+    guión bajo), la lista completa separada por comas.
+
+    Retorna la matriz 5x5 promedio de atención cross-modal de cada trial en
+    la lista (Vista C, C1 rediseñada -- Small Multiples, uno por trial
+    seleccionado en A1/A2). Sin parámetro 'trials' o vacío, retorna la lista
+    vacía (mismo estado que "nada seleccionado todavía"). Ver
+    husformer_attention_service.py (compute_selected_trials_cross_attention)
+    para la justificación completa.
+    """
+    trials_raw: str | None = request.args.get("trials")
+
+    try:
+        trial_keys: list[tuple[int, int]] = []
+
+        if trials_raw:
+            for pair_str in trials_raw.split(","):
+                participant_str, trial_str = pair_str.split("_")
+                trial_keys.append((int(participant_str), int(trial_str)))
+
+        data: dict[str, Any] = compute_selected_trials_cross_attention(trial_keys)
         return jsonify(data)
 
     except Exception as error:

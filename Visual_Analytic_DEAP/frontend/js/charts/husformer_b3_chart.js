@@ -4,7 +4,7 @@ let clipIdCounter = 0;
 
 /**
  * Extrae, de la respuesta de /api/trial-signals, los puntos de UN canal
- * reubicados en el mismo eje temporal que usan B1/B2 (relativo al inicio
+ * reubicados en el mismo eje temporal que usan B1 (relativo al inicio
  * de la fase "During", no al registro completo).
  *
  * ALINEACIÓN CRÍTICA (ver husformer_b3_resumen_implementacion.md para el
@@ -13,7 +13,11 @@ let clipIdCounter = 0;
  * window_start_sec de la atención es relativo solo al inicio de During.
  * Se corrige restando el `start` de la fase "During" a cada timestamp.
  */
-function extractDuringPhaseSamples(signalResponse, channelName) {
+// Exportadas (2026-07-22) para que C2 (señal real + atención superpuestas,
+// disparado por hover en B2) pueda reutilizar la misma extracción/promedio
+// de canales sin duplicar la lógica -- C2 necesita los valores REALES (sin
+// z-score) de un tramo corto alrededor del punto hovereado.
+export function extractDuringPhaseSamples(signalResponse, channelName) {
     const duringPhase = signalResponse.phases.find((phase) => phase.name === "During");
 
     if (!duringPhase) {
@@ -40,7 +44,7 @@ function extractDuringPhaseSamples(signalResponse, channelName) {
  * el mismo esquema -- mismo total_points, mismo max_points -- así que
  * quedan alineados sin necesitar interpolación).
  */
-function averageChannels(signalResponse, channelNames) {
+export function averageChannels(signalResponse, channelNames) {
     const perChannelSamples = channelNames.map(
         (channelName) => extractDuringPhaseSamples(signalResponse, channelName)
     );
@@ -85,7 +89,7 @@ function zScoreNormalize(samples) {
  * seleccionados (ver husformer_b3_channel_groups.js), arma las series
  * finales: una por grupo, promediada sobre sus canales y normalizada.
  */
-export function buildB3Series(signalResponse, selectedGroups) {
+export function buildB2Series(signalResponse, selectedGroups) {
     return selectedGroups
         .map((group) => {
             const averaged = averageChannels(signalResponse, group.channels);
@@ -105,22 +109,24 @@ export function buildB3Series(signalResponse, selectedGroups) {
 }
 
 /**
- * Renderiza B3: N señales normalizadas superpuestas (una por grupo
- * seleccionado), a lo largo de toda la fase During del trial.
+ * Renderiza B2 (señal cruda -- reetiquetado de B3 a B2 el 2026-07-22, tras
+ * descartarse el B2 original de líneas superpuestas; ver husformer_a3_
+ * resumen_implementacion.md): N señales normalizadas superpuestas (una por
+ * grupo seleccionado), a lo largo de toda la fase During del trial.
  *
  * REDISEÑO 2026-07-17 (a pedido de Russell, tras evaluación crítica): la
- * versión anterior apilaba un panel de atención (B2 reutilizado) debajo de
- * la señal cruda -- redundante, porque B1/B2 ya está visible al lado en la
- * misma fila del CMV todo el tiempo (Eyes Beat Memory, Munzner Cap. 6.5,
- * ya se cumple con los paneles juxtapuestos, no hace falta repetir el
- * contenido DENTRO de B3). B3 ahora usa todo su espacio para comparar
+ * versión anterior apilaba un panel de atención (el B2 original, de líneas)
+ * debajo de la señal cruda -- redundante, porque B1 ya está visible al lado
+ * en la misma fila del CMV todo el tiempo (Eyes Beat Memory, Munzner Cap.
+ * 6.5, ya se cumple con los paneles juxtapuestos, no hace falta repetir el
+ * contenido DENTRO de este panel). Ahora usa todo su espacio para comparar
  * varias señales crudas entre sí, normalizadas.
  *
- * Colores compartidos con el panel de atención de B1/B2 (ver
- * husformer_b3_channel_groups.js, getSignalColor) -- misma justificación
- * de "share encoding" ya usada ahí.
+ * Colores compartidos con el panel de atención de B1 (ver husformer_b3_
+ * channel_groups.js, getSignalColor) -- misma justificación de "share
+ * encoding" ya usada ahí.
  */
-export function renderHusformerB3Chart({
+export function renderHusformerB2Chart({
     containerId,
     activeTrial,
     seriesList,
@@ -131,7 +137,7 @@ export function renderHusformerB3Chart({
     const container = document.getElementById(containerId);
     container.innerHTML = "";
 
-    d3.select(".husformer-b3-tooltip").remove();
+    d3.select(".husformer-b2-tooltip").remove();
 
     if (!activeTrial) {
         container.innerHTML = '<div class="husformer-b1-empty">Selecciona un trial en Vista A</div>';
@@ -168,7 +174,7 @@ export function renderHusformerB3Chart({
     const plotHeight = height - margin.top - margin.bottom;
 
     clipIdCounter += 1;
-    const clipId = `husformer-b3-clip-${clipIdCounter}`;
+    const clipId = `husformer-b2-clip-${clipIdCounter}`;
 
     svg
         .append("clipPath")
@@ -243,7 +249,7 @@ export function renderHusformerB3Chart({
 
     drawLines();
 
-    // Guía vertical + tooltip consolidado (mismo patrón que B1/B2, Munzner
+    // Guía vertical + tooltip consolidado (mismo patrón que B1, Munzner
     // Cap. 6.5.3 Change Blindness): un solo punto de foco con TODAS las
     // señales seleccionadas listadas, no una por serie.
     const hoverLine = plotGroup
@@ -257,7 +263,7 @@ export function renderHusformerB3Chart({
         .style("pointer-events", "none");
 
     // Banda de resaltado EXTERNO (2026-07-17, sincronización bidireccional
-    // con B1/B2, a pedido de Russell) -- visualmente DISTINTA de hoverLine
+    // con B1, a pedido de Russell) -- visualmente DISTINTA de hoverLine
     // (banda semitransparente ancha, no línea punteada fina) a propósito:
     // hoverLine = "estoy hovereando ACÁ mismo, con tooltip"; esta banda =
     // "esta ventana está resaltada porque el mouse está en OTRO panel", sin
@@ -275,7 +281,7 @@ export function renderHusformerB3Chart({
     const tooltip = d3
         .select("body")
         .append("div")
-        .attr("class", "husformer-b3-tooltip")
+        .attr("class", "husformer-b2-tooltip")
         .style("opacity", 0);
 
     const bisectTime = d3.bisector((d) => d.time).left;
@@ -354,7 +360,7 @@ export function renderHusformerB3Chart({
             if (onHoverWindowChange) {
                 // Criterio acordado con Russell: la ventana de 1s N cubre
                 // [N, N+1) segundos -- floor(tiempo) da directamente su
-                // window_index, sin necesitar la lista de ventanas de B1/B2
+                // window_index, sin necesitar la lista de ventanas de B1
                 // acá (window_start_sec ≈ window_index segundos, confirmado
                 // en windowing.py -- WINDOW_SECONDS=1.0).
                 onHoverWindowChange(Math.floor(hoveredTime));
@@ -393,7 +399,7 @@ export function renderHusformerB3Chart({
             tooltip.style("opacity", 0);
 
             // Si había una banda de resaltado externo activa (viene de
-            // hover en B1/B2), se redibuja en la posición correcta para el
+            // hover en B1), se redibuja en la posición correcta para el
             // nuevo nivel de zoom -- si no, se quedaría en la posición en
             // píxeles vieja, desalineada del tiempo real que ahora
             // corresponde a esa columna.

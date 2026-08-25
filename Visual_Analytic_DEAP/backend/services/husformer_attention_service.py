@@ -405,3 +405,68 @@ def compute_trial_pattern_network() -> dict[str, Any]:
         "edges": edges,
     }
     return _trial_pattern_network_cache
+
+
+def compute_selected_trials_cross_attention(
+    trial_keys: list[tuple[int, int]]
+) -> dict[str, Any]:
+    """
+    Matriz de atención cross-modal PROMEDIO por trial (Vista C, C1
+    rediseñada -- 2026-07-22). Russell pidió eliminar el C1 original (matriz
+    de UNA ventana puntual, disparada por hover en B1) y reemplazarlo por
+    Small Multiples (Munzner Cap. 12.4): una matriz 5x5 por cada trial
+    actualmente seleccionado en A1/A2 (selectedTrials, compartido), en fila,
+    para comparar visualmente varios "recetas de fusión" a la vez -- Cap.
+    6.5 ("Eyes Beat Memory"): comparar varias matrices juxtapuestas evita
+    forzar al usuario a recordar la de un trial mientras mira la de otro.
+
+    Reutiliza la misma reducción que compute_trial_pattern_network (mean
+    sobre las ventanas del trial), pero SIN aplanar a 25 valores ni calcular
+    similitud coseno -- acá interesa la matriz 5x5 completa de cada trial
+    seleccionado tal cual, no una firma resumida para comparar contra TODO
+    el dataset.
+
+    Trials no encontrados en el manifest se omiten en silencio (no debería
+    pasar en uso normal -- selectedTrials siempre viene de A1/A2, que ya
+    cargó del mismo manifest -- pero no se quiere que un solo trial mal
+    formado tumbe la respuesta completa de los demás).
+    """
+    manifest: pd.DataFrame = _load_manifest()
+
+    # Agrupar por split para minimizar cuántas veces se carga cada .npz --
+    # mismo patrón de cacheo local que compute_trial_pattern_network, pero
+    # acá solo para los pocos splits que toquen los trials seleccionados
+    # (normalmente 4, no los 1280 del dataset completo).
+    matrices_by_split: dict[str, np.ndarray] = {}
+    results: list[dict[str, Any]] = []
+
+    for participant_id, trial in trial_keys:
+        trial_rows: pd.DataFrame = manifest[
+            (manifest["participant_id"] == participant_id)
+            & (manifest["trial"] == trial)
+        ]
+
+        if trial_rows.empty:
+            continue
+
+        split_name: str = str(trial_rows["split"].iloc[0])
+
+        if split_name not in matrices_by_split:
+            matrices_by_split[split_name] = _load_split_attn_cross_summary(split_name)
+
+        attn_cross_summary: np.ndarray = matrices_by_split[split_name]
+        local_ids: np.ndarray = trial_rows["local_id"].to_numpy()
+        trial_matrices: np.ndarray = attn_cross_summary[local_ids]  # (n_windows, 5, 5)
+
+        mean_matrix: np.ndarray = trial_matrices.mean(axis=0)  # (5, 5)
+
+        results.append({
+            "participant_id": participant_id,
+            "trial": trial,
+            "matrix": mean_matrix.astype(float).tolist(),
+        })
+
+    return {
+        "modality_labels": MODALITY_LABELS,
+        "trials": results,
+    }

@@ -561,25 +561,31 @@
                     <div class="cmv-panel-body" id="a2-chart"></div>
                 </section>
 
+                <!-- A3 -- comparación de PERFIL DE CUESTIONARIO de los
+                     participantes de los trials seleccionados en A1/A2
+                     (gramática visual LineUp, Gratzl et al. 2013). Vuelto a
+                     este diseño el 2026-07-22 -- reemplaza el mapa de red de
+                     patrones de fusión probado antes en la misma sesión
+                     (descartado a pedido de Russell). Reutiliza el mismo
+                     tamaño (1/3) y el mismo backend que ya usa H2
+                     (/api/h2/participant-profiles), cero backend nuevo. Ver
+                     frontend/js/charts/husformer_a3_panel.js. -->
+                <section class="cmv-panel" id="panel-a3" data-panel="A3">
+                    <span class="cmv-panel-chip">A3</span>
+
+                    <div class="cmv-panel-body" id="a3-chart"></div>
+                </section>
             </section>
 
             <section class="cmv-vista" data-vista="B" aria-label="Vista B: Atención Temporal del Trial">
+                <!-- B1 -- SOLO heatmap (2026-07-22, a pedido de Russell: el
+                     B2 ORIGINAL -- líneas superpuestas -- se descarta del
+                     sistema, ya no hay selector Heatmap/Líneas). Ocupa 1/3
+                     de Vista B, B2 (señal cruda, reetiquetado de B3 el mismo
+                     día) ocupa los otros 2/3 fusionados -- ver
+                     .cmv-vista[data-vista="B"] en layout.css. -->
                 <section class="cmv-panel" id="panel-b1" data-panel="B1">
                     <span class="cmv-panel-chip">B1</span>
-
-                    <!-- Selector Heatmap/Líneas (2026-07-17, fusión B1+B2 a
-                         pedido de Russell) -- mismo lenguaje visual que el
-                         selector de proyección de A1/A2 (botones excluyentes,
-                         "specification by selection", Tominski 2011): B1 y B2
-                         eran dos idioms visuales del MISMO dato, no dos capas
-                         independientes que se puedan combinar -- un checkbox
-                         hubiera sugerido lo segundo, dos botones excluyentes
-                         comunican correctamente que es una alternativa. -->
-                    <div class="husformer-a1-projection-control" id="husformer-b1-view-control">
-                        <span class="husformer-a1-projection-label">Vista:</span>
-                        <button class="husformer-a1-projection-option active" data-view-mode="heatmap" type="button">Heatmap</button>
-                        <button class="husformer-a1-projection-option" data-view-mode="lines" type="button">Líneas</button>
-                    </div>
 
                     <!-- Indicador de contexto -- B1 es un drill-down de UN
                          solo trial a la vez (el último clickeado en Vista
@@ -588,79 +594,62 @@
                          habría forma de saber QUÉ trial se está viendo. -->
                     <div class="husformer-b1-trial-label" id="husformer-b1-trial-label"></div>
 
-                    <!-- Leyenda de la escala de color (modo heatmap) --
-                         dinámica (min/max del trial actual, no fija), ver
-                         justificación en husformer_b1_chart.js. -->
+                    <!-- Leyenda de la escala de color -- dinámica (min/max
+                         del trial actual, no fija), ver justificación en
+                         husformer_b1_chart.js. -->
                     <div class="husformer-b1-legend" id="husformer-b1-legend"></div>
-
-                    <!-- Leyenda categórica FIJA (modo líneas, 5 modalidades
-                         siempre son las mismas) -- color + patrón de trazo,
-                         ver husformer_b2_chart.js. Oculta por defecto (modo
-                         inicial = heatmap), alternada por JS junto con el
-                         selector de arriba. -->
-                    <div class="husformer-b2-legend husformer-b1-legend-hidden" id="husformer-b2-legend">
-                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#2563eb"></span>EEG</div>
-                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#dc2626"></span>EOG</div>
-                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#16a34a"></span>EMG</div>
-                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#d97706"></span>GSR</div>
-                        <div class="husformer-b2-legend-item"><span class="husformer-b2-legend-swatch" style="background:#9333ea"></span>Resp+Plet+Temp</div>
-                    </div>
 
                     <div class="cmv-panel-body" id="b1-chart"></div>
                 </section>
-            </section>
 
-            <!-- ⚠️ TEMPORAL (2026-07-22, a pedido de Russell, solo para
-                 pruebas de legibilidad del grafo de A3 con 1280 nodos):
-                 A3 y B3 fusionados en UN SOLO panel grande que abarca las
-                 filas de Vista A y Vista B (grid-row: span 2). Ahí va
-                 SOLO el grafo de A3 -- B3 (señales crudas) no se muestra
-                 mientras dure esta prueba (sin selector, decisión directa,
-                 no un toggle). Sacado de adentro de Vista A/Vista B (donde
-                 vivían panel-a3/panel-b3 originalmente) y puesto acá como
-                 hijo directo de .system-cmv-grid para poder ocupar las dos
-                 filas. REVERTIR: mover panel-a3 de vuelta adentro de
-                 data-vista="A" (después de panel-a2) y panel-b3 de vuelta
-                 adentro de data-vista="B" (después de panel-b1), sacar
-                 este bloque, y sacar las reglas CSS marcadas TEMPORAL en
-                 layout.css. -->
-            <section class="cmv-panel cmv-panel-a3b3-merged" id="panel-a3b3-merged">
-                <span class="cmv-panel-chip">A3</span>
+                <!-- B2 -- señales fisiológicas crudas normalizadas,
+                     superpuestas (T5). Reetiquetado de B3 a B2 el 2026-07-22
+                     (el B2 original, de líneas superpuestas, se descartó el
+                     mismo día -- ver husformer_a3_resumen_implementacion.md
+                     Sección 4). Los archivos internos siguen llamándose
+                     husformer_b3_chart.js / husformer_b3_channel_groups.js
+                     (no renombrados, ver nota ahí) -- solo cambió la
+                     etiqueta/ids expuestos acá y en husformer_main.js. -->
+                <section class="cmv-panel" id="panel-b2" data-panel="B2">
+                    <span class="cmv-panel-chip">B2</span>
 
-                <div class="husformer-a1-legend" id="husformer-a3-legend">
-                    <span class="husformer-a1-legend-label">Valencia</span>
-                    <div class="husformer-a1-legend-bar"></div>
-                    <div class="husformer-a1-legend-ticks">
-                        <span>1</span>
-                        <span>9</span>
+                    <div class="husformer-b1-trial-label" id="husformer-b2-trial-label"></div>
+
+                    <button class="husformer-b2-reset-zoom" id="husformer-b2-reset-zoom" type="button">↺ Reset zoom</button>
+
+                    <div class="husformer-b2-layout">
+                        <div class="husformer-b2-selector" id="husformer-b2-selector"></div>
+                        <div class="husformer-b2-chart-body" id="b2-chart"></div>
                     </div>
-                </div>
-                <div class="husformer-a3-selection-count" id="husformer-a3-selection-count"></div>
-
-                <div class="cmv-panel-body" id="a3b3-merged-chart"></div>
+                </section>
             </section>
 
-            <section class="cmv-vista" data-vista="C" aria-label="Vista C: Detalle de Atención Cross-Modal por Ventana">
+            <!-- Vista C -- rediseñada por completo el 2026-07-22 (a pedido
+                 de Russell): se elimina el C1 original (matriz 5x5 de UNA
+                 ventana puntual, disparada por hover en B1) y se reemplaza
+                 por dos paneles de Small Multiples (Munzner Cap. 12.4),
+                 ambos alimentados por la MISMA selección múltiple compartida
+                 de A1/A2 (selectedTrials) -- ya no por el trial/ventana
+                 activo de Vista B. C1 y C2 ocupan cada uno la mitad del
+                 ancho. Ver husformer_a3_resumen_implementacion.md Sección 4
+                 para el detalle completo de la decisión. -->
+            <section class="cmv-vista" data-vista="C" aria-label="Vista C: Comparación de Trials Seleccionados">
+                <!-- C1 -- Small Multiples de la matriz 5x5 de atención
+                     cross-modal promedio, una por trial seleccionado en
+                     A1/A2. Ver frontend/js/charts/husformer_c1_small_
+                     multiples_chart.js. -->
                 <section class="cmv-panel" id="panel-c1" data-panel="C1">
                     <span class="cmv-panel-chip">C1</span>
-
-                    <!-- Mismo tipo de indicador de contexto que B1 (trial
-                         activo), + la ventana seleccionada -- sin esto no
-                         habría forma de saber a qué click en B1/B2
-                         corresponde la matriz mostrada. -->
-                    <div class="husformer-b1-trial-label" id="husformer-c1-context-label"></div>
-
                     <div class="cmv-panel-body" id="c1-chart"></div>
                 </section>
 
+                <!-- C2 -- Small Multiples de VAD (Valencia/Activación/
+                     Dominancia/Liking) autorreportado, mismo orden de
+                     trials que C1 para poder cruzar visualmente ambos. Ver
+                     frontend/js/charts/husformer_c2_vad_chart.js. -->
                 <section class="cmv-panel" id="panel-c2" data-panel="C2">
                     <span class="cmv-panel-chip">C2</span>
                     <div class="cmv-panel-body" id="c2-chart"></div>
-                </section>
-
-                <section class="cmv-panel" id="panel-c3" data-panel="C3">
-                    <span class="cmv-panel-chip">C3</span>
-                    <div class="cmv-panel-body" id="c3-chart"></div>
                 </section>
             </section>
         </div>

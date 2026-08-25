@@ -1,5 +1,7 @@
 /**
- * Definiciones de "grupos seleccionables" para el selector de B3
+ * Definiciones de "grupos seleccionables" para el selector de B2 (señal
+ * cruda -- reetiquetado de B3 a B2 el 2026-07-22, ver husformer_a3_resumen_
+ * implementacion.md, tras descartarse el B2 original de líneas superpuestas)
  * (2026-07-17, rediseño a pedido de Russell -- reemplaza el selector de
  * 44 canales individuales).
  *
@@ -14,7 +16,7 @@
  * HEMISFERIO (Izquierdo, Derecho, Línea media) -- ambos esquemas
  * disponibles a la vez, el usuario elige de cuál partir. Cada grupo se
  * PROMEDIA en vivo a partir de sus canales reales (ver husformer_main.js,
- * loadAndRenderB3) -- no hay agregación precomputada.
+ * loadAndRenderB2) -- no hay agregación precomputada.
  *
  * EOG/EMG/GSR/Resp+Plet+Temp NO se agrupan más allá de la modalidad
  * misma -- son pocos canales (4, 4, 1 y 3 respectivamente), listarlos
@@ -74,7 +76,7 @@ export const AUTONOMIC_GROUPS = [
 
 // Todas las opciones seleccionables, en un solo array (usado para
 // resolver un id -> definición completa, y para armar el fetch combinado).
-export const ALL_B3_GROUPS = [
+export const ALL_B2_GROUPS = [
     ...EEG_REGION_GROUPS,
     ...EEG_HEMISPHERE_GROUPS,
     ...EOG_GROUPS,
@@ -83,8 +85,8 @@ export const ALL_B3_GROUPS = [
     ...AUTONOMIC_GROUPS,
 ];
 
-export function findB3Group(groupId) {
-    return ALL_B3_GROUPS.find((group) => group.id === groupId);
+export function findB2Group(groupId) {
+    return ALL_B2_GROUPS.find((group) => group.id === groupId);
 }
 
 // Máximo de señales simultáneas -- Munzner Cap. 10 (límite práctico de
@@ -95,12 +97,14 @@ export function findB3Group(groupId) {
 // siendo legible.
 export const MAX_SIMULTANEOUS_SIGNALS = 6;
 
-// Selección por defecto al abrir B3 (2026-07-17, a pedido de Russell) --
-// una señal de cada una de las 6 familias de color/modalidad, para que la
-// primera impresión del panel ya muestre una comparación representativa
-// entre TODAS las modalidades a la vez, no solo EEG. Coincide exactamente
-// con MAX_SIMULTANEOUS_SIGNALS (las 6 quedan activas de entrada).
-export const DEFAULT_B3_GROUP_IDS = [
+// Selección por defecto al abrir B2 (2026-07-17, a pedido de Russell;
+// panel reetiquetado de B3 a B2 el 2026-07-22 tras descartarse el B2
+// original de líneas superpuestas) -- una señal de cada una de las 6
+// familias de color/modalidad, para que la primera impresión del panel ya
+// muestre una comparación representativa entre TODAS las modalidades a la
+// vez, no solo EEG. Coincide exactamente con MAX_SIMULTANEOUS_SIGNALS (las
+// 6 quedan activas de entrada).
+export const DEFAULT_B2_GROUP_IDS = [
     "eeg_frontal",
     "eeg_left",
     "eog_exg1",

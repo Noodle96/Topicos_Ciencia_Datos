@@ -897,12 +897,6 @@ body {
   width: 100%;
   display: grid;
   grid-template-rows: var(--row-a) var(--row-b) var(--row-c);
-  /* ⚠️ TEMPORAL (2026-07-22): columnas explícitas a nivel de la grilla
-     externa, necesarias para poder ubicar el panel fusionado A3+B3 (ver
-     #panel-a3b3-merged más abajo) abarcando 2 filas en la 3ra columna.
-     REVERTIR sacando esta línea junto con el resto de las reglas
-     TEMPORAL de este archivo. */
-  grid-template-columns: 1fr 1fr 1fr;
   gap: 6px;
   background: #cbd5e1;
   padding: 6px;
@@ -924,59 +918,25 @@ body {
   min-width: 0;
 }
 
-/* Vista B: 2 paneles, no 3 (2026-07-17, fusión B1+B2 en un solo panel con
-   selector Heatmap/Líneas -- ver #panel-b1 en index.html). B3 (señal cruda +
-   atención, pendiente de implementar) recibe el espacio extra que dejó
-   libre la fusión -- necesita más ancho que B1/B2 (señal densa + zoom), a
-   diferencia de B1/B2 que ya cabían cómodos en 1/3 de la fila. Override
-   puntual de grid-template-columns (no de las variables --col-1/2/3,
-   pensadas para 3 columnas) porque acá hay solo 2 paneles reales.
-   Ajustado de 1fr/2fr a 0.8fr/2.2fr (2026-07-17, a pedido de Russell) --
-   B1/B2 un poco más angosto, B3 un poco más ancho (más chips + más
-   señales que comparar de una). */
+/* Vista B: 2 paneles (2026-07-22, a pedido de Russell -- el B2 ORIGINAL de
+   líneas superpuestas se descarta del sistema por completo, ya no hay
+   selector Heatmap/Líneas). B1 (solo Heatmap) ocupa 1/3, B2 (señal cruda --
+   reetiquetado de B3 a B2 el mismo día, con selector de canales + zoom)
+   ocupa los otros 2/3 fusionados -- misma proporción 1:2 que Russell pidió
+   explícitamente ("el primer 1/3... la segunda y tercera parte fusionadas").
+   Override puntual de grid-template-columns (no de las variables
+   --col-1/2/3, pensadas para 3 columnas) porque acá hay solo 2 paneles
+   reales. */
 .cmv-vista[data-vista="B"] {
-  grid-template-columns: 1.1fr 2.5fr;
+  grid-template-columns: 1fr 2fr;
 }
 
-/* ⚠️ BLOQUE TEMPORAL COMPLETO (2026-07-22) -- fusión de A3+B3 en un solo
-   panel grande para probar la legibilidad del grafo de A3 (1280 nodos).
-   REVERTIR todo este bloque + la línea grid-template-columns de
-   .system-cmv-grid de más arriba + devolver panel-a3/panel-b3 a su lugar
-   original en index.html (dentro de data-vista="A" y data-vista="B"
-   respectivamente) cuando se termine de probar. */
-.cmv-vista[data-vista="A"] {
-  /* Ahora solo A1+A2 (A3 se mudó fuera de acá) -- 2 columnas, no 3. */
-  grid-template-columns: 1fr 1fr;
-  grid-column: 1 / 3;
-}
-
-.cmv-vista[data-vista="B"] {
-  /* Ahora solo el panel B1/B2 fusionado (B3 se mudó fuera de acá) -- 1
-     columna, no 2. Pisa el override de arriba a propósito (viene después
-     en el archivo). */
-  grid-template-columns: 1fr;
-  grid-column: 1 / 3;
-}
-
+/* Vista C: 2 paneles, YA NO mitad y mitad (2026-07-22, ajustado a pedido de
+   Russell tras ver C2 con poco espacio real -- C1 es una sola matriz
+   compacta, C2 necesita más ancho para que sus mini-gráficos se lean bien). */
 .cmv-vista[data-vista="C"] {
-  /* Sin cambios de contenido, pero ahora la grilla externa tiene 3
-     columnas explícitas -- hay que decirle que ocupe las 3, si no
-     quedaría solo en la primera. */
-  grid-column: 1 / 4;
+  grid-template-columns: 1fr 2fr;
 }
-
-.cmv-panel-a3b3-merged {
-  grid-row: 1 / 3;
-  grid-column: 3;
-  display: flex;
-  flex-direction: column;
-}
-
-.cmv-panel-a3b3-merged .cmv-panel-body {
-  flex: 1;
-  min-height: 0;
-}
-/* ⚠️ FIN DEL BLOQUE TEMPORAL */
 
 .cmv-panel {
   position: relative;
@@ -1496,9 +1456,15 @@ body {
 }
 
 /* =========================
-   B2 -- series superpuestas por modalidad: leyenda categórica fija +
-   tooltip propio (mismo estilo visual de fila que .husformer-b1-tooltip-row,
-   reutilizado directamente desde husformer_b2_chart.js).
+   B2 ORIGINAL (líneas superpuestas) -- DESCARTADO del sistema el 2026-07-22
+   a pedido de Russell (ver husformer_a3_resumen_implementacion.md Sección
+   4). husformer_b2_chart.js ya no se importa desde husformer_main.js --
+   estas reglas de leyenda quedan como código muerto, sin uso, mismo
+   criterio que el resto del proyecto para diseños descartados. Las reglas
+   de TOOLTIP que tenía este B2 original SÍ se eliminaron (no solo se
+   dejaron muertas) porque el nombre `.husformer-b2-tooltip` se reutiliza
+   más abajo para el panel de señal cruda, reetiquetado de B3 a B2 el mismo
+   día -- dejar ambas hubiera generado dos reglas CSS con el mismo selector.
    ========================= */
 
 .husformer-b2-legend {
@@ -1531,43 +1497,21 @@ body {
   flex-shrink: 0;
 }
 
-.husformer-b2-tooltip {
-  position: absolute;
-  background: linear-gradient(135deg, #1f2937, #0f172a);
-  color: #f9fafb;
-  border-radius: 8px;
-  padding: 10px 12px;
-  pointer-events: none;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  font-size: 12px;
-  line-height: 1.5;
-  z-index: 1000;
-}
-
-.husformer-b2-tooltip strong {
-  color: #93c5fd;
-}
-
-/* Filas del tooltip de B2 reutilizan .husformer-b1-tooltip-row (definida
-   arriba) para el layout -- acá solo se agrega el espacio para el punto de
-   color que antepone husformer_b2_chart.js a cada fila. */
-.husformer-b2-tooltip .husformer-b1-tooltip-row {
-  gap: 6px;
-}
-
 /* =========================
-   B3 -- comparación de señales crudas normalizadas (rediseño 2026-07-17,
-   ver husformer_b3_chart.js y husformer_b3_channel_groups.js). Ya NO
-   apila un panel de atención (B1/B2 ya está visible al lado, en la misma
-   fila del CMV -- duplicar era redundante, ver husformer_b3_resumen_
-   implementacion.md sección de corrección).
+   B2 -- comparación de señales crudas normalizadas (rediseño 2026-07-17,
+   ver husformer_b3_chart.js y husformer_b3_channel_groups.js -- nombres de
+   archivo sin renombrar, ver nota de husformer_a3_resumen_implementacion.md
+   Sección 4). Reetiquetado de B3 a B2 el 2026-07-22 (el B2 original, de
+   líneas superpuestas, se descartó el mismo día). Ya NO apila un panel de
+   atención (B1 ya está visible al lado, en la misma fila del CMV --
+   duplicar era redundante, ver husformer_b3_resumen_implementacion.md
+   sección de corrección).
    ========================= */
 
-/* Botón de reset de zoom -- esquina superior derecha (el chip "B3" ocupa
+/* Botón de reset de zoom -- esquina superior derecha (el chip "B2" ocupa
    la izquierda, el label de trial el centro -- ver .husformer-b1-trial-
-   label -- así que la derecha está libre, mismo patrón que el selector
-   Heatmap/Líneas de B1/B2). */
-.husformer-b3-reset-zoom {
+   label -- así que la derecha está libre). */
+.husformer-b2-reset-zoom {
   position: absolute;
   top: 6px;
   right: 8px;
@@ -1582,14 +1526,14 @@ body {
   cursor: pointer;
 }
 
-.husformer-b3-reset-zoom:hover {
+.husformer-b2-reset-zoom:hover {
   background: #e5e7eb;
 }
 
 /* Layout en flexbox normal (no absolute) -- ver nota en index.html: el
    selector puede crecer hasta 6 filas, con flexbox el chart de abajo
    siempre recibe el espacio restante real, sin adivinar un padding fijo. */
-.husformer-b3-layout {
+.husformer-b2-layout {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -1603,10 +1547,10 @@ body {
    -- con 6 grupos, eso consumía bastante alto del panel. Ahora los 6
    grupos fluyen de izquierda a derecha (flex-direction: row + flex-wrap),
    cada uno como una unidad compacta (label + sus chips, sin separarse
-   entre sí -- flex-wrap: nowrap en .husformer-b3-selector-row), y solo
+   entre sí -- flex-wrap: nowrap en .husformer-b2-selector-row), y solo
    se pasa a una nueva línea cuando ya no entra más en el ancho
    disponible -- mucho más horizontal, mucho menos alto ocupado. */
-.husformer-b3-selector {
+.husformer-b2-selector {
   flex: 0 1 auto;
   display: flex;
   flex-direction: row;
@@ -1623,13 +1567,13 @@ body {
 
 /* Cada grupo (label + sus chips) es una unidad que NO se separa entre
    líneas -- flex-wrap:nowrap acá, el wrap real pasa en el contenedor
-   padre (.husformer-b3-selector) entre grupos completos, no dentro de uno.
+   padre (.husformer-b2-selector) entre grupos completos, no dentro de uno.
    Separador vertical entre grupos (2026-07-17, a pedido de Russell: "que
    se note la diferencia" entre EEG·Región/EEG·Hemisferio/EOG/EMG/GSR/
    Resp+Plet+Temp) -- sin el borde, 6 grupos en fila corrida se leían como
    un solo bloque continuo de chips, sin indicar dónde termina uno y
    empieza el otro. */
-.husformer-b3-selector-row {
+.husformer-b2-selector-row {
   display: flex;
   align-items: center;
   gap: 3px;
@@ -1639,16 +1583,16 @@ body {
   border-right: 1px solid #d1d5db;
 }
 
-.husformer-b3-selector-row:last-child {
+.husformer-b2-selector-row:last-child {
   border-right: none;
 }
 
 /* Label más grande/oscuro que antes (era 8px gris #6b7280, casi invisible)
    + un punto de color con el color BASE de la modalidad de ese grupo
-   (mismo share encoding que ya usan los chips activos y las líneas de
-   B1/B2) -- así cada grupo se distingue de un vistazo incluso antes de
-   leer el texto, no solo por el separador. */
-.husformer-b3-selector-group-label {
+   (mismo share encoding que ya usan los chips activos y el heatmap de B1)
+   -- así cada grupo se distingue de un vistazo incluso antes de leer el
+   texto, no solo por el separador. */
+.husformer-b2-selector-group-label {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -1659,7 +1603,7 @@ body {
   margin-right: 2px;
 }
 
-.husformer-b3-selector-group-dot {
+.husformer-b2-selector-group-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -1670,7 +1614,7 @@ body {
    activo = color sólido), pero acá el color activo es el color REAL de la
    serie que va a aparecer en el chart (share encoding), no un azul
    genérico -- se fija por JS vía --chip-color en cada botón. */
-.husformer-b3-chip {
+.husformer-b2-chip {
   border: 1px solid #d1d5db;
   background: #ffffff;
   color: #374151;
@@ -1682,27 +1626,27 @@ body {
   white-space: nowrap;
 }
 
-.husformer-b3-chip:hover {
+.husformer-b2-chip:hover {
   background: #f3f4f6;
 }
 
-.husformer-b3-chip.active {
+.husformer-b2-chip.active {
   background: var(--chip-color, #2563eb);
   border-color: var(--chip-color, #2563eb);
   color: #ffffff;
 }
 
-.husformer-b3-chip:disabled {
+.husformer-b2-chip:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.husformer-b3-chart-body {
+.husformer-b2-chart-body {
   flex: 1 1 auto;
   min-height: 0; /* necesario para que un hijo flex con SVG pueda encogerse por debajo de su tamaño intrínseco */
 }
 
-.husformer-b3-tooltip {
+.husformer-b2-tooltip {
   position: absolute;
   background: linear-gradient(135deg, #1f2937, #0f172a);
   color: #f9fafb;
@@ -1715,7 +1659,7 @@ body {
   z-index: 1000;
 }
 
-.husformer-b3-tooltip strong {
+.husformer-b2-tooltip strong {
   color: #93c5fd;
 }
 
@@ -1866,4 +1810,161 @@ thead .husformer-a3-attr-col {
 
 .husformer-a3-remove-btn:hover {
   color: #dc2626;
+}
+
+/* =========================
+   C1 -- Small Multiples de la matriz 5x5 de atención cross-modal promedio,
+   una por trial seleccionado en A1/A2 (2026-07-22, reemplaza el C1
+   original de una ventana puntual). Ver husformer_c1_small_multiples_
+   chart.js.
+   ========================= */
+
+/* Scroll horizontal si hay más trials seleccionados de los que entran --
+   selectedTrials no tiene tope (a diferencia del mapa de red descartado),
+   así que el layout tiene que poder crecer sin romperse. */
+.husformer-c1-scroll-row {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.husformer-c1-card {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.husformer-c1-card-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.husformer-c1-axis-label {
+  font-size: 6.5px;
+  fill: #6b7280;
+}
+
+.husformer-c1-tooltip {
+  position: absolute;
+  background: linear-gradient(135deg, #1f2937, #0f172a);
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-size: 11px;
+  line-height: 1.5;
+  z-index: 1000;
+}
+
+/* =========================
+   C2 -- señal real + dominancia de atención juxtapuestas (tercer diseño,
+   ver husformer_c2_resumen_implementacion.md). Ajustado el 2026-07-22 (a
+   pedido de Russell, mismo día): el contenido quedaba arrinconado arriba a
+   la izquierda sin aprovechar el panel -- .husformer-c2-card pasó de
+   `flex: 0 0 auto` (ancho fijo, al tamaño de su contenido) a `flex: 1 1 0`
+   (las tarjetas se REPARTEN todo el ancho disponible entre sí, hasta un
+   máximo razonable) + `justify-content: center` / `align-items: stretch`
+   en la fila para centrar horizontalmente cuando hay pocas tarjetas y
+   estirarlas verticalmente para ocupar el alto real del panel. La altura
+   de cada mini-gráfico (antes fija en 70px) ahora se calcula en JS a
+   partir del alto real del contenedor -- ver renderHusformerC2SignalAttentionChart.
+   ========================= */
+
+.husformer-c2-scroll-row {
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: center;
+  gap: 18px;
+  padding: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* flex/min-width/max-width de acá son el FALLBACK -- en la práctica,
+   husformer_c2_signal_attention_overlay_chart.js calcula el ancho exacto
+   de cada tarjeta de antemano (mismo rango 180-420px) y lo fija por JS
+   (`.style("width", ...)`, `.style("flex", "0 0 auto")`), así que estas
+   reglas casi no entran en juego -- se dejan como respaldo por si algún
+   otro chart reutiliza esta clase sin pasar por ese cálculo. */
+.husformer-c2-card {
+  flex: 1 1 0;
+  min-width: 180px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.husformer-c2-card-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #111827;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Etiqueta chica sobre cada una de las dos mini-gráficas apiladas de una
+   tarjeta (2026-07-22, tercer diseño de C2 -- "Señal real" / "% Dominancia
+   de atención"). */
+.husformer-c2-mini-label {
+  font-size: 7.5px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  width: 100%;
+  text-align: center;
+}
+
+/* Reglas de abajo (.husformer-c2-bar-*) eran del diseño ANTERIOR de C2
+   (Small Multiples de VAD, descartado por Russell el mismo día) -- código
+   muerto, sin uso, se dejan por el mismo criterio del resto del proyecto. */
+.husformer-c2-bar-label {
+  font-size: 8px;
+  fill: #374151;
+  font-weight: 700;
+}
+
+.husformer-c2-bar-track {
+  fill: #f3f4f6;
+  stroke: #e5e7eb;
+  stroke-width: 1;
+}
+
+.husformer-c2-bar-value {
+  font-size: 8px;
+  fill: #111827;
+}
+
+.husformer-c2-bar-na {
+  font-size: 8px;
+  fill: #9ca3af;
+}
+
+.husformer-c2-tooltip {
+  position: absolute;
+  background: linear-gradient(135deg, #1f2937, #0f172a);
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-size: 11px;
+  line-height: 1.5;
+  z-index: 1000;
 }

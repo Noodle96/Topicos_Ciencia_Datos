@@ -249,6 +249,30 @@ export async function fetchHusformerTrialPatternNetwork() {
     return await response.json();
 }
 
+/**
+ * Obtiene la matriz 5x5 promedio de atención cross-modal (attn_cross_summary)
+ * de cada trial en `trialKeys` (Vista C, C1 rediseñada -- Small Multiples,
+ * uno por trial seleccionado en A1/A2). Ver husformer_attention_service.py
+ * (compute_selected_trials_cross_attention).
+ *
+ * @param {Array<{participantId: number, trial: number}>} trialKeys
+ */
+export async function fetchHusformerSelectedTrialsCrossAttention(trialKeys) {
+    const trialsQuery = trialKeys
+        .map(({ participantId, trial }) => `${participantId}_${trial}`)
+        .join(",");
+
+    const response = await fetch(
+        `${API_BASE_URL}/husformer/selected-trials-cross-attention?trials=${trialsQuery}`
+    );
+
+    if (!response.ok) {
+        throw new Error("Error loading Husformer selected trials cross-attention");
+    }
+
+    return await response.json();
+}
+
 export async function fetchTarea1TrialSignals({
     participant,
     trial,

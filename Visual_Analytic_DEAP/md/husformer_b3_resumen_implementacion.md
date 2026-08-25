@@ -2,6 +2,8 @@
 
 Documento vivo, creado 2026-07-17. Objetivo: documentar en el momento (no al final) qué hace el sistema respecto a cada tarea, con las decisiones de diseño y su justificación, como insumo directo para la exposición y la redacción del paper.
 
+**⚠️ Actualización (2026-07-22): este panel se REETIQUETÓ de B3 a B2.** Tuvo, brevemente, su espacio ocupado temporalmente por una prueba de layout de A3 (mapa de red de patrones, luego descartado) -- no se renderizaba en ningún panel durante esa prueba. Restaurado a su panel propio el mismo día y, en la misma sesión, renombrado de "B3" a "B2" (el B2 original -- líneas superpuestas -- se descartó del sistema, dejando un hueco de numeración que Russell pidió cerrar). Ahora ocupa **2/3 de Vista B** (antes 2.5 de 3.6, proporción equivalente), junto a B1 (solo Heatmap). Todas las funciones descritas abajo (selección múltiple de grupos, zoom, resaltado sincronizado con B1) siguen implementadas sin cambios de comportamiento -- solo cambiaron las etiquetas/ids/nombres de función expuestos (`renderB3`→`renderB2`, `#b3-chart`→`#b2-chart`, etc., ver `husformer_main.js`). **Los archivos siguen llamándose `husformer_b3_chart.js` / `husformer_b3_channel_groups.js`** -- no se pudieron renombrar (sin acceso a shell en el momento del cambio); todo lo que exportan/exponen ya dice B2. Ver `husformer_a3_resumen_implementacion.md` Sección 4 para el detalle completo del reajuste de layout.
+
 ## 1. Qué es T5 y por qué importa
 
 **T5:** *"Relacionar picos o cambios abruptos en la atención con eventos visibles en la señal original."* Categoría: Query — Compare. Goals: **G2**, G4.

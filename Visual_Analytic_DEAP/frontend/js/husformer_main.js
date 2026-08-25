@@ -3,7 +3,7 @@ import {
     fetchHusformerTrialClusters,
     fetchHusformerTrialAttention,
     fetchHusformerWindowCrossAttention,
-    fetchHusformerTrialPatternNetwork,
+    fetchH2ParticipantProfiles,
     fetchTrialSignals,
 } from "./api.js";
 
@@ -18,25 +18,39 @@ import {
 } from "./charts/husformer_a2_chart.js";
 
 import {
-    renderHusformerA3NetworkChart,
-} from "./charts/husformer_a3_network_chart.js";
+    renderHusformerA3Panel,
+} from "./charts/husformer_a3_panel.js";
 
 import {
     renderHusformerB1Chart,
 } from "./charts/husformer_b1_chart.js";
 
+// B2 -- señal cruda comparada, reetiquetado del antiguo B3 el 2026-07-22
+// (el B2 original de líneas superpuestas se descartó el mismo día). Los archivos
+// siguen llamándose husformer_b3_chart.js / husformer_b3_channel_groups.js
+// -- no fue posible renombrarlos (sandbox sin acceso a shell en el momento
+// del cambio) -- pero todo lo exportado/expuesto ya dice B2.
 import {
     renderHusformerB2Chart,
-} from "./charts/husformer_b2_chart.js";
-
-import {
-    renderHusformerB3Chart,
-    buildB3Series,
+    buildB2Series,
 } from "./charts/husformer_b3_chart.js";
 
+// C1/C2 -- Vista C, SEGUNDO rediseño el mismo día (2026-07-22, a pedido de
+// Russell): el primer rediseño (Small Multiples por selectedTrials,
+// husformer_c1_small_multiples_chart.js / husformer_c2_vad_chart.js -- ver
+// esos archivos, NO borrados) no le convenció -- quería algo anclado a una
+// ACCIÓN sobre B2 (la señal cruda), no a la selección de A1/A2. C1 vuelve a
+// ser el original (matriz de UNA ventana puntual, revivido tal cual estaba,
+// solo cambia el disparador: antes hover en B1, ahora hover en B2). C2 es
+// nuevo: señal real + dominancia de atención juxtapuestas, misma ventana de
+// tiempo, mismo disparador.
 import {
     renderHusformerC1Chart,
 } from "./charts/husformer_c1_chart.js";
+
+import {
+    renderHusformerC2SignalAttentionChart,
+} from "./charts/husformer_c2_signal_attention_overlay_chart.js";
 
 import {
     EEG_REGION_GROUPS,
@@ -45,9 +59,9 @@ import {
     EMG_GROUPS,
     GSR_GROUPS,
     AUTONOMIC_GROUPS,
-    findB3Group,
+    findB2Group,
     MAX_SIMULTANEOUS_SIGNALS,
-    DEFAULT_B3_GROUP_IDS,
+    DEFAULT_B2_GROUP_IDS,
     getSignalColor,
 } from "./husformer_b3_channel_groups.js";
 
@@ -139,85 +153,87 @@ let resizeObserverA2 = null;
 let lastObservedWidthA2 = 0;
 let lastObservedHeightA2 = 0;
 
-// A3 -- mapa de patrones de fusión cross-modal entre trials (rediseño
-// 2026-07-22, reemplaza el panel de perfil de cuestionario -- ver
-// husformer_a3_resumen_implementacion.md para la justificación completa).
+// A3 -- comparación de PERFIL DE CUESTIONARIO de los participantes de los
+// trials seleccionados en A1/A2 (gramática visual LineUp -- ver
+// husformer_a3_panel.js). Vuelto a este diseño el 2026-07-22: la sesión
+// había probado un mapa de red de patrones de fusión (attn_cross_summary,
+// similitud coseno entre trials) en su lugar, pero Russell decidió
+// descartarlo y volver al perfil de cuestionario -- ver
+// husformer_a3_resumen_implementacion.md para el historial completo.
 //
-// Es un mapa del DATASET COMPLETO (1280 trials), independiente del trial
-// activo en B/C -- se pide UNA sola vez al cargar la vista, no en cada
-// click como A1/A2.
-//
-// Selección PROPIA, separada de `selectedTrials` (la de A1/A2) -- decisión
-// deliberada: el propósito acá es distinto (elegir 2-4 trials CONTRASTANTES
-// para un estudio de caso en Vista C, no marcar puntos de interés general
-// en el espacio de representación), y necesita su propio tope
-// (MAX_SELECTED_COMPARISON_TRIALS) que no tendría sentido imponerle a la
-// selección de A1/A2.
-const MAX_SELECTED_COMPARISON_TRIALS = 4;
+// A diferencia del mapa de red (dataset completo, independiente de la
+// selección), A3 depende DIRECTAMENTE de `selectedTrials` -- la misma
+// selección compartida de A1/A2, no una propia. Se re-pide cada vez que la
+// selección cambia (ver loadAndRenderA3Profiles, llamada desde
+// handlePointToggle/handleBackgroundClick/handleRemoveParticipant).
+let latestA3ProfileData = null;
+let a3RequestId = 0;
 
-let latestA3NetworkData = null;
-let selectedComparisonTrials = new Set(); // claves "participantId_trial"
+/**
+ * Cuenta cuántos trials seleccionados pertenecen a cada participante --
+ * insumo del panel LineUp (label "P01 (3)" = 3 trials de P01 en la
+ * selección actual).
+ */
+function getParticipantTrialCounts() {
+    const counts = new Map();
 
-function getComparisonTrialKey(node) {
-    return `${node.participant_id}_${node.trial}`;
-}
-
-// ⚠️ BLOQUE TEMPORAL (2026-07-22, a pedido de Russell): A3 ocupa un panel
-// fusionado más grande (#panel-a3b3-merged en index.html, spans 2 filas de
-// la grilla -- antes eran los espacios separados de A3 y B3). SOLO el grafo
-// de A3 se muestra ahí -- B3 (señales crudas) no se renderiza en ningún
-// lado mientras dure esta prueba de legibilidad (1280 nodos). Sin selector
-// -- decisión directa, no un toggle (primer intento tenía uno, Russell pidió
-// sacarlo). REVERTIR: volver panel-a3/panel-b3 a sus lugares originales en
-// index.html, volver renderA3() a su containerId original ("a3-chart"), y
-// volver a habilitar renderB3()/setupB3ChannelControl()/observeB3Container().
-const A3B3_MERGED_CONTAINER_ID = "a3b3-merged-chart";
-
-function renderA3() {
-    const counter = document.getElementById("husformer-a3-selection-count");
-    counter.textContent = `Seleccionados: ${selectedComparisonTrials.size}/${MAX_SELECTED_COMPARISON_TRIALS}`;
-
-    renderHusformerA3NetworkChart({
-        containerId: A3B3_MERGED_CONTAINER_ID,
-        networkData: latestA3NetworkData,
-        selectedTrials: selectedComparisonTrials,
-        onNodeToggle: handleA3NodeToggle,
-        onBackgroundClick: handleA3BackgroundClick,
+    selectedTrials.forEach((point) => {
+        counts.set(point.Participant_id, (counts.get(point.Participant_id) ?? 0) + 1);
     });
-}
 
-function handleA3NodeToggle(node) {
-    const key = getComparisonTrialKey(node);
-
-    if (selectedComparisonTrials.has(key)) {
-        selectedComparisonTrials.delete(key);
-    } else {
-        if (selectedComparisonTrials.size >= MAX_SELECTED_COMPARISON_TRIALS) {
-            return;
-        }
-        selectedComparisonTrials.add(key);
-    }
-
-    renderA3();
-}
-
-function handleA3BackgroundClick() {
-    if (selectedComparisonTrials.size === 0) {
-        return;
-    }
-
-    selectedComparisonTrials.clear();
-    renderA3();
+    return counts;
 }
 
 /**
- * Pide el mapa de patrones UNA sola vez (no depende de ningún trial activo
- * ni de la selección de A1/A2) -- mismo patrón que loadAndRenderProjection,
- * pero sin argumentos ni re-fetch en cada render.
+ * Botón "×" de una fila de A3 -- quita TODOS los trials de ese participante
+ * de la selección compartida (no solo uno), y re-renderiza A1/A2/A3.
  */
-async function loadAndRenderA3Network() {
-    const data = await fetchHusformerTrialPatternNetwork();
-    latestA3NetworkData = data;
+function handleRemoveParticipant(participantId) {
+    Array.from(selectedTrials.entries())
+        .filter(([, point]) => point.Participant_id === participantId)
+        .forEach(([key]) => selectedTrials.delete(key));
+
+    renderA1();
+    renderA2();
+    loadAndRenderA3Profiles();
+}
+
+function renderA3() {
+    renderHusformerA3Panel({
+        containerId: "a3-chart",
+        profileData: latestA3ProfileData,
+        participantTrialCounts: getParticipantTrialCounts(),
+        onRemoveParticipant: handleRemoveParticipant,
+    });
+}
+
+/**
+ * Pide al backend (reutiliza /api/h2/participant-profiles, cero backend
+ * nuevo) el perfil de los participantes con AL MENOS un trial en
+ * `selectedTrials`. Mismo patrón de guard de condición de carrera que
+ * a2RequestId/b1RequestId/c1RequestId.
+ */
+async function loadAndRenderA3Profiles() {
+    a3RequestId += 1;
+    const requestId = a3RequestId;
+
+    const participantIds = Array.from(
+        new Set(Array.from(selectedTrials.values()).map((point) => point.Participant_id))
+    );
+
+    if (participantIds.length === 0) {
+        latestA3ProfileData = null;
+        renderA3();
+        return;
+    }
+
+    const data = await fetchH2ParticipantProfiles(participantIds);
+
+    if (requestId !== a3RequestId) {
+        return;
+    }
+
+    latestA3ProfileData = data;
     renderA3();
 }
 
@@ -226,9 +242,7 @@ let lastObservedWidthA3 = 0;
 let lastObservedHeightA3 = 0;
 
 function observeA3Container() {
-    // ⚠️ TEMPORAL: observa el contenedor fusionado (A3B3_MERGED_CONTAINER_ID),
-    // compartido con B3 -- ver bloque TEMPORAL más arriba.
-    const container = document.getElementById(A3B3_MERGED_CONTAINER_ID);
+    const container = document.getElementById("a3-chart");
 
     if (!container || resizeObserverA3) {
         return;
@@ -244,7 +258,7 @@ function observeA3Container() {
         lastObservedWidthA3 = width;
         lastObservedHeightA3 = height;
 
-        if (width > 0 && height > 0 && latestA3NetworkData) {
+        if (width > 0 && height > 0) {
             renderA3();
         }
     });
@@ -281,83 +295,49 @@ let resizeObserverB1 = null;
 let lastObservedWidthB1 = 0;
 let lastObservedHeightB1 = 0;
 
-// Modo de vista de B1 -- "heatmap" (default) o "lines" (2026-07-17, fusión
-// B1+B2 en un solo panel a pedido de Russell: eran dos idioms del MISMO
-// dato ocupando dos espacios, con un selector arriba pasan a ocupar uno
-// solo -- ver #husformer-b1-view-control en index.html). El panel B2
-// original (frontend/js/charts/husformer_b2_chart.js) NO se eliminó -- se
-// sigue usando tal cual, solo que renderizado adentro de #b1-chart cuando
-// este modo está activo, en vez de tener su propio contenedor/observer.
-const DEFAULT_B1_VIEW_MODE = "heatmap";
-let currentB1ViewMode = DEFAULT_B1_VIEW_MODE;
-
-// Handles devueltos por renderHusformerB1Chart/B2Chart/B3Chart (2026-07-17,
-// sincronización bidireccional B1/B2 <-> B3, a pedido de Russell) -- cada
+// Handles devueltos por renderHusformerB1Chart/B2Chart (2026-07-17,
+// sincronización bidireccional B1 <-> B2, a pedido de Russell) -- cada
 // chart expone { highlightWindow(windowIndex), clearHighlight() } para que
 // OTRO panel pueda resaltar una ventana en él sin reconstruir su SVG
 // entero. Se reasignan en cada render (el chart viejo ya no existe en el
 // DOM), y pueden ser null si el panel está en estado vacío/cargando (esos
 // casos retornan null en vez de un handle) -- por eso todo acceso usa `?.`.
-let activeB1B2Handle = null;
-let activeB3Handle = null;
+let activeB1Handle = null;
+let activeB2Handle = null;
 
 function renderB1() {
-    // El hover ahora TAMBIÉN maneja C1 (2026-07-22, a pedido de Russell):
-    // las matrices cross-modal varían poco entre ventanas consecutivas, y
-    // click obligaba a un click por ventana para comparar -- demasiado
-    // lento para "barrer" varias ventanas seguidas y notar la diferencia.
-    // Con hover, mover el mouse por B1/B2 actualiza C1 en tiempo real, sin
-    // clicks. handleWindowSelect ya tiene el guard de "no hacer nada si es
-    // la misma ventana o si es null" (ver esa función) -- null pasa cuando
-    // el mouse SALE del panel, y ahí C1 se queda mostrando la última
-    // ventana (sticky), no vuelve a estado vacío -- si volviera a vacío
-    // cada vez que el mouse sale de B1/B2, sería imposible siquiera mirar
-    // C1 con calma sin que desaparezca.
+    // Hover en B1 sigue sincronizando el resaltado con B2 (linked
+    // highlighting, sin reconstruir el SVG de ninguno de los dos --
+    // Becker & Cleveland 1987, Munzner Cap. 12.3.3). Ya NO dispara nada
+    // hacia Vista C (2026-07-22, a pedido de Russell): C1/C2 dependen de
+    // selectedTrials (selección de A1/A2), no de una ventana puntual de B1
+    // -- ese mecanismo (selectedWindowIndex/handleWindowSelect) se retiró
+    // junto con el C1 original.
     const onHoverWindowChange = (windowIndex) => {
         if (windowIndex === null) {
-            activeB3Handle?.clearHighlight();
+            activeB2Handle?.clearHighlight();
         } else {
-            activeB3Handle?.highlightWindow(windowIndex);
+            activeB2Handle?.highlightWindow(windowIndex);
         }
-
-        handleWindowSelect(windowIndex);
     };
 
-    if (currentB1ViewMode === "heatmap") {
-        activeB1B2Handle = renderHusformerB1Chart({
-            containerId: "b1-chart",
-            activeTrial: lastClickedTrial,
-            attentionData: latestB1Data,
-            onHoverWindowChange,
-            onWindowSelect: handleWindowSelect,
-            selectedWindowIndex,
-        });
-    } else {
-        activeB1B2Handle = renderHusformerB2Chart({
-            containerId: "b1-chart",
-            activeTrial: lastClickedTrial,
-            attentionData: latestB1Data,
-            onHoverWindowChange,
-            onWindowSelect: handleWindowSelect,
-            selectedWindowIndex,
-        });
-    }
+    activeB1Handle = renderHusformerB1Chart({
+        containerId: "b1-chart",
+        activeTrial: lastClickedTrial,
+        attentionData: latestB1Data,
+        onHoverWindowChange,
+    });
 
     renderB1Context();
 }
 
 /**
- * Actualiza el label de trial activo (compartido por ambos modos) y
- * alterna cuál de las dos leyendas se ve -- la de color dinámico (heatmap)
- * o la categórica fija (líneas), nunca las dos a la vez.
+ * Actualiza el label de trial activo y la leyenda de color de B1 (dinámica,
+ * min/max del trial actual).
  */
 function renderB1Context() {
     const label = document.getElementById("husformer-b1-trial-label");
     const heatmapLegend = document.getElementById("husformer-b1-legend");
-    const linesLegend = document.getElementById("husformer-b2-legend");
-
-    heatmapLegend.classList.toggle("husformer-b1-legend-hidden", currentB1ViewMode !== "heatmap");
-    linesLegend.classList.toggle("husformer-b1-legend-hidden", currentB1ViewMode !== "lines");
 
     if (!lastClickedTrial) {
         label.textContent = "";
@@ -366,10 +346,6 @@ function renderB1Context() {
     }
 
     label.textContent = `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`;
-
-    if (currentB1ViewMode !== "heatmap") {
-        return;
-    }
 
     if (!latestB1Data || !latestB1Data.windows || latestB1Data.windows.length === 0) {
         heatmapLegend.innerHTML = "";
@@ -401,14 +377,6 @@ function renderB1Context() {
 async function loadAndRenderB1(trialPoint) {
     lastClickedTrial = trialPoint;
 
-    // La ventana seleccionada (si había una) pertenece al trial ANTERIOR --
-    // un window_index de otro trial no tiene ningún significado acá, así
-    // que se limpia junto con el cambio de trial (mismo momento en que B1/B2
-    // se recargan). C1 vuelve a su estado vacío hasta el próximo click.
-    selectedWindowIndex = null;
-    latestC1Data = null;
-    renderC1();
-
     b1RequestId += 1;
     const requestId = b1RequestId;
 
@@ -429,34 +397,6 @@ async function loadAndRenderB1(trialPoint) {
 
     latestB1Data = data;
     renderB1();
-}
-
-/**
- * Botones "Heatmap"/"Líneas" -- mismo patrón que setupProjectionControls de
- * A1/A2 (botones excluyentes, no checkboxes).
- */
-function setupB1ViewToggle() {
-    const buttons = document.querySelectorAll(
-        "#husformer-b1-view-control .husformer-a1-projection-option"
-    );
-
-    buttons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const viewMode = button.dataset.viewMode;
-
-            if (viewMode === currentB1ViewMode) {
-                return;
-            }
-
-            currentB1ViewMode = viewMode;
-
-            buttons.forEach((otherButton) => {
-                otherButton.classList.toggle("active", otherButton === button);
-            });
-
-            renderB1();
-        });
-    });
 }
 
 function observeB1Container() {
@@ -485,18 +425,16 @@ function observeB1Container() {
 }
 
 // ============================================================
-// Vista C -- C1 (matriz 5x5 de atención cross-modal de UNA ventana puntual).
-// Drill-down de B1/B2: a diferencia de A->B (que se dispara por CLICK en un
-// punto, pero sin necesidad de recordar cuál -- B1 solo necesita "el último
-// trial"), B->C necesita saber EXACTAMENTE qué ventana, y esa selección debe
-// sobrevivir a que el usuario siga haciendo hover en B1/B2/B3 -- por eso es
-// un estado nuevo (selectedWindowIndex), separado de lastClickedTrial y del
-// mecanismo de hover ya existente. Decisión de diseño confirmada con Russell
-// (2026-07-22): selección por CLICK simple de una ventana (no brushing de un
-// rango, que es lo que decía el paper hasta ahora -- Sección 5 actualizada
-// para reflejar esto).
+// Vista C -- C1 (matriz 5x5 cross-modal de UNA ventana puntual, revivida) y
+// C2 (señal real + dominancia de atención juxtapuestas), SEGUNDO rediseño
+// el mismo día (2026-07-22) -- ambos disparados por HOVER en B2, no por la
+// selección de A1/A2 (primer rediseño, descartado por Russell).
+//
+// hoveredB2WindowIndex es el estado nuevo: la ventana de 1s que el mouse
+// está sobrevolando en B2 en este momento. null = todavía no hubo hover en
+// esta sesión de trial activo.
 // ============================================================
-let selectedWindowIndex = null;
+let hoveredB2WindowIndex = null;
 
 // Última respuesta de /window-cross-attention -- { participant_id, trial,
 // window_index, window_start_sec, split, modality_labels, matrix: 5x5 }.
@@ -507,32 +445,23 @@ let resizeObserverC1 = null;
 let lastObservedWidthC1 = 0;
 let lastObservedHeightC1 = 0;
 
+let resizeObserverC2 = null;
+let lastObservedWidthC2 = 0;
+let lastObservedHeightC2 = 0;
+
 function renderC1() {
-    const label = document.getElementById("husformer-c1-context-label");
-
-    if (!lastClickedTrial || selectedWindowIndex === null) {
-        label.textContent = "";
-    } else if (latestC1Data) {
-        label.textContent = (
-            `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial} `
-            + `· ${latestC1Data.window_start_sec.toFixed(1)}s`
-        );
-    } else {
-        label.textContent = `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`;
-    }
-
     renderHusformerC1Chart({
         containerId: "c1-chart",
         activeTrial: lastClickedTrial,
-        selectedWindowIndex,
+        selectedWindowIndex: hoveredB2WindowIndex,
         crossAttentionData: latestC1Data,
     });
 }
 
 /**
- * Pide al backend la matriz cross-modal de la ventana seleccionada y
- * renderiza C1 -- mismo patrón que loadAndRenderB1 (fetch al vuelo, guard de
- * condición de carrera con requestId, estado "Cargando..." inmediato).
+ * Pide al backend la matriz cross-modal de la ventana hovereada en B2 --
+ * mismo patrón que loadAndRenderC1 en su versión original (fetch al vuelo,
+ * guard de condición de carrera con requestId).
  */
 async function loadAndRenderC1() {
     c1RequestId += 1;
@@ -544,7 +473,7 @@ async function loadAndRenderC1() {
     const data = await fetchHusformerWindowCrossAttention({
         participantId: lastClickedTrial.Participant_id,
         trial: lastClickedTrial.Trial,
-        windowIndex: selectedWindowIndex,
+        windowIndex: hoveredB2WindowIndex,
     });
 
     if (requestId !== c1RequestId) {
@@ -553,33 +482,6 @@ async function loadAndRenderC1() {
 
     latestC1Data = data;
     renderC1();
-}
-
-/**
- * Ventana activa para C1 -- disparada por HOVER en B1/B2 (principal, desde
- * 2026-07-22) y también por click (se deja funcionando igual, no molesta,
- * útil en touch donde no hay hover real). Dos guards importantes:
- *
- * 1. `windowIndex === null` (el mouse salió de B1/B2, evento de mouseout) --
- *    no hace nada. C1 se queda mostrando la última ventana marcada (sticky),
- *    a propósito: si limpiara la selección cada vez que el mouse sale del
- *    panel, sería imposible mover el mouse hacia C1 para mirarlo de cerca
- *    sin que se vaciara antes de llegar.
- * 2. `windowIndex === selectedWindowIndex` (ya es la ventana mostrada) --
- *    evita un fetch de red redundante. Importante sobre todo para B2, cuyo
- *    hover dispara en cada `mousemove` (muchos eventos por segundo mientras
- *    el mouse se mueve dentro de la MISMA ventana) -- sin este guard,
- *    hacer hover lento dentro de una sola ventana dispararía decenas de
- *    requests idénticos.
- */
-function handleWindowSelect(windowIndex) {
-    if (windowIndex === null || windowIndex === selectedWindowIndex) {
-        return;
-    }
-
-    selectedWindowIndex = windowIndex;
-    activeB1B2Handle?.updateSelection(windowIndex);
-    loadAndRenderC1();
 }
 
 function observeC1Container() {
@@ -607,93 +509,176 @@ function observeC1Container() {
     resizeObserverC1.observe(container);
 }
 
+/**
+ * C2 -- sin fetch propio: reutiliza `latestB2RawResponse` (señal cruda ya
+ * cargada por B2, sin normalizar) y `latestB1Data.windows` (% de dominancia
+ * ya cargado por B1) -- ambos ya están en memoria cuando hay hover en B2,
+ * así que renderC2 es puramente síncrono.
+ */
+function renderC2() {
+    const activeModalities = getSelectedB2GroupsWithColor().reduce((accumulated, group) => {
+        // Deduplicar por modalidad -- si hay dos grupos de la misma
+        // modalidad activos (ej. EEG Región + EEG Hemisferio), sus canales
+        // se promedian JUNTOS en una sola tarjeta, no una por grupo (C2
+        // trabaja al nivel de modalidad, igual que la dominancia de B1).
+        const baseModalityKey = group.modalityKey.replace(/h$/, ""); // modality_1h -> modality_1
+        const existing = accumulated.find((entry) => entry.modalityKey === baseModalityKey);
+
+        if (existing) {
+            existing.channels.push(...group.channels);
+        } else {
+            // modality_labels viene de la misma respuesta que ya cargó B1
+            // ({modality_1: "EEG", ...}) -- única fuente de verdad, evita
+            // duplicar el mapeo modalidad->nombre acá.
+            accumulated.push({
+                modalityKey: baseModalityKey,
+                label: latestB1Data?.modality_labels?.[baseModalityKey] ?? baseModalityKey,
+                channels: [...group.channels],
+                color: getSignalColor(baseModalityKey, 0),
+            });
+        }
+
+        return accumulated;
+    }, []);
+
+    renderHusformerC2SignalAttentionChart({
+        containerId: "c2-chart",
+        activeTrial: lastClickedTrial,
+        hoveredWindowIndex: hoveredB2WindowIndex,
+        activeModalities,
+        rawSignalResponse: latestB2RawResponse,
+        b1Windows: latestB1Data?.windows,
+    });
+}
+
+function observeC2Container() {
+    const container = document.getElementById("c2-chart");
+
+    if (!container || resizeObserverC2) {
+        return;
+    }
+
+    resizeObserverC2 = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+
+        if (width === lastObservedWidthC2 && height === lastObservedHeightC2) {
+            return;
+        }
+
+        lastObservedWidthC2 = width;
+        lastObservedHeightC2 = height;
+
+        if (width > 0 && height > 0) {
+            renderC2();
+        }
+    });
+
+    resizeObserverC2.observe(container);
+}
+
+/**
+ * Handler único para el hover en B2 -- actualiza el estado compartido y
+ * dispara C1 (fetch) + C2 (síncrono). Mismo guard que el mecanismo
+ * original de B1->C1: `windowIndex === null` (mouse salió de B2) no limpia
+ * nada -- C1/C2 se quedan mostrando la última ventana (sticky), y
+ * `windowIndex === hoveredB2WindowIndex` evita un fetch redundante en cada
+ * `mousemove` dentro de la misma ventana.
+ */
+function handleB2WindowHover(windowIndex) {
+    if (windowIndex === null || windowIndex === hoveredB2WindowIndex) {
+        return;
+    }
+
+    hoveredB2WindowIndex = windowIndex;
+    loadAndRenderC1();
+    renderC2();
+}
+
 // ============================================================
-// B3 -- comparación de señales crudas normalizadas (rediseño 2026-07-17,
+// B2 -- comparación de señales crudas normalizadas (rediseño 2026-07-17,
 // ver husformer_b3_chart.js / husformer_b3_channel_groups.js). Selección
 // MÚLTIPLE de grupos (no un canal suelto), hasta MAX_SIMULTANEOUS_SIGNALS
-// a la vez. Ya NO muestra atención acá -- B1/B2 está siempre visible al
+// a la vez. Ya NO muestra atención acá -- B1 está siempre visible al
 // lado, mostrarla de nuevo era redundante (ver corrección en el .md).
+// Panel propio restaurado el 2026-07-22 (antes compartía temporalmente
+// espacio con la prueba del grafo de A3, ver husformer_a3_resumen_
+// implementacion.md).
 // ============================================================
 
 // IDs de los grupos actualmente seleccionados, en orden de selección
 // (Set preserva orden de inserción en JS) -- el orden importa para que el
 // color de cada señal sea estable mientras no cambie la selección.
-// Arranca con DEFAULT_B3_GROUP_IDS (2026-07-17, a pedido de Russell: una
+// Arranca con DEFAULT_B2_GROUP_IDS (2026-07-17, a pedido de Russell: una
 // señal de cada una de las 6 familias, para que la primera impresión del
 // panel ya muestre una comparación representativa entre modalidades).
-let selectedB3GroupIds = new Set(DEFAULT_B3_GROUP_IDS);
+let selectedB2GroupIds = new Set(DEFAULT_B2_GROUP_IDS);
 
 // Respuesta cruda de /api/trial-signals -- incluye TODOS los canales que
 // hacen falta para promediar los grupos actualmente seleccionados (un solo
 // fetch combinado, no uno por grupo).
-let latestB3RawResponse = null;
-let b3RequestId = 0;
+let latestB2RawResponse = null;
+let b2RequestId = 0;
 
-let resizeObserverB3 = null;
-let lastObservedWidthB3 = 0;
-let lastObservedHeightB3 = 0;
+let resizeObserverB2 = null;
+let lastObservedWidthB2 = 0;
+let lastObservedHeightB2 = 0;
 
-// Transform de zoom de B3 -- SOLO zoom/pan en X (ver husformer_b3_
+// Transform de zoom de B2 -- SOLO zoom/pan en X (ver husformer_b3_
 // chart.js). Se persiste acá para sobrevivir a re-renders (resize, cambio
 // de selección de señales), mismo patrón que currentZoomTransform de A1 y
 // el de B1. null = sin zoom (vista completa 0-60s).
-let currentB3ZoomTransform = null;
+let currentB2ZoomTransform = null;
 
 /**
  * Arma la lista de series (una por grupo seleccionado, promediada y
- * normalizada) a partir de la respuesta cruda ya cargada, y renderiza B3.
- * Separado de loadAndRenderB3 porque cambiar CUÁLES colores usa cada
+ * normalizada) a partir de la respuesta cruda ya cargada, y renderiza B2.
+ * Separado de loadAndRenderB2 porque cambiar CUÁLES colores usa cada
  * chip activo (getSignalColor) no necesita un fetch nuevo -- solo
  * reconstruir las series con el mismo dato ya en memoria.
  */
-function renderB3() {
-    // ⚠️ TEMPORAL (2026-07-22): B3 no tiene dónde renderizarse -- sus
-    // elementos (#husformer-b3-trial-label, #husformer-b3-selector,
-    // #b3-chart, etc.) se sacaron del DOM mientras A3 usa el panel
-    // fusionado (ver bloque TEMPORAL en index.html). REVERTIR sacando este
-    // `return` cuando B3 vuelva a su panel propio.
-    const label = document.getElementById("husformer-b3-trial-label");
-    if (!label) {
-        return;
-    }
+function renderB2() {
+    const label = document.getElementById("husformer-b2-trial-label");
     label.textContent = lastClickedTrial
         ? `${lastClickedTrial.Participant_label} · Trial ${lastClickedTrial.Trial}`
         : "";
 
-    const selectedGroups = getSelectedB3GroupsWithColor();
+    const selectedGroups = getSelectedB2GroupsWithColor();
 
     // Tres estados posibles cuando hay trial activo: sin grupos elegidos
     // ([] -- "elegí algo"), esperando el fetch (null -- "cargando"), o ya
     // con datos (array de series). Si no hay trial activo, el valor no
-    // importa -- renderHusformerB3Chart revisa activeTrial primero.
+    // importa -- renderHusformerB2Chart revisa activeTrial primero.
     let seriesList = null;
 
     if (lastClickedTrial && selectedGroups.length === 0) {
         seriesList = [];
-    } else if (lastClickedTrial && latestB3RawResponse) {
-        seriesList = buildB3Series(latestB3RawResponse, selectedGroups);
+    } else if (lastClickedTrial && latestB2RawResponse) {
+        seriesList = buildB2Series(latestB2RawResponse, selectedGroups);
     }
 
-    // ⚠️ TEMPORAL (2026-07-22): renderiza en el contenedor fusionado con
-    // A3 (ver bloque TEMPORAL más arriba) -- REVERTIR a "b3-chart".
-    activeB3Handle = renderHusformerB3Chart({
-        containerId: A3B3_MERGED_CONTAINER_ID,
+    activeB2Handle = renderHusformerB2Chart({
+        containerId: "b2-chart",
         activeTrial: lastClickedTrial,
         seriesList,
-        initialZoomTransform: currentB3ZoomTransform,
+        initialZoomTransform: currentB2ZoomTransform,
         onZoomChange: (transform) => {
-            currentB3ZoomTransform = transform;
+            currentB2ZoomTransform = transform;
         },
         onHoverWindowChange: (windowIndex) => {
             if (windowIndex === null) {
-                activeB1B2Handle?.clearHighlight();
+                activeB1Handle?.clearHighlight();
             } else {
-                activeB1B2Handle?.highlightWindow(windowIndex);
+                activeB1Handle?.highlightWindow(windowIndex);
             }
+
+            // Dispara C1/C2 (2026-07-22, segundo rediseño de Vista C -- ver
+            // handleB2WindowHover) -- mismo guard de "null no limpia nada"
+            // que ya usa el resaltado de B1 arriba.
+            handleB2WindowHover(windowIndex);
         },
     });
 
-    renderB3SelectorUI();
+    renderB2SelectorUI();
 }
 
 /**
@@ -702,11 +687,11 @@ function renderB3() {
  * modalidad ya seleccionados -- ver getSignalColor en husformer_b3_
  * channel_groups.js.
  */
-function getSelectedB3GroupsWithColor() {
+function getSelectedB2GroupsWithColor() {
     const countByModality = new Map();
 
-    return Array.from(selectedB3GroupIds)
-        .map((groupId) => findB3Group(groupId))
+    return Array.from(selectedB2GroupIds)
+        .map((groupId) => findB2Group(groupId))
         .filter((group) => group !== undefined)
         .map((group) => {
             const indexWithinModality = countByModality.get(group.modalityKey) ?? 0;
@@ -724,16 +709,24 @@ function getSelectedB3GroupsWithColor() {
  * actualmente seleccionados, en un solo request (la unión de sus listas de
  * canales) -- evita un fetch por grupo cuando hay varios seleccionados.
  */
-async function loadAndRenderB3(trialPoint) {
+async function loadAndRenderB2(trialPoint) {
     lastClickedTrial = trialPoint;
 
-    b3RequestId += 1;
-    const requestId = b3RequestId;
+    // La ventana hovereada (si había una) pertenece al trial ANTERIOR -- se
+    // limpia junto con el cambio de trial (mismo momento en que B2 se
+    // recarga). C1/C2 vuelven a su estado vacío hasta el próximo hover.
+    hoveredB2WindowIndex = null;
+    latestC1Data = null;
+    renderC1();
+    renderC2();
 
-    latestB3RawResponse = null;
-    renderB3();
+    b2RequestId += 1;
+    const requestId = b2RequestId;
 
-    const selectedGroups = getSelectedB3GroupsWithColor();
+    latestB2RawResponse = null;
+    renderB2();
+
+    const selectedGroups = getSelectedB2GroupsWithColor();
 
     if (selectedGroups.length === 0) {
         return;
@@ -749,12 +742,12 @@ async function loadAndRenderB3(trialPoint) {
         channels: allChannels,
     });
 
-    if (requestId !== b3RequestId) {
+    if (requestId !== b2RequestId) {
         return;
     }
 
-    latestB3RawResponse = data;
-    renderB3();
+    latestB2RawResponse = data;
+    renderB2();
 }
 
 /**
@@ -764,20 +757,20 @@ async function loadAndRenderB3(trialPoint) {
  * hay ningún trial clickeado todavía, solo actualiza la selección (sin
  * fetch) -- el fetch se dispara recién cuando haya un trial activo.
  */
-function toggleB3Group(groupId) {
-    if (selectedB3GroupIds.has(groupId)) {
-        selectedB3GroupIds.delete(groupId);
+function toggleB2Group(groupId) {
+    if (selectedB2GroupIds.has(groupId)) {
+        selectedB2GroupIds.delete(groupId);
     } else {
-        if (selectedB3GroupIds.size >= MAX_SIMULTANEOUS_SIGNALS) {
+        if (selectedB2GroupIds.size >= MAX_SIMULTANEOUS_SIGNALS) {
             return;
         }
-        selectedB3GroupIds.add(groupId);
+        selectedB2GroupIds.add(groupId);
     }
 
     if (lastClickedTrial) {
-        loadAndRenderB3(lastClickedTrial);
+        loadAndRenderB2(lastClickedTrial);
     } else {
-        renderB3SelectorUI();
+        renderB2SelectorUI();
     }
 }
 
@@ -785,35 +778,35 @@ function toggleB3Group(groupId) {
  * Construye el selector de chips agrupados por modalidad -- EEG con dos
  * esquemas (Región / Hemisferio), el resto de las modalidades con sus
  * canales individuales (pocos, no hace falta agruparlos más). Se
- * reconstruye en cada render de B3 (barato, son ~20 botones) para que el
- * estado activo/deshabilitado siempre refleje selectedB3GroupIds.
+ * reconstruye en cada render de B2 (barato, son ~20 botones) para que el
+ * estado activo/deshabilitado siempre refleje selectedB2GroupIds.
  */
-function renderB3SelectorUI() {
-    const container = document.getElementById("husformer-b3-selector");
+function renderB2SelectorUI() {
+    const container = document.getElementById("husformer-b2-selector");
     container.innerHTML = "";
 
-    const atCap = selectedB3GroupIds.size >= MAX_SIMULTANEOUS_SIGNALS;
+    const atCap = selectedB2GroupIds.size >= MAX_SIMULTANEOUS_SIGNALS;
 
-    // Mismo color que va a usar el chart -- reutiliza getSelectedB3Groups
+    // Mismo color que va a usar el chart -- reutiliza getSelectedB2Groups
     // WithColor en vez de recalcular el índice por modalidad acá también
     // (única fuente de verdad para "qué color le toca a cada grupo activo").
     const colorByGroupId = new Map(
-        getSelectedB3GroupsWithColor().map((group) => [group.id, group.color])
+        getSelectedB2GroupsWithColor().map((group) => [group.id, group.color])
     );
 
     // Punto de color por grupo (2026-07-17, a pedido de Russell -- "que se
     // note la diferencia"): color BASE de la modalidad (índice 0, sin
     // importar si hay algo seleccionado todavía), mismo share encoding que
-    // ya usan los chips activos y las líneas de B1/B2.
+    // ya usan los chips activos y el heatmap de B1.
     function buildRow(label, groups, modalityKey) {
         const row = document.createElement("div");
-        row.className = "husformer-b3-selector-row";
+        row.className = "husformer-b2-selector-row";
 
         const rowLabel = document.createElement("span");
-        rowLabel.className = "husformer-b3-selector-group-label";
+        rowLabel.className = "husformer-b2-selector-group-label";
 
         const dot = document.createElement("span");
-        dot.className = "husformer-b3-selector-group-dot";
+        dot.className = "husformer-b2-selector-group-dot";
         dot.style.background = getSignalColor(modalityKey, 0);
         rowLabel.appendChild(dot);
 
@@ -821,11 +814,11 @@ function renderB3SelectorUI() {
         row.appendChild(rowLabel);
 
         groups.forEach((group) => {
-            const isActive = selectedB3GroupIds.has(group.id);
+            const isActive = selectedB2GroupIds.has(group.id);
 
             const button = document.createElement("button");
             button.type = "button";
-            button.className = `husformer-b3-chip${isActive ? " active" : ""}`;
+            button.className = `husformer-b2-chip${isActive ? " active" : ""}`;
             button.textContent = group.label;
             button.disabled = !isActive && atCap;
 
@@ -833,7 +826,7 @@ function renderB3SelectorUI() {
                 button.style.setProperty("--chip-color", colorByGroupId.get(group.id));
             }
 
-            button.addEventListener("click", () => toggleB3Group(group.id));
+            button.addEventListener("click", () => toggleB2Group(group.id));
             row.appendChild(button);
         });
 
@@ -849,7 +842,7 @@ function renderB3SelectorUI() {
 }
 
 /**
- * Vuelve la vista de B3 al trial completo (0-60s) -- 2026-07-17, a pedido
+ * Vuelve la vista de B2 al trial completo (0-60s) -- 2026-07-17, a pedido
  * de Russell. Aclarado explícitamente con él: esto SOLO resetea el zoom,
  * no la selección de señales (son dos estados independientes) -- ver
  * husformer_b3_resumen_implementacion.md. El doble-click sobre el chart
@@ -857,49 +850,49 @@ function renderB3SelectorUI() {
  * botón es el mecanismo DESCUBRIBLE -- un doble-click no tiene ninguna
  * pista visual de que existe, a diferencia de un botón.
  */
-function resetB3Zoom() {
-    currentB3ZoomTransform = null;
-    renderB3();
+function resetB2Zoom() {
+    currentB2ZoomTransform = null;
+    renderB2();
 }
 
-function setupB3ChannelControl() {
-    renderB3SelectorUI();
+function setupB2ChannelControl() {
+    renderB2SelectorUI();
 
-    const resetButton = document.getElementById("husformer-b3-reset-zoom");
-    resetButton.addEventListener("click", resetB3Zoom);
+    const resetButton = document.getElementById("husformer-b2-reset-zoom");
+    resetButton.addEventListener("click", resetB2Zoom);
 }
 
-function observeB3Container() {
-    const container = document.getElementById("b3-chart");
+function observeB2Container() {
+    const container = document.getElementById("b2-chart");
 
-    if (!container || resizeObserverB3) {
+    if (!container || resizeObserverB2) {
         return;
     }
 
-    resizeObserverB3 = new ResizeObserver((entries) => {
+    resizeObserverB2 = new ResizeObserver((entries) => {
         const { width, height } = entries[0].contentRect;
 
-        if (width === lastObservedWidthB3 && height === lastObservedHeightB3) {
+        if (width === lastObservedWidthB2 && height === lastObservedHeightB2) {
             return;
         }
 
-        lastObservedWidthB3 = width;
-        lastObservedHeightB3 = height;
+        lastObservedWidthB2 = width;
+        lastObservedHeightB2 = height;
 
         if (width > 0 && height > 0) {
-            renderB3();
+            renderB2();
         }
     });
 
-    resizeObserverB3.observe(container);
+    resizeObserverB2.observe(container);
 }
 
 // Handlers de selección/fondo COMPARTIDOS entre A1 y A2 -- clickear un punto
 // (o el fondo) en cualquiera de los dos paneles re-renderiza AMBOS paneles
 // (compound brushing/linked highlighting entre vistas coordinadas, Cap. 12
-// de Munzner / Cap. 5 de Aigner). A3 YA NO depende de selectedTrials
-// (rediseño 2026-07-22 -- tiene su propia selección, ver más arriba), así
-// que no se re-renderiza acá.
+// de Munzner / Cap. 5 de Aigner). A3 vuelve a depender de selectedTrials
+// (revertido el 2026-07-22 al perfil de cuestionario) -- se re-pide en cada
+// cambio de selección vía loadAndRenderA3Profiles().
 function handlePointToggle(point) {
     const key = getTrialKey(point);
 
@@ -911,6 +904,7 @@ function handlePointToggle(point) {
 
     renderA1();
     renderA2();
+    loadAndRenderA3Profiles();
 
     // Drill-down a Vista B -- ver nota extensa arriba de lastClickedTrial.
     // Se dispara SIEMPRE que se clickea un punto (agregar o quitar de la
@@ -918,9 +912,9 @@ function handlePointToggle(point) {
     loadAndRenderB1(point);
 
     // lastClickedTrial recién queda actualizado DESPUÉS de loadAndRenderB1
-    // (es quien lo asigna) -- por eso B3 se dispara con `point` directo, no
+    // (es quien lo asigna) -- por eso B2 se dispara con `point` directo, no
     // con la variable, para no depender del orden de ejecución async.
-    loadAndRenderB3(point);
+    loadAndRenderB2(point);
 }
 
 function handleBackgroundClick() {
@@ -931,6 +925,7 @@ function handleBackgroundClick() {
     selectedTrials.clear();
     renderA1();
     renderA2();
+    loadAndRenderA3Profiles();
 }
 
 function renderA1() {
@@ -1305,17 +1300,14 @@ export function initializeHusformerView() {
     setupProjectionControls();
     setupFilterControls();
     setupA2Controls();
-    setupB1ViewToggle();
-    // ⚠️ TEMPORAL (2026-07-22): setupB3ChannelControl()/observeB3Container()
-    // deshabilitados -- B3 no se renderiza en ningún lado mientras A3 usa el
-    // panel fusionado (ver bloque TEMPORAL más arriba). REVERTIR
-    // descomentando la línea de setupB3ChannelControl() y observeB3Container().
-    // setupB3ChannelControl();
+    setupB2ChannelControl();
     observeA1Container();
     observeA2Container();
     observeA3Container();
     observeB1Container();
+    observeB2Container();
     observeC1Container();
+    observeC2Container();
 
     // A1/A2 dependen de fetches asíncronos independientes (proyección y
     // clustering respectivamente) -- se piden en paralelo; cada uno
@@ -1324,19 +1316,21 @@ export function initializeHusformerView() {
     loadAndRenderProjection();
     loadAndRenderClusters();
 
-    // A3 (rediseño 2026-07-22, mapa de patrones) pide el grafo completo UNA
-    // sola vez -- no depende de ningún trial activo ni de selectedTrials.
-    loadAndRenderA3Network();
+    // A3 arranca sin selección (nadie ha clickeado nada todavía en A1/A2) --
+    // muestra el estado vacío ("Selecciona uno o más trials..."), sin
+    // fetch, hasta el primer click (ver loadAndRenderA3Profiles).
+    renderA3();
 
     // B1 arranca sin trial activo (nadie ha clickeado nada todavía) -- solo
     // muestra el estado vacío ("Selecciona un trial en Vista A"), sin
     // fetch, hasta el primer click en A1/A2 (ver loadAndRenderB1).
     renderB1();
 
-    // C1 arranca sin ventana seleccionada -- estado vacío hasta el primer
-    // click en B1/B2 (ver handleWindowSelect).
+    // C1/C2 arrancan sin trial activo ni hover todavía -- estado vacío
+    // hasta el primer hover en B2 (ver handleB2WindowHover).
     renderC1();
+    renderC2();
 
-    // B3 igual -- estado vacío hasta el primer click (ver loadAndRenderB3).
-    renderB3();
+    // B2 igual -- estado vacío hasta el primer click (ver loadAndRenderB2).
+    renderB2();
 }
