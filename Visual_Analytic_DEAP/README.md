@@ -418,20 +418,7 @@ No requiere paso de build para el frontend (JS servido directo, D3 desde CDN). E
 
 ## 8. Diagramas — prompts para generarlos
 
-Para cada diagrama decidí qué herramienta conviene según qué tan preciso/técnico necesita ser vs. qué tan ilustrativo. Los de **Mermaid** los podés pegar tal cual en cualquier renderizador (mermaid.live, la extensión de VS Code, o pedirle a una IA que te devuelva el `.png` renderizado); los de **imagen** son prompts en lenguaje natural para una IA generativa de imágenes.
-
-### 8.1 Estructura de un archivo `.bdf` — REUSAR, no generar de nuevo
-
-Este diagrama **ya existe**, hecho a mano en el informe de Data Wrangling. No hace falta generarlo de nuevo — solo recortar las figuras del PDF como PNG:
-
-- Figura 2 (`JorgeTito_Informe_DataWrangling_AED.pdf`, página 3): estructura general del archivo `.bdf` (header fijo → header por canal → data records).
-- Figura 3 (página 4): estructura de un data record (canales × 512 muestras × 3 bytes).
-- Figura 4 (página 5): montaje EEG 10-20 con 32 electrodos.
-
-### 8.2 Pipeline completo end-to-end — YA GENERADO
-
-Ya está hecho (SVG a mano, embebido en la Sección 4): `docs/img/diagram_pipeline.svg`. Si preferís una versión más pulida/ilustrada, esta es la alternativa en Mermaid, y también un prompt de imagen:
-
+### 8.1 Pipeline completo end-to-end
 **Mermaid:**
 
 ```mermaid
@@ -453,15 +440,6 @@ flowchart TD
     L --> P["Vista C del sistema VA"]
 ```
 
-### 8.3 Arquitectura de Husformer — YA GENERADO (versión técnica); prompt abajo para una versión más pulida
-
-Ya está hecho (SVG a mano, embebido en la Sección 4.4): `docs/img/diagram_husformer_architecture.svg` — correcto técnicamente, pero con estética de diagrama de software, no de figura de paper. Si querés algo más pulido para el PDF final del artículo, esta es la alternativa:
-
-**Herramienta:** IA de imagen (Napkin, DALL-E, Midjourney o similar) — buscamos un diagrama pulido, tipo figura de paper académico.
-
-**Prompt:**
-
-> "Diagrama técnico de arquitectura de red neuronal, estilo figura de paper académico (limpio, minimalista, fondo blanco, paleta de azules y grises). Muestra un pipeline de fusión multimodal con 5 modalidades de entrada en paralelo, etiquetadas 'EEG', 'EOG', 'EMG', 'GSR', 'Resp+Plet+Temp', cada una entrando a su propia caja de 'Proyección lineal'. Debajo, 5 módulos idénticos etiquetados 'Atención Cross-Modal' (uno por modalidad), cada uno recibiendo flechas desde TODAS las 5 proyecciones (conexiones cruzadas visibles, tipo grafo completo pequeño). Las salidas de los 5 módulos de atención cross-modal se concatenan (una caja 'Concatenación'), y esa concatenación entra a un único bloque 'Transformer de Auto-Atención Final'. De ahí sale una flecha a una caja 'Convolución + Pooling', que termina en un vector final etiquetado 'last_hs (40-dim)'. Estilo diagrama de flujo horizontal, de izquierda a derecha, con cajas redondeadas y flechas finas. Sin texto adicional, sin logos."
 
 ### 8.4 CMV del sistema — vistas coordinadas y drill-down (Mermaid)
 
@@ -493,46 +471,11 @@ flowchart LR
     B2 -->|"hover: ventana puntual"| C2
 ```
 
-### 8.5 El bug de la máscara causal (imagen explicativa)
-
-**Herramienta:** IA de imagen — diagrama explicativo/educativo.
-
-**Prompt:**
-
-> "Ilustración técnica educativa, estilo pizarra/diagrama explicativo, fondo blanco. Muestra dos matrices cuadradas de 5x5 celdas lado a lado, tituladas 'CON máscara causal' y 'SIN máscara causal'. En la matriz izquierda, la mitad triangular superior está coloreada de gris claro/vacío con una gran 'X' o candado sobre esas celdas (indicando que esos valores son cero/bloqueados), mientras la diagonal y el triángulo inferior están coloreados en tonos de azul variados (valores reales). En la matriz derecha, las 25 celdas están coloreadas en distintos tonos de azul/naranja sin ningún patrón triangular (todas con valores reales). Debajo de cada matriz, un pequeño ícono de 5 bloques en fila etiquetados 'EEG, EOG, EMG, GSR, Resp' representando el orden de concatenación de modalidades. Estilo limpio, minimalista, colores azul y naranja, apto para una diapositiva o figura de paper."
-
-### 8.6 Protocolo experimental de un trial DEAP (imagen)
-
-**Herramienta:** IA de imagen — línea de tiempo ilustrativa.
-
-**Prompt:**
-
-> "Diagrama de línea de tiempo horizontal, estilo infografía limpia y minimalista, fondo blanco. Muestra 3 segmentos consecutivos en una barra horizontal: 'Baseline' (gris claro, corto), 'Estímulo audiovisual (~60s)' (azul, el segmento más largo, con un pequeño ícono de nota musical o pantalla), y 'Autoevaluación (SAM)' (naranja claro, con pequeños íconos de escalas de valencia/activación tipo 'maniquí'). Debajo de la barra, una flecha indica 'Tiempo →'. Encima de la barra, pequeñas etiquetas de eventos: 'Evento 3' al inicio del baseline, 'Evento 4' al inicio del estímulo, 'Evento 5' al final del estímulo. Estilo académico, colores azul/naranja/gris, sin texto adicional."
+---
 
 ---
 
-## 9. Checklist de capturas de pantalla pendientes
-
-La carpeta `docs/img/` ya está creada, con un archivo guía (`docs/img/README.md`) que repite esta misma lista. Guardá cada captura con el nombre EXACTO indicado (mismo nombre, extensión `.png`) y va a aparecer sola en este documento, sin tocar nada más.
-
-| Archivo esperado               | Qué capturar                                                                                                                                                                                                                                                                                      |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `system_full_overview.png`   | **La más importante — va al inicio del documento.** Captura de pantalla completa de la pestaña **System Overview**, con las 3 vistas pobladas (algo seleccionado en A1/A2, un trial cargado en B1/B2, mouse sobre B2 para que C1/C2 muestren contenido) — la "postal" del proyecto |
-| `deap_eeg_10_20_montage.png` | Recorte de la Figura 4 del informe de Data Wrangling (montaje EEG 10-20) — o una captura equivalente si preferís rehacerla                                                                                                                                                                       |
-| `deap_sam_scales.png`        | Recorte de la Figura 1 del informe (imágenes SAM de valencia/activación/dominancia/agrado)                                                                                                                                                                                                       |
-| `h1_overview.png`            | Pestaña**H1** del sistema, con algún participante/experimento cargado — que se vean los 3 paneles (Espacio Emocional, Métricas de Resumen, Exploración de Señal)                                                                                                                       |
-| `h2_overview.png`            | Pestaña**H2**, sub-vista "Multimodal Relationships" (Participant Profiles activo), con una celda de la matriz seleccionada para que se vea el explorador temporal cross-modal poblado                                                                                                       |
-| `h3_eeg_spatial.png`         | Pestaña**H2**, sub-vista "EEG Spatial Explorer" (la otra pestaña interna), con una celda seleccionada para que se vea el mapa topográfico coloreado                                                                                                                                       |
-| `tarea1_latent_space.png`    | Pestaña**Tarea 1**, con un trial seleccionado (que se vea la proyección, la tarjeta de detalle y la señal cruda)                                                                                                                                                                          |
-| `system_vista_a.png`         | Pestaña**System Overview**, con algo seleccionado en A1/A2 para que A3 muestre contenido real (no el estado vacío)                                                                                                                                                                         |
-| `system_vista_b.png`         | Mismo momento o uno similar, con Vista B poblada (un trial cargado en B1 y B2 con varias señales activas)                                                                                                                                                                                         |
-| `system_vista_c.png`         | Mismo momento, con el mouse sobre B2 (hover activo) para que C1 y C2 muestren contenido real, no el mensaje "pasá el mouse sobre B2"                                                                                                                                                              |
-
-Si preferís, una sola captura de pantalla completa (las 3 vistas a la vez, que es como se ve normalmente el sistema) sirve para `system_vista_a/b/c.png` -- podés usar la MISMA imagen para los 3 nombres, o recortarla en 3 partes.
-
----
-
-## 10. Limitaciones y trabajo futuro
+## 9. Limitaciones y trabajo futuro
 
 - **Sin evaluación con usuarios reales/expertos en cómputo afectivo.** Todo el sistema es funcional y está justificado con literatura de visualización, pero no ha sido validado con las tareas reales de un investigador de dominio (limitación metodológica ya declarada del proyecto).
 - **Desempeño modesto del modelo entrenado.** El checkpoint de Husformer usado tiene accuracy de clasificación cercana al azar en el mejor caso (ver 4.5) — la variación de atención observada es real pero sutil; el sistema interpreta un modelo entrenado con recursos y tiempo limitados, no un modelo de estado del arte.
@@ -543,7 +486,7 @@ Si preferís, una sola captura de pantalla completa (las 3 vistas a la vez, que 
 
 ---
 
-## 11. Referencias
+## 10. Referencias
 
 - Koelstra, S., Muhl, C., Soleymani, M., Lee, J.-S., Yazdani, A., Ebrahimi, T., Pun, T., Nijholt, A., y Patras, I. (2012). "DEAP: A Database for Emotion Analysis Using Physiological Signals". *IEEE Transactions on Affective Computing*, 3(1), 18-31.
 - Wang, D., Guo, X., Tian, Y., Liu, J., He, L., y Luo, X. (2022). "Husformer: A Multi-Modal Transformer for Multi-Modal Human State Recognition". *arXiv:2209.15182*.
